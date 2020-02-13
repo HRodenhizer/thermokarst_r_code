@@ -75,7 +75,7 @@ thermokarst14_51m_20cm <- reclassify(microtopo14_51m, rcl = reclass_matrix_20cm)
 
 ### plot the thermokarst features with the same focal window and different cut-off values on top of each other
 # set plot viewer to have two rows and one column
-par(mfrow=c(2, 1))
+par(mfrow=c(3, 1))
 
 ##15 m
 plot(thermokarst14_15m_0cm)
@@ -96,6 +96,16 @@ par(mfrow=c(1,1))
 ########################################################################################################################
 
 ### Check whether there are points in the 15 m moving window that get missed in the larger moving windows and vice versa
+# value of 1 means that it is thermokarst using the first input only, 2 means the cell is thermokarst in both inputs
+thermo15m_31m <- overlay(thermokarst14_15m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)})
+thermo15m_51m <- overlay(thermokarst14_15m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)})
+thermo31m_51m <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)})
+
+# looking at these, I think the 31 m window probably does the best job (there appears to be a pattern in all of the thermokarst by the time you hit 31 m)
+# 15 m might be picking up random cells that aren't actually thermokarst, because the are the median is coming from isn't big enough to smooth out local variations?
+plot(thermo15m_31m)
+plot(thermo15m_51m)
+plot(thermo31m_51m)
 
 ### future ideas
 # compare to cipehr plot locations with known thermokarst
