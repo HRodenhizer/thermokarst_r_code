@@ -15,22 +15,34 @@ elev14 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remo
 crs(elev14)
 
 # this take a long time!
-rgb <- merge(brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_388000_7084000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_388000_7085000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_388000_7086000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_389000_7084000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_389000_7085000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_389000_7086000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_390000_7084000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_390000_7085000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_390000_7086000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_391000_7084000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_391000_7085000_image.tif"),
-             brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_391000_7086000_image.tif"))
+# rgb <- merge(brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_388000_7084000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_388000_7085000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_388000_7086000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_389000_7084000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_389000_7085000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_389000_7086000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_390000_7084000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_390000_7085000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_390000_7086000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_391000_7084000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_391000_7085000_image.tif"),
+#              brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_391000_7086000_image.tif"))
 
 test <- brick("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/L3/Camera/Mosaic/V01/2017_HEAL_1_385000_7077000_image.tif")
 crs(test)
 elev14_utm6 <- projectRaster(elev14, crs = crs(test))
+egm96 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/GPS/Geoid Troubleshooting 2018/Geoids/egm96-15.tif")
+geoid12b <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/GPS/Geoid Troubleshooting 2018/Geoids/navd88-12b.tif")
+crs(geoid12b) <- CRS('+init=EPSG:6318')
+########################################################################################################################
+
+### Calculate Geoid Correction Raster ##################################################################################
+egm96_crop <- projectRaster(egm96, elev14_utm6)
+geoid12b_rotate <- rotate(geoid12b) # this had coordinates from 0-360, but it needs to be -180-180, rotate fixes
+geoid12b_crop <- projectRaster(geoid12b_rotate, elev14_utm6)
+correction <- egm96_crop - geoid12b_crop
+# correct the GLiHT to use geoid 12b
+elev14_utm6_12b <- elev14_utm6 + correction
 ########################################################################################################################
 
 ### Calculate Moving Window Median Elevation ###########################################################################
@@ -111,7 +123,7 @@ plot(thermokarst14_51m_0cm)
 plot(thermokarst14_51m_15cm)
 plot(thermokarst14_51m_20cm)
 
-par(mfrow=c(1,1))
+dev.off()
 ########################################################################################################################
 
 ### Check whether there are points in the 15 m moving window that get missed in the larger moving windows and vice versa
@@ -126,7 +138,7 @@ karst_combined <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = fu
 
 
 # looking at these, I think the 31 m window probably does the best job (there appears to be a pattern in all of the thermokarst by the time you hit 31 m)
-# 15 m might be picking up random cells that aren't actually thermokarst, because the are the median is coming from isn't big enough to smooth out local variations?
+# 15 m might be picking up random cells that aren't actually thermokarst, because the area the median is coming from isn't big enough to smooth out local variations?
 # 51 m does seem to fill in the spottiness of the 31 m window, though, so the thermokarst features are more continuous, but it might be missing smaller features
 plot(thermo15m_31m)
 plot(thermo15m_51m)
@@ -140,15 +152,26 @@ reclass_matrix <- c(-Inf,0,NA, 1,Inf,1)
 karst_combined <- reclassify(karst_combined, rcl = reclass_matrix)
 karst_sf <- st_as_sf(rasterToPolygons(karst_combined, dissolve = TRUE))
 
+# reclassify the 31 m raster
 karst_31 <- reclassify(thermokarst14_31m_0cm, rcl = reclass_matrix)
 karst_31_sf <- st_as_sf(rasterToPolygons(karst_31, dissolve = TRUE))
 
+### TO-DO:
+### 1
+# it looks like GLiHT and NEON products are a few meters offset - need to fix somehow
+# how well do the various NEON products line up? Can I align the GLiHT dataset to the NEON LiDAR?
+### 2
+# create a points shapefile with randomly selected locations (both thermokarst and not) to use to 'ground truth' with high res imagery
+# create one shapefile, extract thermokarst classification from all of the different versions being tested, and add column for visual verification
+# calculte overall, users, and producers accuracies
+
 ### future ideas
 # compare to cipehr plot locations with known thermokarst (only for 2018 data, because there's not a whole lot by 2014)
-# plot thermokarst over neon high-res imagery
-# use mapview to plot over google imagery
+# plot thermokarst over neon high-res imagery - I do this in ArcMap for quick panning/zooming capability
 # try merging 31 m and 51 m thermokarst if neither performs well by itself?
 # raster::clump() does not remove holes, it just gives each clump a number (potentially good for counting thermokarst features, though)
+
+
 
 # plot over rgb
 plotRGB(rgb)
