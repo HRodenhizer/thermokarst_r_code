@@ -72,9 +72,9 @@ plot(microtopo14_51m)
 ### Reclassify Microtopography as Thermokarst ##########################################################################
 ## create matrices to use for cutoff values
 ## I'm not sure what cut-off makes sense. Vertical accuracy is ~15-22.5 cm. However, the average error over the moving window should be 0.
-reclass_matrix_0cm <- c(-1,0,1, 0,1,0)
-reclass_matrix_15cm <- c(-1,-0.15,1, -0.15,1,0)
-reclass_matrix_20cm <- c(-1,-0.2,1, -0.2,1,0)
+reclass_matrix_0cm <- c(-Inf,0,1, 0,Inf,0)
+reclass_matrix_15cm <- c(-Inf,-0.15,1, -0.15,Inf,0)
+reclass_matrix_20cm <- c(-Inf,-0.2,1, -0.2,Inf,0)
 
 ## 15 m
 thermokarst14_15m_0cm <- reclassify(microtopo14_15m, rcl = reclass_matrix_0cm)
@@ -122,7 +122,7 @@ thermo31m_51m <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = fun
 thermo31m_15m <- overlay(thermokarst14_31m_0cm, thermokarst14_15m_0cm, fun = function(x, y){x*(x+y)})
 thermo51m_15m <- overlay(thermokarst14_51m_0cm, thermokarst14_15m_0cm, fun = function(x, y){x*(x+y)})
 thermo51m_31m <- overlay(thermokarst14_51m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)})
-thermo_combined <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = function(x,y){x+y})
+karst_combined <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = function(x,y){x+y})
 
 
 # looking at these, I think the 31 m window probably does the best job (there appears to be a pattern in all of the thermokarst by the time you hit 31 m)
@@ -136,16 +136,26 @@ plot(thermo51m_15m)
 plot(thermo51m_31m)
 
 # reclassify the combined 31 m and 51 m raster
-reclass_matrix <- c(-Inf,0,NA, 1,2,1)
-thermo_combined <- reclassify(thermo_combined, rcl = reclass_matrix)
+reclass_matrix <- c(-Inf,0,NA, 1,Inf,1)
+karst_combined <- reclassify(karst_combined, rcl = reclass_matrix)
+karst_sf <- st_as_sf(rasterToPolygons(karst_combined, dissolve = TRUE))
 
+karst_31 <- reclassify(thermokarst14_31m_0cm, rcl = reclass_matrix)
+karst_31_sf <- st_as_sf(rasterToPolygons(karst_31, dissolve = TRUE))
 
 ### future ideas
 # compare to cipehr plot locations with known thermokarst (only for 2018 data, because there's not a whole lot by 2014)
 # plot thermokarst over neon high-res imagery
 # use mapview to plot over google imagery
 # try merging 31 m and 51 m thermokarst if neither performs well by itself?
+# raster::clump() does not remove holes, it just gives each clump a number (potentially good for counting thermokarst features, though)
 
 # plot over rgb
 plotRGB(rgb)
-plot(thermo_combined, add = TRUE)
+plot(karst_sf, add = TRUE)
+
+plotRGB(rgb)
+plot(karst_31_sf, add = TRUE)
+
+# st_write(karst_sf, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/karst_31_51_combined.shp')
+# st_write(karst_31_sf, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/karst_31.shp')
