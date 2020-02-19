@@ -35,6 +35,7 @@ egm96 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/GPS/G
 geoid12b <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/GPS/Geoid Troubleshooting 2018/Geoids/navd88-12b.tif")
 crs(geoid12b) <- CRS('+init=EPSG:6318')
 neon_elev <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All/NEON_DTM_2017.tif")
+rm(elev14)
 ########################################################################################################################
 
 ### Calculate Geoid Correction Raster ##################################################################################
@@ -54,6 +55,7 @@ geoid12b_rotate <- rotate(geoid12b) # this had coordinates from 0-360, but it ne
 geoid12b_crop <- projectRaster(geoid12b_rotate, elev14_utm6)
 correction <- egm96_crop - geoid12b_crop
 plot(correction)
+rm(egm96, egm96_crop, geoid12b, geoid12b_crop, geoid12b_rotate)
 
 # correct the GLiHT to use geoid 12b
 elev14_utm6_12b <- elev14_utm6 + correction
@@ -132,8 +134,8 @@ plot(microtopo14_71m)
 ## I'm not sure what cut-off makes sense. Vertical accuracy is ~15-22.5 cm. However, the average error over the moving window should be 0.
 reclass_matrix_0cm <- matrix(c(-Inf,0,1, 0,Inf,0), ncol = 3, byrow = TRUE)
 reclass_matrix_5cm <- matrix(c(-Inf,-0.05,1, -0.05,Inf,0), ncol = 3, byrow = TRUE)
-reclass_matrix_10cm <- matrix(c(-Inf,-0.1,1, -0.1,Inf,0), ncol = 3, byrow = TRUE)
-reclass_matrix_20cm <- matrix(c(-Inf,-0.2,1, -0.2,Inf,0), ncol = 3, byrow = TRUE)
+# reclass_matrix_10cm <- matrix(c(-Inf,-0.1,1, -0.1,Inf,0), ncol = 3, byrow = TRUE)
+# reclass_matrix_20cm <- matrix(c(-Inf,-0.2,1, -0.2,Inf,0), ncol = 3, byrow = TRUE)
 
 ## 15 m
 # thermokarst14_15m_0cm <- reclassify(microtopo14_15m, rcl = reclass_matrix_0cm)
@@ -143,18 +145,18 @@ reclass_matrix_20cm <- matrix(c(-Inf,-0.2,1, -0.2,Inf,0), ncol = 3, byrow = TRUE
 ## 31 m
 thermokarst14_31m_0cm <- reclassify(microtopo14_31m, rcl = reclass_matrix_0cm)
 thermokarst14_31m_5cm <- reclassify(microtopo14_31m, rcl = reclass_matrix_5cm)
-thermokarst14_31m_10cm <- reclassify(microtopo14_31m, rcl = reclass_matrix_10cm)
-thermokarst14_31m_20cm <- reclassify(microtopo14_31m, rcl = reclass_matrix_20cm)
+# thermokarst14_31m_10cm <- reclassify(microtopo14_31m, rcl = reclass_matrix_10cm)
+# thermokarst14_31m_20cm <- reclassify(microtopo14_31m, rcl = reclass_matrix_20cm)
 
 ## 51 m
 thermokarst14_51m_0cm <- reclassify(microtopo14_51m, rcl = reclass_matrix_0cm)
-thermokarst14_51m_10cm <- reclassify(microtopo14_51m, rcl = reclass_matrix_10cm)
-thermokarst14_51m_20cm <- reclassify(microtopo14_51m, rcl = reclass_matrix_20cm)
+# thermokarst14_51m_10cm <- reclassify(microtopo14_51m, rcl = reclass_matrix_10cm)
+# thermokarst14_51m_20cm <- reclassify(microtopo14_51m, rcl = reclass_matrix_20cm)
 
 ## 71 m
 thermokarst14_71m_0cm <- reclassify(microtopo14_71m, rcl = reclass_matrix_0cm)
-thermokarst14_71m_10cm <- reclassify(microtopo14_71m, rcl = reclass_matrix_10cm)
-thermokarst14_71m_20cm <- reclassify(microtopo14_71m, rcl = reclass_matrix_20cm)
+# thermokarst14_71m_10cm <- reclassify(microtopo14_71m, rcl = reclass_matrix_10cm)
+# thermokarst14_71m_20cm <- reclassify(microtopo14_71m, rcl = reclass_matrix_20cm)
 
 
 ### plot the thermokarst features with the same focal window and different cut-off values on top of each other
@@ -224,11 +226,6 @@ plot(thermo51m_31m)
 # becomes thermokarst. This has to be run multiple times to make sure to catch all the cells in oddly shaped holes.
 # I think 3 times should be enough, but need to check.
 
-# neighbor cells to include when looking for thermokarst
-weights_8_cell <- matrix(c(1,1,1, 1,0,1, 1,1,1), nrow = 3)
-# matrix used to reclassify cells of 6 or greater to 1 (if there are at least 6 neighbor cells with thermokarst)
-reclass_neighbor <- matrix(c(-Inf,5,0, 5,Inf,1), ncol = 3, byrow = TRUE)
-
 # Create a function to iteratively fill in all cells with at least 6 thermokarst cells in the 8 immediately surrounding cells
 fill <- function(raster, weights, reclass_matrix_neighbor, reclass_matrix_thermokarst, n) {
   for (i in 1:n) {
@@ -247,6 +244,13 @@ fill <- function(raster, weights, reclass_matrix_neighbor, reclass_matrix_thermo
   return(fill)
 }
 
+# neighbor cells to include when looking for thermokarst
+weights_8_cell <- matrix(c(1,1,1, 1,0,1, 1,1,1), nrow = 3)
+# matrix used to reclassify cells of 6 or greater to 1 (if there are at least 6 neighbor cells with thermokarst)
+reclass_neighbor <- matrix(c(-Inf,5,0, 5,Inf,1), ncol = 3, byrow = TRUE)
+# matrix used to reclassify cells of 1 or greater to 1
+reclass_matrix_0 <- c(-Inf,0,0, 1,Inf,1)
+
 # Fill the various thermokarst models
 karst_31_fill <- fill(thermokarst14_31m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
 karst_31_5_fill <- fill(thermokarst14_31m_5cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
@@ -254,26 +258,48 @@ karst_51_fill <- fill(thermokarst14_51m_0cm, weights_8_cell, reclass_neighbor, r
 karst_71_fill <- fill(thermokarst14_71m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
 karst_combined_1_fill <- fill(karst_combined_1, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
 karst_combined_2_fill <- fill(karst_combined_2, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-
-plot(karst_combined_2_fill1)
-plot(karst_combined_2_fill)
 ########################################################################################################################
 
 ### Sample Cells for Ground Truthing ###################################################################################
-samples <- sampleStratified(karst_combined_2_fill, size = 50, xy = TRUE)
-samples2 <- sampleRandom(karst_combined_2_fill, size = 100)
+# samples <- st_as_sf(sampleStratified(karst_combined_2_fill, size = 50, xy = TRUE, sp = TRUE))
+# samples2 <- st_as_sf(sampleRandom(karst_combined_2_fill, size = 100, xy = TRUE, sp = TRUE)) # this one only gets ~10 thermokarst samples
+# st_write(samples, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/samples_stratified_100.shp')
+# st_write(samples2, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/samples_random_100.shp')
+samples <- st_read('C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/samples_stratified_100.shp') %>%
+  select(-layer)
+########################################################################################################################
+
+### Extract Thermokarst Value for Sample Cells in All Rasters ##########################################################
+# karst_brick <- brick(karst_31, karst_31_5, karst_51, karst_71, karst_combined_1, karst_combined_2)
+karst_extract <- st_as_sf(raster::extract(karst_brick, as(samples, 'Spatial'), layer = 1, nl = 6, sp = TRUE)) %>%
+  rename(karst_31 = layer.1,
+         karst_31_5 = layer.2,
+         karst_51 = layer.3,
+         karst_71 = layer.4,
+         karst_combined_1 = layer.5,
+         karst_combined_2 = layer.6)
+# st_write(karst_extract, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_extract.shp')
 ########################################################################################################################
 
 ### convert rasters to simple features #################################################################################
 # reclassify the rasters to replace 0 with NA for viewing in ArcMap
+# matrix used to reclassify non thermokarst cells to NA
+reclass_matrix_na <- c(-Inf,0,NA, 1,Inf,1)
+
 # this will need to be updated to include all of the rasters included in testing
-reclass_matrix_0 <- c(-Inf,0,0, 1,Inf,1)
-karst_31 <- reclassify(karst_31_fill, rcl = reclass_matrix_0)
-karst_31_5 <- reclassify(karst_31_5_fill, rcl = reclass_matrix_0)
-karst_51 <- reclassify(karst_51_fill, rcl = reclass_matrix_0)
-karst_71 <- reclassify(karst_71_fill, rcl = reclass_matrix_0)
-karst_combined_1 <- reclassify(karst_combined_1_fill, rcl = reclass_matrix_0)
-karst_combined_2 <- reclassify(karst_combined_2_fill, rcl = reclass_matrix_0)
+karst_31 <- reclassify(karst_31_fill, rcl = reclass_matrix_na)
+karst_31_5 <- reclassify(karst_31_5_fill, rcl = reclass_matrix_na)
+karst_51 <- reclassify(karst_51_fill, rcl = reclass_matrix_na)
+karst_71 <- reclassify(karst_71_fill, rcl = reclass_matrix_na)
+karst_combined_1 <- reclassify(karst_combined_1_fill, rcl = reclass_matrix_na)
+karst_combined_2 <- reclassify(karst_combined_2_fill, rcl = reclass_matrix_na)
+
+# writeRaster(karst_31, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_31.tif')
+# writeRaster(karst_31_5, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_31_5.tif')
+# writeRaster(karst_51, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_51.tif')
+# writeRaster(karst_71, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_71.tif')
+# writeRaster(karst_combined_1, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_combined_1.tif')
+# writeRaster(karst_combined_2, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_combined_2.tif')
 
 # convert to simple features
 karst_31_sf <- st_as_sf(rasterToPolygons(karst_31, dissolve = TRUE))
@@ -290,7 +316,6 @@ karst_combined_2_sf <- st_as_sf(rasterToPolygons(karst_combined_2, dissolve = TR
 # st_write(karst_71_sf, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_71.shp')
 # st_write(karst_combined_1_sf, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_31_51_combined.shp')
 # st_write(karst_combined_2_sf, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_31_5_51_71_combined.shp')
-# st_write(karst_combined_2_fill_sf, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/karst_31_5_51_71_fill_combined.shp')
 ########################################################################################################################
 
 ### TO-DO:
@@ -316,8 +341,9 @@ karst_combined_2_sf <- st_as_sf(rasterToPolygons(karst_combined_2, dissolve = TR
 ##### I removed holes which were 1 cell wide, even if they turned, but left holes that were 4 m^2, using the thermokarst on 6 sides rule
 
 ### 4
-# create a points shapefile with randomly selected locations (both thermokarst and not) to use to 'ground truth' with high res imagery
-# create one shapefile, extract thermokarst classification from all of the different versions being tested, and add column for visual verification
+# D # create a points shapefile with randomly selected locations (both thermokarst and not) to use to 'ground truth' with high res imagery
+# O # create one shapefile, extract thermokarst classification from all of the different versions being tested
+# add column for visual verification with digital globe imagery (10-01-2018; means make thermokarst map with 2018 data for accuracy of 'ground' truth)
 # calculate overall, users, and producers accuracies for the various thermokarst classifications
 
 ### future ideas
