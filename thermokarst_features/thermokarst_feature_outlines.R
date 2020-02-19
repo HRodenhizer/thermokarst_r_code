@@ -82,7 +82,7 @@ plot(diff, breaks = breaks, col = colors)
 # plot(diff)
 ########################################################################################################################
 
-### Calculate Moving Window Median Elevation ###########################################################################
+### Calculate Moving Window Median Elevation and Terrain Roughness #####################################################
 ## using the median elevation should not be too influenced by the relatively small portion of thermokarst within any moving window
 ### create a matrix of weights to calculate the median
 ## 15 m diameter circle
@@ -104,6 +104,10 @@ median14_31m <- focal(elev14_utm6_12b, w = weights14_31m, fun = median)
 median14_51m <- focal(elev14_utm6_12b, w = weights14_51m, fun = median)
 ## 71 m
 median14_71m <- focal(elev14_utm6_12b, w = weights14_71m, fun = median)
+
+# calculate ruggedness
+roughness14 <- terrain(elev14_utm6_12b, opt = 'roughness')
+plot(roughness14)
 ########################################################################################################################
 
 ### Calculate Microtopography (deviance from median elevation) #########################################################
@@ -347,6 +351,8 @@ karst_combined_2_sf <- st_as_sf(rasterToPolygons(karst_combined_2, dissolve = TR
 # calculate overall, users, and producers accuracies for the various thermokarst classifications
 
 ### future ideas
+# calculate roughness and incorporate that into calculation of thermokarst? smooth areas are less likely to be thermokarst? use terrain(TRI) TRI = terrain ruggedness index
+# potentially use the median terrain ruggedness
 # compare to cipehr plot locations with known thermokarst (only for 2018 data, because there's not a whole lot by 2014)
 # plot thermokarst over neon high-res imagery - I do this in ArcMap for quick panning/zooming capability
 # try merging 31 m and 51 m thermokarst if neither performs well by itself?
