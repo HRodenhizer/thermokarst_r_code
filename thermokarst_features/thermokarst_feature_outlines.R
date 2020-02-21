@@ -89,10 +89,6 @@ neon_elev_utm6 <- projectRaster(neon_elev, elev14_utm6_12b)
 # plot(diff)
 ########################################################################################################################
 
-### Calculate Subsidence ###############################################################################################
-# sub <- elev18_utm6_12b - elev14_utm6_12b
-########################################################################################################################
-
 ### Calculate Moving Window Median Elevation and Terrain Roughness #####################################################
 ## using the median elevation should not be too influenced by the relatively small portion of thermokarst within any moving window
 ### create a matrix of weights to calculate the median
@@ -256,13 +252,13 @@ plot(thermokarst14_71m_0cm)
 ########################################################################################################################
 
 ### Test Various Combinations of Thermokarst Classification for Completion and Accuracy ################################
-# value of 1 means that it is thermokarst using the first input only, 2 means the cell is thermokarst in both inputs
-# thermo15m_31m <- overlay(thermokarst14_15m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)})
-# thermo15m_51m <- overlay(thermokarst14_15m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)})
-# thermo31m_51m <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)})
-# thermo31m_15m <- overlay(thermokarst14_31m_0cm, thermokarst14_15m_0cm, fun = function(x, y){x*(x+y)})
-# thermo51m_15m <- overlay(thermokarst14_51m_0cm, thermokarst14_15m_0cm, fun = function(x, y){x*(x+y)})
-# thermo51m_31m <- overlay(thermokarst14_51m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)})
+# value of 1 means that it is thermokarst using the first input only, 2 meanst the cell is thermokarst in both layers
+# thermo15m_31m <- overlay(thermokarst14_15m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)}
+# thermo15m_51m <- overlay(thermokarst14_15m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)}
+# thermo31m_51m <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)}
+# thermo31m_15m <- overlay(thermokarst14_31m_0cm, thermokarst14_15m_0cm, fun = function(x, y){x*(x+y)}
+# thermo51m_15m <- overlay(thermokarst14_51m_0cm, thermokarst14_15m_0cm, fun = function(x, y){x*(x+y)}
+# thermo51m_31m <- overlay(thermokarst14_51m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)}
 # This one gets all cells with at least one of the layers being thermokarst
 karst_combined_14_1 <- overlay(thermokarst14_31m_0cm,
                             thermokarst14_51m_0cm,
@@ -342,26 +338,24 @@ fill <- function(raster, weights, reclass_matrix_neighbor, reclass_matrix_thermo
 weights_8_cell <- matrix(c(1,1,1, 1,0,1, 1,1,1), nrow = 3)
 # matrix used to reclassify cells of 6 or greater to 1 (if there are at least 6 neighbor cells with thermokarst)
 reclass_neighbor <- matrix(c(-Inf,5,0, 5,Inf,1), ncol = 3, byrow = TRUE)
-# matrix used to reclassify cells of 1 or greater to 1
-reclass_matrix_0 <- c(-Inf,0,0, 1,Inf,1)
 
 # Fill the various thermokarst models
-karst_14_31_fill <- fill(thermokarst14_31m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-karst_14_31_5_fill <- fill(thermokarst14_31m_5cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-karst_14_51_fill <- fill(thermokarst14_51m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-karst_14_71_fill <- fill(thermokarst14_71m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-karst_combined_14_1_fill <- fill(karst_combined_14_1, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-karst_combined_14_2_fill <- fill(karst_combined_14_2, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-karst_combined_14_3_fill <- fill(karst_combined_14_3, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-karst_combined_14_4_fill <- fill(karst_combined_14_4, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-# karst_18_31_fill <- fill(thermokarst18_31m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-# karst_18_31_5_fill <- fill(thermokarst18_31m_5cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-# karst_18_51_fill <- fill(thermokarst18_51m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-# karst_18_71_fill <- fill(thermokarst18_71m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-# karst_combined_18_1_fill <- fill(karst_combined_18_1, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-# karst_combined_18_2_fill <- fill(karst_combined_18_2, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-# karst_combined_18_3_fill <- fill(karst_combined_18_3, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
-# karst_combined_18_4_fill <- fill(karst_combined_18_4, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
+karst_14_31_fill <- fill(thermokarst14_31m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+karst_14_31_5_fill <- fill(thermokarst14_31m_5cm, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+karst_14_51_fill <- fill(thermokarst14_51m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+karst_14_71_fill <- fill(thermokarst14_71m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+karst_combined_14_1_fill <- fill(karst_combined_14_1, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+karst_combined_14_2_fill <- fill(karst_combined_14_2, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+karst_combined_14_3_fill <- fill(karst_combined_14_3, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+karst_combined_14_4_fill <- fill(karst_combined_14_4, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+# karst_18_31_fill <- fill(thermokarst18_31m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+# karst_18_31_5_fill <- fill(thermokarst18_31m_5cm, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+# karst_18_51_fill <- fill(thermokarst18_51m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+# karst_18_71_fill <- fill(thermokarst18_71m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+# karst_combined_18_1_fill <- fill(karst_combined_18_1, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+# karst_combined_18_2_fill <- fill(karst_combined_18_2, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+# karst_combined_18_3_fill <- fill(karst_combined_18_3, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
+# karst_combined_18_4_fill <- fill(karst_combined_18_4, weights_8_cell, reclass_neighbor, reclass_matrix_0cm, 3)
 ########################################################################################################################
 
 ### Develop Random Forest Model to Compare with Deviation from Median Models ###########################################
