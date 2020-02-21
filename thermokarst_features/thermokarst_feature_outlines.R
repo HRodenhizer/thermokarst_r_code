@@ -88,26 +88,39 @@ plot(diff, breaks = breaks, col = colors)
 ## 15 m diameter circle
 # weights14_15m <- focalWeight(elev14_utm6_12b, 7, type = 'circle')*149 # the focalWeight function returns values that add up to 1, but we want each included cell to have a value of 1
 ## 31 m diameter circle
-weights14_31m <- focalWeight(elev14_utm6_12b, 15, type = 'circle')*717
+weights_31m <- focalWeight(elev14_utm6_12b, 15, type = 'circle')*717
 ## 51 m diameter circle
-weights14_51m <- focalWeight(elev14_utm6_12b, 25, type = 'circle')*1993
+weights_51m <- focalWeight(elev14_utm6_12b, 25, type = 'circle')*1993
 ## 71 m diameter circle
-weights14_71m <- focalWeight(elev14_utm6_12b, 35, type = 'circle')*3893
+weights_71m <- focalWeight(elev14_utm6_12b, 35, type = 'circle')*3893
 
 
 ### calculate median elevation
 ## 15 m
-# median14_15m <- focal(elev14_utm6_12b, w = weights14_15m, fun = median)
+# median14_15m <- focal(elev14_utm6_12b, w = weights_15m, fun = median)
 ## 31 m
-median14_31m <- focal(elev14_utm6_12b, w = weights14_31m, fun = median)
-## 51 m
-median14_51m <- focal(elev14_utm6_12b, w = weights14_51m, fun = median)
-## 71 m
-median14_71m <- focal(elev14_utm6_12b, w = weights14_71m, fun = median)
+# median14_31m <- focal(elev14_utm6_12b, w = weights_31m, fun = median)
+# ## 51 m
+# median14_51m <- focal(elev14_utm6_12b, w = weights_51m, fun = median)
+# ## 71 m
+# median14_71m <- focal(elev14_utm6_12b, w = weights_71m, fun = median)
 
-# calculate ruggedness
+# calculate roughness indices
 roughness14 <- terrain(elev14_utm6_12b, opt = 'roughness')
 plot(roughness14)
+tri14 <- terrain(elev14_utm6_12b, opt = 'TRI')
+plot(tri14)
+tpi14 <- terrain(elev14_utm6_12b, opt = 'TPI')
+plot(tpi14)
+# writeRaster(roughness14, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/roughness/roughness_raw.tif')
+# 5 meter focal window
+weights_5m <- focalWeight(elev14_utm6_12b, 2, type = 'circle')*13
+# 5 m mean roughness
+roughness14_5 <- focal(roughness14, w = weights_5m, fun = mean)
+plot(roughness14_5)
+tri14_5 <- focal(tri, w = weights_5m, fun = mean)
+tpi14_5 <- focal(tpi, w = weights_5m, fun = mean)
+# writeRaster(roughness14_5, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/roughness/roughness_5m_mean.tif')
 ########################################################################################################################
 
 ### Calculate Microtopography (deviance from median elevation) #########################################################
@@ -116,15 +129,19 @@ plot(roughness14)
 ## 15 m
 # microtopo14_15m <- elev14_utm6_12b - median14_15m
 ## 31 m
-microtopo14_31m <- elev14_utm6_12b - median14_31m
-## 51 m
-microtopo14_51m <- elev14_utm6_12b - median14_51m
-## 71 m
-microtopo14_71m <- elev14_utm6_12b - median14_71m
+# microtopo14_31m <- elev14_utm6_12b - median14_31m
+# ## 51 m
+# microtopo14_51m <- elev14_utm6_12b - median14_51m
+# ## 71 m
+# microtopo14_71m <- elev14_utm6_12b - median14_71m
 
-# writeRaster(microtopo14_31m, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography_14_31.tif')
-# writeRaster(microtopo14_51m, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography_14_51.tif')
-# writeRaster(microtopo14_71m, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography_14_71.tif')
+# writeRaster(microtopo14_31m, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography/microtopography_14_31.tif')
+# writeRaster(microtopo14_51m, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography/microtopography_14_51.tif')
+# writeRaster(microtopo14_71m, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography/microtopography_14_71.tif')
+
+microtopo14_31m <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography/microtopography_14_31.tif")
+microtopo14_51m <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography/microtopography_14_51.tif")
+microtopo14_71m <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/thermokarst_classification/microtopography/microtopography_14_71.tif")
 
 ### plot
 # plot(microtopo14_15m)
@@ -194,12 +211,29 @@ dev.off()
 # value of 1 means that it is thermokarst using the first input only, 2 means the cell is thermokarst in both inputs
 # thermo15m_31m <- overlay(thermokarst14_15m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)})
 # thermo15m_51m <- overlay(thermokarst14_15m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)})
-thermo31m_51m <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)})
+# thermo31m_51m <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = function(x, y){x*(x+y)})
 # thermo31m_15m <- overlay(thermokarst14_31m_0cm, thermokarst14_15m_0cm, fun = function(x, y){x*(x+y)})
 # thermo51m_15m <- overlay(thermokarst14_51m_0cm, thermokarst14_15m_0cm, fun = function(x, y){x*(x+y)})
-thermo51m_31m <- overlay(thermokarst14_51m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)})
+# thermo51m_31m <- overlay(thermokarst14_51m_0cm, thermokarst14_31m_0cm, fun = function(x, y){x*(x+y)})
 # This one gets all cells with at least one of the layers being thermokarst
-karst_combined_1 <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = function(x,y){x+y})
+karst_combined_1 <- overlay(thermokarst14_31m_0cm,
+                            thermokarst14_51m_0cm,
+                            thermokarst14_71m_0cm,
+                            fun = function(x,y,z){x+y+z})
+# include 31 m < -0.05 and all 51 m and 71 m
+karst_combined_2 <- overlay(thermokarst14_31m_5cm,
+                            thermokarst14_51m_0cm,
+                            thermokarst14_71m_0cm,
+                            fun = function(x,y,z){x + y + z})
+# 31 m and 51 m
+karst_combined_3 <- overlay(thermokarst14_31m_5cm,
+                            thermokarst14_51m_0cm,
+                            fun = function(x,y){x + y})
+# 51 m and 71 m
+karst_combined_4 <- overlay(thermokarst14_51m_0cm,
+                            thermokarst14_71m_0cm,
+                            fun = function(x,y){x + y})
+
 
 
 # looking at these, there appears to be a pattern in all of the thermokarst by the time you hit 31 m
@@ -210,19 +244,13 @@ karst_combined_1 <- overlay(thermokarst14_31m_0cm, thermokarst14_51m_0cm, fun = 
 # need to check the last point
 # 71 m fills in big features better, and eliminates smaller features - need to check if it is eliminating actual featurs that are just too small
 
-# include 31 m < -0.05 and all 51 m and 71 m
-karst_combined_2 <- overlay(thermokarst14_31m_5cm,
-                            thermokarst14_51m_0cm,
-                            thermokarst14_71m_0cm,
-                            fun = function(x,y,z){x + y + z})
-
 
 # plot(thermo15m_31m)
 # plot(thermo15m_51m)
-plot(thermo31m_51m)
+# plot(thermo31m_51m)
 # plot(thermo31m_15m)
 # plot(thermo51m_15m)
-plot(thermo51m_31m)
+# plot(thermo51m_31m)
 ########################################################################################################################
 
 ### Fill in Holes in the Various Thermokarst Classification Rasters ####################################################
@@ -262,19 +290,28 @@ karst_51_fill <- fill(thermokarst14_51m_0cm, weights_8_cell, reclass_neighbor, r
 karst_71_fill <- fill(thermokarst14_71m_0cm, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
 karst_combined_1_fill <- fill(karst_combined_1, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
 karst_combined_2_fill <- fill(karst_combined_2, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
+karst_combined_3_fill <- fill(karst_combined_3, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
+karst_combined_4_fill <- fill(karst_combined_4, weights_8_cell, reclass_neighbor, reclass_matrix_0, 3)
 ########################################################################################################################
 
-### Sample Cells for Ground Truthing ###################################################################################
+### Develop Random Forest Model to Compare with Deviation from Median Models ###########################################
+set.seed(6272020)
+all_samples <- st_as_sf(sampleStratified(karst_combined_1_fill, size = 200, xy = TRUE, sp = TRUE)) %>%
+  select(-layer) %>%
+  mutate()
+########################################################################################################################
+
+### Sample Cells for Validation ########################################################################################
 # samples <- st_as_sf(sampleStratified(karst_combined_2_fill, size = 50, xy = TRUE, sp = TRUE))
 # samples2 <- st_as_sf(sampleRandom(karst_combined_2_fill, size = 100, xy = TRUE, sp = TRUE)) # this one only gets ~10 thermokarst samples
 # st_write(samples, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/samples_stratified_100.shp')
 # st_write(samples2, 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/samples_random_100.shp')
-samples <- st_read('C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/samples_stratified_100.shp') %>%
-  select(-layer)
+# samples <- st_read('C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/samples_stratified_100.shp') %>%
+#   select(-layer)
 ########################################################################################################################
 
 ### Extract Thermokarst Value for Sample Cells in All Rasters ##########################################################
-# karst_brick <- brick(karst_31, karst_31_5, karst_51, karst_71, karst_combined_1, karst_combined_2)
+karst_brick <- brick(karst_31_fill, karst_31_5_fill, karst_51_fill, karst_71_fill, karst_combined_1_fill, karst_combined_2_fill, karst_combined_3_fill, karst_combined_4_fill)
 karst_extract <- st_as_sf(raster::extract(karst_brick, as(samples, 'Spatial'), layer = 1, nl = 6, sp = TRUE)) %>%
   rename(karst_31 = layer.1,
          karst_31_5 = layer.2,
