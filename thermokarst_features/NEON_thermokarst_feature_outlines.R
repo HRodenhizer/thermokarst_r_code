@@ -11,8 +11,36 @@ library(tidyverse)
 ########################################################################################################################
 
 ### Load Data ##########################################################################################################
-elev18 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All/NEON_DTM_2018.tif")
-crs(elev18)
+filenames <- list.files('C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All',
+                        full.names = TRUE)
+crop_extent <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byrow = TRUE))
+elev <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]), crop_extent),
+              crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), crop_extent),
+              crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), crop_extent))
+rm(filenames)
+
+# what is going on with this? Everything explodes when I try to use for loops.
+# I keep getting errors about extents not being the same when I try to assign a raster layer to either a brick or a stack (even when it is a new brick or stack)
+# I guess I should probably make a new file for the subsidence, anyway, and just do the thermokarst outline here
+sub18 <- elev[[2]] - elev[[1]]
+sub18[which(is.nan(sub18@data@values))] <- NA
+mean(sub18@data@values, na.rm = TRUE)
+sub19 <- elev[[3]] - elev[[1]]
+sub19[which(is.nan(sub19@data@values))] <- NA # isn't giving an error, but also isn't removing NaN values...
+mean(sub19@data@values, na.rm = TRUE)
+sub <- brick(sub18, sub19)
+
+sub[[i-1]][which(is.nan(sub[[i-1]]))] <- NA
+
+elev_project <- map(elev, ~ projectRaster(.x, elev[[3]])) # this doesn't work for 2018...why?
+
+elev_extent <- overlay(elev_project[[1]], elev_project[[2]], elev_project[[3]], fun = function(x,y,z){return((x + y + z)/(x + y + z))})
+
+elev_brick <- brick()
+
+# elev17 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All/NEON_DTM_2017.tif")
+# elev18 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All/NEON_DTM_2018.tif")
+# elev19 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All/NEON_DTM_2019.tif")
 ########################################################################################################################
 
 ### Calculate Moving Window Median Elevation and Terrain Roughness #####################################################
@@ -24,6 +52,16 @@ weights_51m <- focalWeight(elev18, 25, type = 'circle')*1961
 ## 71 m diameter circle
 weights_71m <- focalWeight(elev18, 35, type = 'circle')*3853
 
+radii <- c(15, 25, 35)
+weights <- list()
+for (i in 1:length(elev)) {
+  weights[[i]] <- list()
+  for (k in 1:length(radii)) {
+    weights[[i]][[k]] <- focalWeight(elev[[i]], radii[[k]], type = 'circle')
+    weights[[i]][[k]][weights[[i]][[k]] > 0] <- 1
+  }
+  
+}
 ### calculate median elevation
 ## 31 m
 # median18_31m <- focal(elev18_utm6_12b, w = weights_31m, fun = median)
