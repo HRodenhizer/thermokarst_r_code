@@ -33,12 +33,15 @@ for (i in 1:nlayers(sub)) {
 rm(sub18, sub19)
 
 # look at values
-summary(sub[[1]])
-cellStats(sub[[1]], stat = mean)
-boxplot(sub[[1]])
-summary(sub[[2]])
-cellStats(sub[[2]], stat = mean)
-boxplot(sub[[2]])
-plot(sub[[1]])
-plot(sub[[2]])
+# summary(sub[[1]])
+# cellStats(sub[[1]], stat = mean)
+# boxplot(sub[[1]])
+# summary(sub[[2]])
+# cellStats(sub[[2]], stat = mean)
+# boxplot(sub[[2]])
+# plot(sub[[1]])
+# plot(sub[[2]])
+
+# writeRaster(sub[[1]], 'Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/Subsidence/subsidence_2017_2018.tif')
+# writeRaster(sub[[2]], 'Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/Subsidence/subsidence_2017_2019.tif')
 ########################################################################################################################
