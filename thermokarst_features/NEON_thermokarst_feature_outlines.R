@@ -7,16 +7,23 @@
 library(raster)
 library(sf)
 library(ggthemes)
+library(doParallel)
 library(tidyverse)
 ########################################################################################################################
 
+### Session Settings ###################################################################################################
+rasterOptions()
+rasterOptions(maxmemory = 3e+10)
+########################################################################################################################
+
 ### Load Data ##########################################################################################################
-filenames <- list.files('C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All',
-                        full.names = TRUE)
+filenames <- list.files('/scratch/hgr7/DTM_all',
+                        full.names = TRUE,
+                        pattern = '.tif$')
 crop_extent <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byrow = TRUE))
 elev <- list(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]), crop_extent),
-              crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), crop_extent),
-              crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), crop_extent))
+             crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), crop_extent),
+             crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), crop_extent))
 rm(filenames)
 
 # elev17 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All/NEON_DTM_2017.tif")
@@ -35,9 +42,106 @@ for (i in 1:length(radii)) {
 
 ### calculate median elevation
 ## using the median elevation should not be too influenced by the relatively small portion of thermokarst within any moving window
-median15 <- map(elev, ~ focal(.x, weights[[1]], fun = median))
-median25 <- map(elev, ~ focal(.x, weights[[2]], fun = median))
-median35 <- map(elev, ~ focal(.x, weights[[3]], fun = median))
+#Define how many cores you want to use
+UseCores <- 3
+
+#Register CoreCluster
+cl <- makeCluster(UseCores)
+registerDoParallel(cl)
+
+#Use foreach loop and %dopar% command
+# foreach(i=1:length(elev)) %dopar% {
+#   library(raster)
+#   
+#   median <- focal(elev[[i]], weights[[1]], fun = median)
+#   
+#   
+#   outname <- paste('/scratch/hgr7/int_output/median15_',
+#                    i,
+#                    '.tif',
+#                    sep = '')
+#   
+#   writeRaster(median, 
+#               filename  = outname,
+#               overwrite = T)
+#   
+# }
+
+foreach(i=1:length(elev)) %dopar% {
+  library(raster)
+  
+  median <- focal(elev[[i]], weights[[2]], fun = median)
+  
+  
+  outname <- paste('/scratch/hgr7/int_output/median25_',
+                   i,
+                   '.tif',
+                   sep = '')
+  
+  writeRaster(median, 
+              filename  = outname,
+              overwrite = T)
+  
+}
+
+foreach(i=1:length(elev)) %dopar% {
+  library(raster)
+  
+  median <- focal(elev[[i]], weights[[3]], fun = median)
+  
+  
+  outname <- paste('/scratch/hgr7/int_output/median35_',
+                   i,
+                   '.tif',
+                   sep = '')
+  
+  writeRaster(median, 
+              filename  = outname,
+              overwrite = T)
+  
+}
+
+#end cluster
+stopCluster(cl)
+
+# load median rasters
+filenames <- list.files('/scratch/hgr7/median',
+                        full.names = TRUE,
+                        pattern = '.tif$')
+
+median15 <- list(raster(filenames[which(str_detect(filenames, '15_1'))]), # 2017
+                 raster(filenames[which(str_detect(filenames, '15_2'))]), # 2018
+                 raster(filenames[which(str_detect(filenames, '15_3'))])) # 2019
+
+median25 <- list(raster(filenames[which(str_detect(filenames, '25_1'))]), # 2017
+                 raster(filenames[which(str_detect(filenames, '25_2'))]), # 2018
+                 raster(filenames[which(str_detect(filenames, '25_3'))])) # 2019
+
+median35 <- list(raster(filenames[which(str_detect(filenames, '35_1'))]), # 2017
+                 raster(filenames[which(str_detect(filenames, '35_2'))]), # 2018
+                 raster(filenames[which(str_detect(filenames, '35_3'))])) # 2019
+
+# print(paste('start median15 time: ', Sys.time(), sep = ''))
+# median15_1 <- focal(elev[[1]], weights[[1]], fun = median)
+# median15 <- map(elev, ~ focal(.x, weights[[1]], fun = median))
+# print(paste('end median15 time: ', Sys.time(), sep = ''))
+# writeRaster(median15[[1]], '/scratch/hgr7/median/median15_1.tif')
+# writeRaster(median15[[2]], '/scratch/hgr7/median/median15_2.tif')
+# writeRaster(median15[[3]], '/scratch/hgr7/median/median15_3.tif')
+# 
+# print(paste('start median25 time: ', Sys.time(), sep = ''))
+# median25 <- map(elev, ~ focal(.x, weights[[2]], fun = median, progress = "text"))
+# print(paste('end median25 time: ', Sys.time(), sep = ''))
+# writeRaster(median25[[1]], '/scratch/hgr7/median/median25_1.tif')
+# writeRaster(median25[[2]], '/scratch/hgr7/median/median25_2.tif')
+# writeRaster(median25[[3]], '/scratch/hgr7/median/median25_3.tif')
+# 
+# print(paste('start median35 time: ', Sys.time(), sep = ''))
+# median35 <- map(elev, ~ focal(.x, weights[[3]], fun = median, progress = "text"))
+# print(paste('end median35 time: ', Sys.time(), sep = ''))
+# writeRaster(median35[[1]], '/scratch/hgr7/median/median35_1.tif')
+# writeRaster(median35[[2]], '/scratch/hgr7/median/median35_2.tif')
+# writeRaster(median35[[3]], '/scratch/hgr7/median/median35_3.tif')
 
 ### Calculate Roughness Metrics
 # roughness18 <- terrain(elev18, opt = 'roughness')
