@@ -12,8 +12,8 @@ library(tidyverse)
 ########################################################################################################################
 
 ### Session Settings ###################################################################################################
-rasterOptions()
-rasterOptions(maxmemory = 1e+12)
+# rasterOptions()
+# rasterOptions(maxmemory = 1e+12)
 ########################################################################################################################
 
 ### Load Data ##########################################################################################################
@@ -761,7 +761,7 @@ karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_f
 # stopCluster(cl)
 
 # load thermokarst rasters
-filenames <- list.files('/scratch/hgr7/int_output',
+filenames <- list.files('Y:/scratch/hgr7/int_output',
                         full.names = TRUE,
                         pattern = '.tif$')
 
@@ -790,10 +790,13 @@ map(karst_combined_4, ~plot(.x))
 ### Sample Cells for Validation ########################################################################################
 crop_extent <- extent(matrix(c(387000, 394000, 7080500, 7089500), nrow = 2, byrow = TRUE))
 sample_raster <- crop(karst_combined_1[[1]], crop_extent)
-# set.seed(2151991)
-# samples <- st_as_sf(sampleStratified(sample_raster, size = 100, xy = TRUE, sp = TRUE)) %>%
-#   select(-4)
-# st_write(samples, '/scratch/hgr7/int_output/samples_stratified_100.shp')
+set.seed(33)
+samples <- st_as_sf(sampleStratified(sample_raster, size = 100, xy = TRUE, sp = TRUE)) %>%
+  select(-4)
+ggplot(samples, aes(x = x, y = y)) +
+  geom_point() +
+  coord_fixed()
+st_write(samples, '/scratch/hgr7/int_output/samples_stratified_100.shp', delete_layer = TRUE)
 samples <- st_read('/scratch/hgr7/int_output/samples_stratified_100.shp')
 
 # extract values from each 2018 classification
