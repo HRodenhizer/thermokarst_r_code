@@ -39,8 +39,16 @@ rm(sub18, sub19)
 # summary(sub[[2]])
 # cellStats(sub[[2]], stat = mean)
 # boxplot(sub[[2]])
-# plot(sub[[1]])
-# plot(sub[[2]])
+plot(sub[[1]])
+plot(sub[[2]])
+
+# I thought there were issues at first, given how much of panguingue creek is red,
+# but most red cells drop out by 0.4 or 0.5 m below 0, so it could be real elevation
+# change due to erosion/thermoerosion
+colors <- c( '#FF0000', '#FFFFFF','#0000FF')
+breaks <- c(-4, -0.2, 0.2, 3)
+plot(sub[[1]], breaks = breaks, col = colors)
+plot(sub[[2]], breaks = breaks, col = colors)
 
 # writeRaster(sub[[1]], 'Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/Subsidence/subsidence_2017_2018.tif')
 # writeRaster(sub[[2]], 'Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/Subsidence/subsidence_2017_2019.tif')

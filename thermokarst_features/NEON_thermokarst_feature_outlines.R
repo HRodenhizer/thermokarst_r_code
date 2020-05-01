@@ -31,6 +31,50 @@ rm(filenames)
 # elev19 <- raster("C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All/NEON_DTM_2019.tif")
 ########################################################################################################################
 
+### Calculate Slope ####################################################################################################
+# Define how many cores you want to use
+# UseCores <- 3
+# # Register CoreCluster
+# cl <- makeCluster(UseCores)
+# registerDoParallel(cl)
+# 
+# # Calculate slope for each year
+# # Use foreach loop and %dopar% command
+# start <- Sys.time()
+# foreach(i=1:length(elev)) %dopar% {
+#   library(raster)
+# 
+#   slope <- terrain(elev[[i]], opt = 'slope')
+# 
+# 
+#   outname <- paste('/scratch/hgr7/int_output/slope_',
+#                    i,
+#                    '.tif',
+#                    sep = '')
+# 
+#   writeRaster(slope,
+#               filename  = outname,
+#               overwrite = T)
+# 
+# }
+# end <- Sys.time()
+# difftime(end, start)
+
+# load median rasters
+filenames <- list.files('Y:/scratch/hgr7/int_output',
+                        full.names = TRUE,
+                        pattern = '.tif$')
+
+slope <- list(raster(filenames[which(str_detect(filenames, 'slope_1'))]), # 2017
+              raster(filenames[which(str_detect(filenames, 'slope_2'))]), # 2018
+              raster(filenames[which(str_detect(filenames, 'slope_3'))])) # 2019
+map(slope, ~ plot(.x))
+
+colors <- c('#FFFFFF','#0000FF')
+breaks <- c(0, 0.35, 1.6)
+map(slope, ~ plot(.x, breaks = breaks, col = colors))
+########################################################################################################################
+
 ### Calculate Moving Window Median Elevation and Terrain Roughness #####################################################
 # create circular focal windows with radii of 15 m, 25 m, and 35 m
 radii <- c(15, 25, 35)
@@ -503,25 +547,25 @@ map(karst15_5, ~ plot(.x))
 # writeRaster(karst35_fill[[3]], '/scratch/hgr7/int_output/karst35_fill_3.tiff')
 
 # load thermokarst rasters
-filenames <- list.files('/scratch/hgr7/int_output',
+filenames <- list.files('Y:/scratch/hgr7/int_output',
                         full.names = TRUE,
                         pattern = '.tif$')
 
 karst15_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_fill_1'))]), # 2017
-                raster(filenames[which(str_detect(filenames, 'karst15_fill_2'))]), # 2018
-                raster(filenames[which(str_detect(filenames, 'karst15_fill_3'))])) # 2019
+                     raster(filenames[which(str_detect(filenames, 'karst15_fill_2'))]), # 2018
+                     raster(filenames[which(str_detect(filenames, 'karst15_fill_3'))])) # 2019
 
 karst25_fill <- list(raster(filenames[which(str_detect(filenames, 'karst25_fill_1'))]), # 2017
-                raster(filenames[which(str_detect(filenames, 'karst25_fill_2'))]), # 2018
-                raster(filenames[which(str_detect(filenames, 'karst25_fill_3'))])) # 2019
+                     raster(filenames[which(str_detect(filenames, 'karst25_fill_2'))]), # 2018
+                     raster(filenames[which(str_detect(filenames, 'karst25_fill_3'))])) # 2019
 
 karst35_fill <- list(raster(filenames[which(str_detect(filenames, 'karst35_fill_1'))]), # 2017
-                raster(filenames[which(str_detect(filenames, 'karst35_fill_2'))]), # 2018
-                raster(filenames[which(str_detect(filenames, 'karst35_fill_3'))])) # 2019
+                     raster(filenames[which(str_detect(filenames, 'karst35_fill_2'))]), # 2018
+                     raster(filenames[which(str_detect(filenames, 'karst35_fill_3'))])) # 2019
 
 karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_fill_1'))]), # 2017
-                  raster(filenames[which(str_detect(filenames, 'karst15_5_fill_2'))]), # 2018
-                  raster(filenames[which(str_detect(filenames, 'karst15_5_fill_3'))])) # 2019
+                       raster(filenames[which(str_detect(filenames, 'karst15_5_fill_2'))]), # 2018
+                       raster(filenames[which(str_detect(filenames, 'karst15_5_fill_3'))])) # 2019
 ########################################################################################################################
 
 ### Remove Landscape Features Not Due to Thermokarst ###################################################################
@@ -539,6 +583,11 @@ karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_f
 # 
 # plot(flow_accum[[1]], breaks = breaks, col = colors)
 
+# remove flow less than 20000000, but keep flow values > 20000000
+# flow <- flow_accum
+# flow[flow < 20000000] <- NA
+# plot(flow)
+
 # # reclassify the flow accumulation raster into a binary stream raster using a cut-off of 20,000,000
 # streams <- reclassify(flow_accum,
 #                       rcl = matrix(c(-Inf,20000000,NA, 20000000,Inf,1),
@@ -547,16 +596,64 @@ karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_f
 # writeRaster(streams, '/scratch/hgr7/hydrologic_flow/streams17_20000000.tif', overwrite = TRUE)
 
 # # load in stream data
-# streams <- raster('/scratch/hgr7/hydrologic_flow/streams17_20000000.tif')
+streams_7000000 <- raster('/scratch/hgr7/hydrologic_flow/streams17_7000000.tif')
+streams_8000000 <- raster('/scratch/hgr7/hydrologic_flow/streams17_8000000.tif')
+streams_20000000 <- raster('/scratch/hgr7/hydrologic_flow/streams17_20000000.tif')
 # 
-# # buffer streams 15 m on either side
-# stream_buffer_15 <- buffer(streams, width = 15, dissolve = TRUE)
-# stream_buffer_15[which(is.na(stream_buffer_15[]))] <- 0
-# writeRaster(stream_buffer_15, '/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_15.tif', overwrite = TRUE)
-# plot(stream_buffer_15)
+# # buffer streams 50 m on either side of streams_7000000
+# stream_buffer_50 <- buffer(streams_7000000, width = 50, dissolve = TRUE)
+# stream_buffer_50[which(is.na(stream_buffer_15[]))] <- 0
+# writeRaster(stream_buffer_50, '/scratch/hgr7/hydrologic_flow/streams17_7000000_buffer_50.tif', overwrite = TRUE)
+stream_buffer_15 <- raster('/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_15.tif')
+plot(stream_buffer_15)
 # 
-# stream_buffer_15 <- raster('/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_15.tif')
+# # buffer streams 100 m on either side of streams_8000000
+# stream_buffer_100 <- buffer(streams_8000000, width = 100, dissolve = TRUE)
+# stream_buffer_50[which(is.na(stream_buffer_15[]))] <- 0
+# writeRaster(stream_buffer_50, '/scratch/hgr7/hydrologic_flow/streams17_7000000_buffer_50.tif', overwrite = TRUE)
+stream_buffer_15 <- raster('/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_15.tif')
+plot(stream_buffer_15)
 # 
+# # buffer streams 250 m on either side
+# stream_buffer_250 <- buffer(streams_20000000, width = 250, dissolve = TRUE)
+# stream_buffer_250[which(is.na(stream_buffer_250[]))] <- 0
+# writeRaster(stream_buffer_250, '/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_250.tif', overwrite = TRUE)
+stream_buffer_250 <- raster('/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_250.tif')
+plot(stream_buffer_250)
+# 
+# # buffer streams 500 m on either side
+# stream_buffer_500 <- buffer(streams_20000000, width = 500, dissolve = TRUE)
+# stream_buffer_500[which(is.na(stream_buffer_500[]))] <- 0
+# writeRaster(stream_buffer_500, '/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_500.tif', overwrite = TRUE)
+# stream_buffer_500 <- raster('/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_500.tif')
+# plot(stream_buffer_250)
+#
+
+stream_buffer_15 <- raster('Y:/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_15.tif')
+stream_buffer_50 <- raster('Y:/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_15.tif')
+stream_buffer_250 <- raster('Y:/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_15.tif')
+stream_buffer_500 <- raster('Y:/scratch/hgr7/hydrologic_flow/streams17_20000000_buffer_500.tif')
+
+plot(stream_buffer_250)
+
+test1 <- reclassify(karst35_fill[[1]] - stream_buffer_500, rcl = matrix(c(-Inf,0,0, 0,Inf,1), ncol = 3, byrow = TRUE))
+plot(test1)
+test2 <- reclassify(karst35_fill[[1]] - stream_buffer_250, rcl = matrix(c(-Inf,0,0, 0,Inf,1), ncol = 3, byrow = TRUE))
+plot(test2)
+
+# determine threshold for slope
+colors <- c('#000000', '#FFFFFF')
+breaks <- c(0, 0.01, 1.58)
+
+plot(slope[[1]], breaks = breaks, col = colors)
+
+# reclassify slope
+slope_25 <- reclassify(slope[[1]], rcl = matrix(c(0,0.436,0, 0.436,1.58,1), ncol = 3, byrow = TRUE))
+plot(slope_25)
+
+# combine slope threshold and stream buffer into one filter raster
+filter <- reclassify(slope_25 + stream_buffer_500, rcl = matrix(c(0,0,0, 0,2,1), ncol = 3, byrow = TRUE))
+
 # #Register CoreCluster
 # cl <- makeCluster(UseCores)
 # registerDoParallel(cl)
