@@ -636,11 +636,11 @@ stream_buffer_250 <- raster('/scratch/hgr7/hydrologic_flow/streams17_20000000_bu
 #
 
 ### Determine threshold value for slope (remove steep slopes)
-# determine threshold for slope
-colors <- c('#000000', '#FFFFFF')
-breaks <- c(0, 0.01, 1.58)
-
-plot(slope[[1]], breaks = breaks, col = colors)
+# # determine threshold for slope
+# colors <- c('#000000', '#FFFFFF')
+# breaks <- c(0, 0.01, 1.58)
+# 
+# plot(slope[[1]], breaks = breaks, col = colors)
 
 # reclassify slope
 # slope_25 <- reclassify(slope[[1]], rcl = matrix(c(0,0.436,0, 0.436,1.58,1), ncol = 3, byrow = TRUE))
@@ -648,8 +648,95 @@ plot(slope[[1]], breaks = breaks, col = colors)
 # writeRaster(slope_25, 'Y:/scratch/hgr7/int_output/slope_25.tif')
 slope_25 <- raster('/scratch/hgr7/int_output/slope_25.tif')
 
-# combine slope threshold and stream buffer into one filter raster
-# filter <- reclassify(slope_25 + stream_buffer_50 + stream_buffer_100 + stream_buffer_250, rcl = matrix(c(0,0,0, 0,5,1), ncol = 3, byrow = TRUE))
+### Remove EML
+### take difference of filled vs. unfilled DTM and intersect with streams
+# # read in data
+# elev_fill <- raster('/scratch/hgr7/hydrologic_flow/neon_sink_fill_2017.tif')
+
+# # difference of filled vs. unfilled DTM
+# sinks <- elev_fill - elev[[1]]
+# # plot(sinks)
+
+# # reclassify sinks to presence or absence
+# sinks_class <- reclassify(sinks, rcl = matrix(c(-Inf,0.1,NA, 0.1,Inf,1), ncol = 3, byrow = TRUE))
+# # plot(sinks_class)
+
+# # fill holes in sink classification
+# sinks_fill <- fill_gaps(sinks_class)
+# sinks_fill[sinks_fill == -Inf] <- NA
+
+# # convert sinks to sp polygons
+# sinks_sp <- rasterToPolygons(sinks_fill, dissolve = TRUE)
+# writeOGR(sinks_sp, dsn = '/scratch/hgr7/hydrologic_flow/', layer = 'neon_sinks_2017', driver = 'ESRI Shapefile')
+
+# # read in sinks as sf
+# sinks_sf <- st_read('/scratch/hgr7/hydrologic_flow/neon_sinks_2017_multi.shp')
+
+# convert the one multipolygon into many individual polygons
+# sinks_sf <- st_cast(sinks_sf, 'POLYGON')
+# st_write(sinks_sf, '/scratch/hgr7/hydrologic_flow/neon_sinks_2017_poly.shp')
+# plot(sinks_sf)
+
+# Convert streams to polygons
+# streams_sp <- rasterToPolygons(streams_7000000, dissolve = TRUE)
+# writeOGR(streams_sp, dsn = '/scratch/hgr7/hydrologic_flow/', layer = 'streams_7000000', driver = 'ESRI Shapefile')
+
+# # Read in sf datasets
+# sinks_sf <- st_read('/scratch/hgr7/hydrologic_flow/neon_sinks_2017_poly.shp') %>% st_transform(26906)
+# streams_sf <- st_read('/scratch/hgr7/hydrologic_flow/streams_7000000.shp') %>% st_transform(26906)
+
+# remove sinks that do not have inlet our outlet streams
+# # test how the functions work
+# # it looks like st_intersects with sparse = FALSE will return the lakes (polygons)
+# #  which have a stream (polygons) that intersects it
+# # (even if it doesn't completely cross the lake)
+# test_stream <- raster(xmn = 385000,
+#                       xmx = 385010,
+#                       ymn = 7085000,
+#                       ymx = 7085014,
+#                       resolution = c(1,1),
+#                       vals = c(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
+#                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
+#                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
+#                                NA, 1, 1,NA,NA,NA,NA,NA,NA,NA,
+#                                NA,NA, 1,NA,NA,NA,NA,NA,NA,NA,
+#                                NA,NA, 1, 1,NA,NA,NA,NA,NA,NA,
+#                                NA,NA,NA, 1,NA,NA,NA,NA,NA,NA,
+#                                NA,NA,NA, 1, 1, 1,NA,NA,NA,NA,
+#                                NA,NA,NA,NA,NA, 1, 1,NA,NA,NA,
+#                                NA,NA,NA,NA,NA,NA, 1, 1, 1,NA,
+#                                NA,NA,NA,NA,NA,NA,NA,NA, 1, 1,
+#                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
+#                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
+#                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA),
+#                       crs = 26905)
+# test_stream_sf <- st_as_sf(rasterToPolygons(test_stream, dissolve = TRUE)) %>% st_set_crs(26905)
+# 
+# test_coords <- st_sfc(st_polygon(list(cbind(c(385008, 385010, 385010, 385008, 385008),
+#                                             c(7085014, 7085014, 7085012, 7085012, 7085014)))),
+#                       st_polygon(list(cbind(c(385001, 385004, 385004, 385001, 385001),
+#                                             c(7085010, 7085010, 7085008, 7085008, 7085010)))),
+#                       st_polygon(list(cbind(c(385000, 385002, 385002, 385000, 385000),
+#                                             c(7085012, 7085012, 7085010, 7085010, 7085012)))))
+# test_lakes <- st_sf(test_coords) %>% st_set_crs(26905)
+# 
+# test_index <- st_intersects(test_lakes, test_stream_sf, sparse = FALSE)
+# test_intersects <- test_lakes %>% filter(as.vector(test_index))
+
+# # join lakes and streams to find lakes with an inlet or outlet
+# lakes_index <- st_join(sinks_sf, streams_sf)
+# 
+# # subset the sinks to only include lakes with inlet or outlet streams
+# lakes <- lakes_index %>% filter(!is.na(value))
+# st_write(lakes, '/scratch/hgr7/hydrologic_flow/lakes_poly_2017.shp')
+# 
+# # convert to raster to join with the non-thermokarst filter
+# lakes_raster <- rasterize(lakes, slope25)
+# writeRaster(lakes_raster, '/scratch/hgr7/hydrologic_flow/lakes_2017.tif')
+lakes_raster <- raster('/scratch/hgr7/hydrologic_flow/lakes_2017.tif')
+
+# combine slope threshold, stream buffer, and lakes into one filter raster
+# filter <- reclassify(slope_25 + stream_buffer_50 + stream_buffer_100 + stream_buffer_250 + lakes_raster, rcl = matrix(c(0,0,0, 0,5,1), ncol = 3, byrow = TRUE))
 # writeRaster(filter, '/scratch/hgr7/int_output/filter_1.tif')
 # plot(filter)
 filter <- raster('/scratch/hgr7/int_output/filter_1.tif')
