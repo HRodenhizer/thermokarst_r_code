@@ -736,9 +736,9 @@ slope_25 <- raster('/scratch/hgr7/int_output/slope_25.tif')
 lakes_raster <- raster('/scratch/hgr7/hydrologic_flow/lakes_2017.tif')
 
 # combine slope threshold, stream buffer, and lakes into one filter raster
-# filter <- reclassify(slope_25 + stream_buffer_50 + stream_buffer_100 + stream_buffer_250 + lakes_raster, rcl = matrix(c(0,0,0, 0,5,1), ncol = 3, byrow = TRUE))
-# writeRaster(filter, '/scratch/hgr7/int_output/filter_1.tif')
-# plot(filter)
+filter <- reclassify(slope_25 + stream_buffer_50 + stream_buffer_100 + stream_buffer_250 + lakes_raster, rcl = matrix(c(0,0,0, 0,5,1), ncol = 3, byrow = TRUE))
+writeRaster(filter, '/scratch/hgr7/int_output/filter_1.tif')
+plot(filter)
 filter <- raster('/scratch/hgr7/int_output/filter_1.tif')
 
 ### filter out steep slopes and stream buffer
