@@ -21,10 +21,13 @@ slope25 <- raster('/scratch/hgr7/int_output/slope_25.tif')
 
 ### Intersect sinks and streams ########################################################################################
 # join lakes and streams to find lakes with an inlet or outlet
-lakes_index <- st_join(sinks_sf, streams_sf)
+start <- Sys.time()
+lakes_index <- st_intersects(sinks_sf, streams_sf, sparse = FALSE)
+end <- Sys.time()
+difftime(end, start)
 
 # subset the sinks to only include lakes with inlet or outlet streams
-lakes <- lakes_index %>% filter(!is.na(value))
+lakes <- sinks_sf %>% filter(as.vector(lakes_index))
 st_write(lakes, '/scratch/hgr7/hydrologic_flow/lakes_poly_2017.shp')
 
 # convert to raster to join with the non-thermokarst filter
