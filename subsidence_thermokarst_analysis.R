@@ -12,10 +12,10 @@ library(sf)
 ### Load Data ##########################################################################################################
 sub <- brick(stack('Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/Subsidence/subsidence_2017_2018.tif',
                    'Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/Subsidence/subsidence_2017_2019.tif'))
-# this is not the actual file, but just a placeholder/file to test with
-karst <- brick(stack("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst_combined_4_filter_1.tif",
-                     "Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst_combined_4_filter_2.tif",
-                     "Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst_combined_4_filter_3.tif"))
+
+karst <- brick(stack("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst_combined_3_filter_1.tif",
+                     "Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst_combined_3_filter_2.tif",
+                     "Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst_combined_3_filter_3.tif"))
 ########################################################################################################################
 
 ### Calculate Thermokarst Coverage #####################################################################################
