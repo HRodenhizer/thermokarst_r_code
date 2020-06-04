@@ -10,16 +10,19 @@ library(tidyverse)
 ########################################################################################################################
 
 ### Load Data ##########################################################################################################
-karst_extract <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/thermokarst_extract_18.shp") %>%
+karst_extract <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/thermokarst_extract_18_9km.shp") %>%
   st_set_crs(32606)
 validated_samples <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/samples_stratified_100_scrambled.shp") %>%
-  st_set_crs(32606)
+  st_set_crs(32606) %>%
+  mutate(validation = as.numeric(as.character(validation)),
+         confidence = as.numeric(as.character(confidence)))
 ########################################################################################################################
 
 ### Join Validated Points with Extracted Values ########################################################################
 validation_df <- full_join(st_drop_geometry(validated_samples),
                            select(st_drop_geometry(karst_extract), -validation),
                            by = c('cell', 'x', 'y'))
+
 ########################################################################################################################
 
 ### Compare Performance of Different Thermokarst Classifications #######################################################
@@ -82,9 +85,18 @@ accuracy_by_conf_1
 accuracy_by_conf_2
 accuracy_by_conf_3
 
-performance_by_conf_1 <- table(validation_df$validation[which(validation_df$confidence == 1)], validation_df$tk_comb_3[which(validation_df$confidence == 1)])
-performance_by_conf_2 <- table(validation_df$validation[which(validation_df$confidence == 2)], validation_df$tk_comb_3[which(validation_df$confidence == 2)])
-performance_by_conf_3 <- table(validation_df$validation[which(validation_df$confidence == 3)], validation_df$tk_comb_3[which(validation_df$confidence == 3)])
+performance_by_conf_1 <- table(validation_df$validation[which(validation_df$confidence == 1)],
+                               validation_df$tk_comb_3[which(validation_df$confidence == 1)])/
+  sum(table(validation_df$validation[which(validation_df$confidence == 1)],
+            validation_df$tk_comb_3[which(validation_df$confidence == 1)])[1:2,1:2])
+performance_by_conf_2 <- table(validation_df$validation[which(validation_df$confidence == 2)],
+                               validation_df$tk_comb_3[which(validation_df$confidence == 2)])/
+  sum(table(validation_df$validation[which(validation_df$confidence == 2)],
+            validation_df$tk_comb_3[which(validation_df$confidence == 2)])[1:2,1:2])
+performance_by_conf_3 <- table(validation_df$validation[which(validation_df$confidence == 3)],
+                               validation_df$tk_comb_3[which(validation_df$confidence == 3)])/
+  sum(table(validation_df$validation[which(validation_df$confidence == 3)],
+            validation_df$tk_comb_3[which(validation_df$confidence == 3)])[1:2,1:2])
 
 performance_by_conf_1
 performance_by_conf_2
