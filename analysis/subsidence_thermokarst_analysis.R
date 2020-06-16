@@ -213,7 +213,9 @@ wedges <- st_as_sf(st_collection_extract(st_split(circle_sf$geometry,
 wedges_sf <- wedges %>%
   mutate(n = seq(1:360))
 
-ggplot() + geom_sf(data = wedges_sf, aes(color = n))
+ggplot() + geom_sf(data = wedges_sf, aes(color = n)) + geom_sf(data = ec_sf) + geom_sf(data = circle_sf, fill = NA)
+
+st_write(wedges_sf, 'Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly.shp')
 ########################################################################################################################
 
 ### Summary Statistics From Polygons ###################################################################################
