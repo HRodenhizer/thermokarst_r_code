@@ -10,182 +10,323 @@ library(rsvg)
 ########################################################################################################################
 
 ### Create Flow Chart of Thermokarst Model #############################################################################
-# with details and subgraphs
-graph <- "digraph {
+### list of node labels
+# node labels for the main classification flow
+main_labels <- c('LiDAR',
+                 'Digital Terrain Model\n[Floating Point]',
+                 'Median Elevation\n[Floating Point]',
+                 'Microtopography\n[0,1]',
+                 'Local Elevation Minima\n[0,1]',
+                 'Raw Thermokarst Classification\n[0,1]',
+                 'Filled Thermokarst\n[0,1]',
+                 'Filled Thermokarst Combinations\n[0,1]',
+                 'Final Thermokarst Classification\n[0,1]')
+# node labels for the landscape features filter
+filter_labels <- c('Slope\n[&deg;]',
+                   'Steep Slopes\n[0,1]',
+                   'Flow Direction\n[Integer]',
+                   'Flow Accumulation\n[Integer]',
+                   'Stream\n[0,1]',
+                   'Stream Buffer Layers\n[0,1]',
+                   'Stream Buffer\n[0,1]',
+                   'Landscape Features\n[0,1,2]',
+                   'Filter\n[0,1]')
+# combine all node labels into one
+node_labels <- c(main_labels, filter_labels)
 
-# top section (single Column)
-subgraph cluster_0 {
-style = invisible
-node [shape = rectangle, style = filled, fillcolor = White, penwidth = 2]
-a [label = <<b>LiDAR</b>>, shape = rectangle]
-b [label = <<b>Digital Terrain Model</b>  <br/>  [Floating Point]>]
-1 [label =  'Pre-Processing', shape = oval, penwidth = 1]
-a  -> 1 [arrowhead = none]
-1 -> b
+# types to distinguish between the main classification and landscape features filter
+node_types <- c(rep('main', length(main_labels)),
+                rep('filter', length(filter_labels)))
+# shapes - all rectangle currently
+node_shapes <- c(rep('rectangle', length(node_labels)))
+# node outline colors - all black currently
+node_colors <- c(rep('black', length(node_labels)))
+# node fill color - all white currently
+node_fill <- c(rep('white', length(node_labels)))
+# node width - set to a fixed width currently. I don't think there is a way to automatically adjust.
+node_widths <- c(2.25)
 
-}
+### create node dataframe using input variables from previous section
+nodes <- create_node_df(n = length(node_labels),
+                        type = node_types,
+                        label = node_labels,
+                        shape = node_shapes,
+                        fontcolor = node_colors,
+                        color = node_colors,
+                        fillcolor = node_fill,
+                        width = node_widths)
 
-# Microtopography column
-subgraph cluster_1 {
-label = <<b>Main Thermokarst Classification</b>>
-node [shape = rectangle, style = filled, fillcolor = White, penwidth = 2]
+### Edge Definitions
+# from and to nodes
+edges_from <- c(nodes$id[which(nodes$label == 'LiDAR')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Median Elevation\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+                nodes$id[which(nodes$label == 'Local Elevation Minima\n[0,1]')],
+                nodes$id[which(nodes$label == 'Raw Thermokarst Classification\n[0,1]')],
+                nodes$id[which(nodes$label == 'Filled Thermokarst\n[0,1]')],
+                nodes$id[which(nodes$label == 'Filled Thermokarst Combinations\n[0,1]')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Slope\n[&deg;]')],
+                nodes$id[which(nodes$label == 'Steep Slopes\n[0,1]')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Flow Direction\n[Integer]')],
+                nodes$id[which(nodes$label == 'Flow Accumulation\n[Integer]')],
+                nodes$id[which(nodes$label == 'Stream\n[0,1]')],
+                nodes$id[which(nodes$label == 'Stream Buffer Layers\n[0,1]')],
+                nodes$id[which(nodes$label == 'Stream Buffer\n[0,1]')],
+                nodes$id[which(nodes$label == 'Landscape Features\n[0,1,2]')],
+                nodes$id[which(nodes$label == 'Filter\n[0,1]')])
 
-# datasets
-c1 [label = <<b>Median Elevation</b>  <br/>  [Floating Point]>]
-d1 [label = <<b>Microtopography</b>  <br/>  [Floating Point]>]
-e1 [label = <<b>Local Elevation Minima</b> <br/>[0,1]>]
-i [label = <<b>Raw Thermokarst Classification</b>   <br/>   [0,1]>]
-j [label = <<b>Filled Thermokarst</b>  <br/>  [0,1]>]
-k [label = <<b>Filled Thermokarst Combinations</b>   <br/> [0,1]>]
-l [label = <<b>Final Thermokarst Classification</b>   <br/>  [0,1]>]
+edges_to <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+              nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+              nodes$id[which(nodes$label == 'Median Elevation\n[Floating Point]')],
+              nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+              nodes$id[which(nodes$label == 'Local Elevation Minima\n[0,1]')],
+              nodes$id[which(nodes$label == 'Raw Thermokarst Classification\n[0,1]')],
+              nodes$id[which(nodes$label == 'Filled Thermokarst\n[0,1]')],
+              nodes$id[which(nodes$label == 'Filled Thermokarst Combinations\n[0,1]')],
+              nodes$id[which(nodes$label == 'Final Thermokarst Classification\n[0,1]')],
+              nodes$id[which(nodes$label == 'Slope\n[&deg;]')],
+              nodes$id[which(nodes$label == 'Steep Slopes\n[0,1]')],
+              nodes$id[which(nodes$label == 'Landscape Features\n[0,1,2]')],
+              nodes$id[which(nodes$label == 'Flow Direction\n[Integer]')],
+              nodes$id[which(nodes$label == 'Flow Accumulation\n[Integer]')],
+              nodes$id[which(nodes$label == 'Stream\n[0,1]')],
+              nodes$id[which(nodes$label == 'Stream Buffer Layers\n[0,1]')],
+              nodes$id[which(nodes$label == 'Stream Buffer\n[0,1]')],
+              nodes$id[which(nodes$label == 'Landscape Features\n[0,1,2]')],
+              nodes$id[which(nodes$label == 'Filter\n[0,1]')],
+              nodes$id[which(nodes$label == 'Raw Thermokarst Classification\n[0,1]')])
 
-# processes
-2.1 [label = 'Circular Focal Mean*\nRadius = 15 m or\nRadius = 25 m or\nRadius = 35 m', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-3.1 [label = 'DTM - Median Elevation', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-4.1 [label = 'Reclassify\n0: >=0, 1: <0', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-5.1 [label = 'Elevation Minima - Filter', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-7 [label = 'Fill Holes\n2x(Dilate then Erode)', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-8 [label = 'Combine Filled Thermokarst Layers*\nAdd Layers Derived From Different Radii', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-9 [label = 'Validation', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# edge labels
+arrow_labels <- c('Pre-Processing',
+                  '',
+                  'Circular Focal Mean\nRadius = [15 m, 25 m, 35 m]',
+                  'DTM - Median Elevation',
+                  'Reclassify\n0: >=0, 1: <0',
+                  '',
+                  'Fill Holes\n2x(Dilate then Erode)',
+                  'Combine Filled Thermokarst Layers',
+                  'Validation',
+                  'Terrain Function',
+                  'Reclassify\n0: <25&deg;, 1: >=25&deg;',
+                  '',
+                  'Flow Direction Tool',
+                  'Flow Accumulation Tool',
+                  'Reclassify*\n0: <7,000,000, 1: >7,000,000 or\n0: <8,000,000, 1: >8,000,000 or\n0: <20,000,000, 1: >20,000,000',
+                  'Buffer*\nWidth = 50 m or\nWidth = 100 m or\nWidth = 250 m',
+                  'Combine Stream Buffer Layers*\n0: all(Stream Buffer Layers == 0),\n1: !all(Stream Buffer Layers == 0)',
+                  'Steep Slopes + Stream Buffer',
+                  'Reclassify\n0: <1, 1: >=1',
+                  'Elevation Minima - Filter')
+# edge arrow colors - currently set by software used for that step
+# black = NEON
+# blue = R
+# green = ArcMap
+arrow_colors <- c('black',
+                  rep('SteelBlue2',11),
+                  rep('DarkOliveGreen3', 2),
+                  rep('SteelBlue2', 6))
+# edge arrow width - currently set by number of times the step is run
+arrow_width <- c(rep(1, 1),
+                 rep(2, 7),
+                 rep(1, 6),
+                 rep(2, 2),
+                 rep(1, 3),
+                 2)
 
-# edges
-2.1 -> c1
-2.1 -> c1
-2.1 -> c1
-c1 -> 3.1 [arrowhead = none]
-c1 -> 3.1 [arrowhead = none]
-c1 -> 3.1 [arrowhead = none]
-3.1 -> d1
-3.1 -> d1
-3.1 -> d1
-d1 -> 4.1 [arrowhead = none]
-d1 -> 4.1 [arrowhead = none]
-d1 -> 4.1 [arrowhead = none]
-4.1 -> e1
-4.1 -> e1
-4.1 -> e1
-e1 -> 5.1 [arrowhead = none]
-e1 -> 5.1 [arrowhead = none]
-e1 -> 5.1 [arrowhead = none]
-5.1 -> i
-5.1 -> i
-5.1 -> i
-i -> 7 [arrowhead = none]
-i -> 7 [arrowhead = none]
-i -> 7 [arrowhead = none]
-7 -> j
-7 -> j
-7 -> j
-j -> 8 [arrowhead = none]
-j -> 8 [arrowhead = none]
-j -> 8 [arrowhead = none]
-8 -> k
-8 -> k
-8 -> k
-k -> 9 [arrowhead = none]
-k -> 9 [arrowhead = none]
-k -> 9 [arrowhead = none]
-9 -> l
+### create edges dataframe from variables in previous section
+edges <- create_edge_df(from = edges_from,
+                        to = edges_to,
+                        fontcolor = c('black'),
+                        color = arrow_colors,
+                        label = arrow_labels,
+                        headport = 'n',
+                        arrowhead = c('vee'),
+                        penwidth = arrow_width)
 
-}
-
-subgraph cluster_2 {
-label = <<b>Landscape Feature Filter</b>>
-node [shape = rectangle, style = filled, fillcolor = White, penwidth = 2]
-
-###### nodes ######
-### datasets
-# Slope Column
-c2 [label = <<b>Slope</b> <br/>  [&deg;]>]
-d2 [label = <<b>Hillslopes</b>  <br/>  [0,1]>]
-
-# Stream Column
-c3 [label = <<b>Flow Direction</b>  <br/>  [Integer]>]
-d3 [label = <<b>Flow Accumulation</b>  <br/>  [Integer]>]
-e3 [label = <<b>Stream</b> <br/>  [0,1]>]
-f3 [label = <<b>Stream Buffer Layers</b>  <br/>  [0,1]>]
-g3 [label = <<b>Stream Buffer</b>  <br/>  [0,1]>]
-
-# Filter Column (Slope and Stream Columns join)
-g [label = <<b>Landscape Features</b>  <br/>  [0,1,2]>]
-h [label = <<b>Filter</b> <br/>  [0,1]>]
-
-### processes
-# Slope Column
-2.2 [label = 'Terrain Function', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-3.2 [label = 'Reclassify\n0: <25&deg;, 1: >=25&deg;', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-
-# Stream Column
-2.3 [label = 'Flow Direction Tool', shape = oval, fillcolor = DarkOliveGreen3, penwidth = 1]
-3.3 [label = 'Flow Accumulation Tool', shape = oval, fillcolor = DarkOliveGreen3, penwidth = 1]
-4.3 [label = 'Reclassify*\n0: <7,000,000, 1: >7,000,000 or\n0: <8,000,000, 1: >8,000,000 or\n0: <20,000,000, 1: >20,000,000', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-5.3 [label = 'Buffer*\nWidth = 50 m or\nWidth = 100 m or\nWidth = 250 m', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-6.3 [label = 'Combine Stream Buffer Layers*\n0: all(Stream Buffer Layers == 0),\n1: !all(Stream Buffer Layers == 0)', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-
-# Filter Column (Slope and Stream Columns join)
-4.2 [label = 'Hillslopes + Stream Buffer', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-5.2 [label = 'Reclassify\n0: <1, 1: >=1', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
-
-
-###### edges ######
-# Slope Column
-2.2 -> c2
-c2 -> 3.2 [arrowhead = none]
-3.2 -> d2
-
-# Stream Column
-2.3 -> c3
-c3 -> 3.3 [arrowhead = none]
-3.3 -> d3
-d3 -> 4.3 [arrowhead = none]
-d3 -> 4.3 [arrowhead = none]
-d3 -> 4.3 [arrowhead = none]
-4.3 -> e3
-4.3 -> e3
-4.3 -> e3
-e3 -> 5.3 [arrowhead = none]
-e3 -> 5.3 [arrowhead = none]
-e3 -> 5.3 [arrowhead = none]
-5.3 -> f3
-5.3 -> f3
-5.3 -> f3
-f3 -> 6.3 [arrowhead = none]
-f3 -> 6.3 [arrowhead = none]
-f3 -> 6.3 [arrowhead = none]
-6.3 -> g3
-
-# Filter Column (Slope and Stream Columns join)
-{d2 g3} -> 4.2 [arrowhead = none]
-4.2 -> g
-g -> 5.2 [arrowhead = none]
-5.2 -> h
-
-}
-
-b -> {2.1 2.2 2.3 3.1} [arrowhead = none]
-h -> 5.1 [arrowhead = none]
-
-}"
-
-grViz(graph)
-setwd('C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing')
-
-grViz(graph) %>%
-  export_svg %>%
-  charToRaw %>%
-  rsvg_pdf('test.pdf')
-
-nodes <- create_node_df(n = 2,
-                      label = c('LiDAR', 'DTM'))
-edges <- create_edge_df(from = c(1),
-                        to = c(2))
+### create graph
 graph <- create_graph(nodes_df = nodes,
-                      edges_df = edges)
+                      edges_df = edges,
+                      attr_theme = 'tb')
+### visualize graph
 graph %>% render_graph()
 
-graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/test.pdf',
-             file_type = "pdf")
+# save file
+# graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/test.png',
+#              file_type = "png")
 
+
+
+#### Old Code ############
+
+# # with details and subgraphs
+# graph <- "digraph {
+# 
+# # top section (single Column)
+# subgraph cluster_0 {
+# style = invisible
+# node [shape = rectangle, style = filled, fillcolor = White, penwidth = 2]
+# a [label = <<b>LiDAR</b>>, shape = rectangle]
+# b [label = <<b>Digital Terrain Model</b>  <br/>  [Floating Point]>]
+# 1 [label =  'Pre-Processing', shape = oval, penwidth = 1]
+# a  -> 1 [arrowhead = none]
+# 1 -> b
+# 
+# }
+# 
+# # Microtopography column
+# subgraph cluster_1 {
+# label = <<b>Main Thermokarst Classification</b>>
+# node [shape = rectangle, style = filled, fillcolor = White, penwidth = 2]
+# 
+# # datasets
+# c1 [label = <<b>Median Elevation</b>  <br/>  [Floating Point]>]
+# d1 [label = <<b>Microtopography</b>  <br/>  [Floating Point]>]
+# e1 [label = <<b>Local Elevation Minima</b> <br/>[0,1]>]
+# i [label = <<b>Raw Thermokarst Classification</b>   <br/>   [0,1]>]
+# j [label = <<b>Filled Thermokarst</b>  <br/>  [0,1]>]
+# k [label = <<b>Filled Thermokarst Combinations</b>   <br/> [0,1]>]
+# l [label = <<b>Final Thermokarst Classification</b>   <br/>  [0,1]>]
+# 
+# # processes
+# 2.1 [label = 'Circular Focal Mean*\nRadius = 15 m or\nRadius = 25 m or\nRadius = 35 m', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 3.1 [label = 'DTM - Median Elevation', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 4.1 [label = 'Reclassify\n0: >=0, 1: <0', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 5.1 [label = 'Elevation Minima - Filter', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 7 [label = 'Fill Holes\n2x(Dilate then Erode)', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 8 [label = 'Combine Filled Thermokarst Layers*\nAdd Layers Derived From Different Radii', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 9 [label = 'Validation', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 
+# # edges
+# 2.1 -> c1
+# 2.1 -> c1
+# 2.1 -> c1
+# c1 -> 3.1 [arrowhead = none]
+# c1 -> 3.1 [arrowhead = none]
+# c1 -> 3.1 [arrowhead = none]
+# 3.1 -> d1
+# 3.1 -> d1
+# 3.1 -> d1
+# d1 -> 4.1 [arrowhead = none]
+# d1 -> 4.1 [arrowhead = none]
+# d1 -> 4.1 [arrowhead = none]
+# 4.1 -> e1
+# 4.1 -> e1
+# 4.1 -> e1
+# e1 -> 5.1 [arrowhead = none]
+# e1 -> 5.1 [arrowhead = none]
+# e1 -> 5.1 [arrowhead = none]
+# 5.1 -> i
+# 5.1 -> i
+# 5.1 -> i
+# i -> 7 [arrowhead = none]
+# i -> 7 [arrowhead = none]
+# i -> 7 [arrowhead = none]
+# 7 -> j
+# 7 -> j
+# 7 -> j
+# j -> 8 [arrowhead = none]
+# j -> 8 [arrowhead = none]
+# j -> 8 [arrowhead = none]
+# 8 -> k
+# 8 -> k
+# 8 -> k
+# k -> 9 [arrowhead = none]
+# k -> 9 [arrowhead = none]
+# k -> 9 [arrowhead = none]
+# 9 -> l
+# 
+# }
+# 
+# subgraph cluster_2 {
+# label = <<b>Landscape Feature Filter</b>>
+# node [shape = rectangle, style = filled, fillcolor = White, penwidth = 2]
+# 
+# ###### nodes ######
+# ### datasets
+# # Slope Column
+# c2 [label = <<b>Slope</b> <br/>  [&deg;]>]
+# d2 [label = <<b>Hillslopes</b>  <br/>  [0,1]>]
+# 
+# # Stream Column
+# c3 [label = <<b>Flow Direction</b>  <br/>  [Integer]>]
+# d3 [label = <<b>Flow Accumulation</b>  <br/>  [Integer]>]
+# e3 [label = <<b>Stream</b> <br/>  [0,1]>]
+# f3 [label = <<b>Stream Buffer Layers</b>  <br/>  [0,1]>]
+# g3 [label = <<b>Stream Buffer</b>  <br/>  [0,1]>]
+# 
+# # Filter Column (Slope and Stream Columns join)
+# g [label = <<b>Landscape Features</b>  <br/>  [0,1,2]>]
+# h [label = <<b>Filter</b> <br/>  [0,1]>]
+# 
+# ### processes
+# # Slope Column
+# 2.2 [label = 'Terrain Function', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 3.2 [label = 'Reclassify\n0: <25&deg;, 1: >=25&deg;', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 
+# # Stream Column
+# 2.3 [label = 'Flow Direction Tool', shape = oval, fillcolor = DarkOliveGreen3, penwidth = 1]
+# 3.3 [label = 'Flow Accumulation Tool', shape = oval, fillcolor = DarkOliveGreen3, penwidth = 1]
+# 4.3 [label = 'Reclassify*\n0: <7,000,000, 1: >7,000,000 or\n0: <8,000,000, 1: >8,000,000 or\n0: <20,000,000, 1: >20,000,000', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 5.3 [label = 'Buffer*\nWidth = 50 m or\nWidth = 100 m or\nWidth = 250 m', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 6.3 [label = 'Combine Stream Buffer Layers*\n0: all(Stream Buffer Layers == 0),\n1: !all(Stream Buffer Layers == 0)', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 
+# # Filter Column (Slope and Stream Columns join)
+# 4.2 [label = 'Hillslopes + Stream Buffer', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 5.2 [label = 'Reclassify\n0: <1, 1: >=1', shape = oval, fillcolor = SteelBlue2, penwidth = 1]
+# 
+# 
+# ###### edges ######
+# # Slope Column
+# 2.2 -> c2
+# c2 -> 3.2 [arrowhead = none]
+# 3.2 -> d2
+# 
+# # Stream Column
+# 2.3 -> c3
+# c3 -> 3.3 [arrowhead = none]
+# 3.3 -> d3
+# d3 -> 4.3 [arrowhead = none]
+# d3 -> 4.3 [arrowhead = none]
+# d3 -> 4.3 [arrowhead = none]
+# 4.3 -> e3
+# 4.3 -> e3
+# 4.3 -> e3
+# e3 -> 5.3 [arrowhead = none]
+# e3 -> 5.3 [arrowhead = none]
+# e3 -> 5.3 [arrowhead = none]
+# 5.3 -> f3
+# 5.3 -> f3
+# 5.3 -> f3
+# f3 -> 6.3 [arrowhead = none]
+# f3 -> 6.3 [arrowhead = none]
+# f3 -> 6.3 [arrowhead = none]
+# 6.3 -> g3
+# 
+# # Filter Column (Slope and Stream Columns join)
+# {d2 g3} -> 4.2 [arrowhead = none]
+# 4.2 -> g
+# g -> 5.2 [arrowhead = none]
+# 5.2 -> h
+# 
+# }
+# 
+# b -> {2.1 2.2 2.3 3.1} [arrowhead = none]
+# h -> 5.1 [arrowhead = none]
+# 
+# }"
+# 
+# grViz(graph)
+# setwd('C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing')
+# 
+# grViz(graph) %>%
+#   export_svg %>%
+#   charToRaw %>%
+#   rsvg_pdf('test.pdf')
+# 
 # # with details
 # grViz("digraph {
 # 
