@@ -24,11 +24,18 @@ main_labels <- c('LiDAR',
 # node labels for the landscape features filter
 filter_labels <- c('Slope\n[&deg;]',
                    'Steep Slopes\n[0,1]',
+                   'Sink Fill\n[Integer]',
                    'Flow Direction\n[Integer]',
                    'Flow Accumulation\n[Integer]',
                    'Stream\n[0,1]',
                    'Stream Buffer Layers\n[0,1]',
                    'Stream Buffer\n[0,1]',
+                   'Sink Depth\n[Integer]',
+                   'Sinks\n[0,1]',
+                   'Sink Polygons\n[Vector]',
+                   'Stream Polygons\n[Vector]',
+                   'Non-Thermokarst Lake Polygons\n[Vector]',
+                   'Non-Thermokarst Lakes\n[0,1]',
                    'Landscape Features\n[0,1,2]',
                    'Filter\n[0,1]')
 # combine all node labels into one
@@ -39,8 +46,8 @@ node_types <- c(rep('main', length(main_labels)),
                 rep('filter', length(filter_labels)))
 # shapes - all rectangle currently
 node_shapes <- c(rep('rectangle', length(node_labels)))
-# node outline colors - all black currently
-node_colors <- c(rep('black', length(node_labels)))
+# node outline colors - black for main model, gray for filter
+node_colors <- c(rep('black', length(main_labels)), rep('DimGray', length(filter_labels)))
 # node fill color - all white currently
 node_fill <- c(rep('white', length(node_labels)))
 # node width - set to a fixed width currently. I don't think there is a way to automatically adjust.
@@ -71,11 +78,21 @@ edges_from <- c(nodes$id[which(nodes$label == 'LiDAR')],
                 nodes$id[which(nodes$label == 'Slope\n[&deg;]')],
                 nodes$id[which(nodes$label == 'Steep Slopes\n[0,1]')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Sink Fill\n[Integer]')],
                 nodes$id[which(nodes$label == 'Flow Direction\n[Integer]')],
                 nodes$id[which(nodes$label == 'Flow Accumulation\n[Integer]')],
                 nodes$id[which(nodes$label == 'Stream\n[0,1]')],
                 nodes$id[which(nodes$label == 'Stream Buffer Layers\n[0,1]')],
                 nodes$id[which(nodes$label == 'Stream Buffer\n[0,1]')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Sink Fill\n[Integer]')],
+                nodes$id[which(nodes$label == 'Sink Depth\n[Integer]')],
+                nodes$id[which(nodes$label == 'Sinks\n[0,1]')],
+                nodes$id[which(nodes$label == 'Stream\n[0,1]')],
+                nodes$id[which(nodes$label == 'Sink Polygons\n[Vector]')],
+                nodes$id[which(nodes$label == 'Stream Polygons\n[Vector]')],
+                nodes$id[which(nodes$label == 'Non-Thermokarst Lake Polygons\n[Vector]')],
+                nodes$id[which(nodes$label == 'Non-Thermokarst Lakes\n[0,1]')],
                 nodes$id[which(nodes$label == 'Landscape Features\n[0,1,2]')],
                 nodes$id[which(nodes$label == 'Filter\n[0,1]')])
 
@@ -91,11 +108,21 @@ edges_to <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Po
               nodes$id[which(nodes$label == 'Slope\n[&deg;]')],
               nodes$id[which(nodes$label == 'Steep Slopes\n[0,1]')],
               nodes$id[which(nodes$label == 'Landscape Features\n[0,1,2]')],
+              nodes$id[which(nodes$label == 'Sink Fill\n[Integer]')],
               nodes$id[which(nodes$label == 'Flow Direction\n[Integer]')],
               nodes$id[which(nodes$label == 'Flow Accumulation\n[Integer]')],
               nodes$id[which(nodes$label == 'Stream\n[0,1]')],
               nodes$id[which(nodes$label == 'Stream Buffer Layers\n[0,1]')],
               nodes$id[which(nodes$label == 'Stream Buffer\n[0,1]')],
+              nodes$id[which(nodes$label == 'Landscape Features\n[0,1,2]')],
+              nodes$id[which(nodes$label == 'Sink Depth\n[Integer]')],
+              nodes$id[which(nodes$label == 'Sink Depth\n[Integer]')],
+              nodes$id[which(nodes$label == 'Sinks\n[0,1]')],
+              nodes$id[which(nodes$label == 'Sink Polygons\n[Vector]')],
+              nodes$id[which(nodes$label == 'Stream Polygons\n[Vector]')],
+              nodes$id[which(nodes$label == 'Non-Thermokarst Lake Polygons\n[Vector]')],
+              nodes$id[which(nodes$label == 'Non-Thermokarst Lake Polygons\n[Vector]')],
+              nodes$id[which(nodes$label == 'Non-Thermokarst Lakes\n[0,1]')],
               nodes$id[which(nodes$label == 'Landscape Features\n[0,1,2]')],
               nodes$id[which(nodes$label == 'Filter\n[0,1]')],
               nodes$id[which(nodes$label == 'Raw Thermokarst Classification\n[0,1]')])
@@ -113,12 +140,22 @@ arrow_labels <- c('Pre-Processing',
                   'Terrain Function',
                   'Reclassify\n0: <25&deg;, 1: >=25&deg;',
                   '',
+                  'Fill Tool',
                   'Flow Direction Tool',
                   'Flow Accumulation Tool',
                   'Reclassify*\n0: <7,000,000, 1: >7,000,000 or\n0: <8,000,000, 1: >8,000,000 or\n0: <20,000,000, 1: >20,000,000',
                   'Buffer*\nWidth = 50 m or\nWidth = 100 m or\nWidth = 250 m',
                   'Combine Stream Buffer Layers*\n0: all(Stream Buffer Layers == 0),\n1: !all(Stream Buffer Layers == 0)',
-                  'Steep Slopes + Stream Buffer',
+                  'Steep Slopes + Stream Buffer + Non-Thermokarst Lakes',
+                  '',
+                  'Sink Fill - Digital Terrain Model',
+                  'Reclassify\n0: <=0, 1: >0',
+                  'Raster to Polygon',
+                  'Raster to Polygon',
+                  '',
+                  'Intersect',
+                  'Rasterize',
+                  '',
                   'Reclassify\n0: <1, 1: >=1',
                   'Elevation Minima - Filter')
 # edge arrow colors - currently set by software used for that step
@@ -127,14 +164,14 @@ arrow_labels <- c('Pre-Processing',
 # green = ArcMap
 arrow_colors <- c('black',
                   rep('SteelBlue2',11),
-                  rep('DarkOliveGreen3', 2),
-                  rep('SteelBlue2', 6))
+                  rep('DarkOliveGreen3', 3),
+                  rep('SteelBlue2', 15))
 # edge arrow width - currently set by number of times the step is run
 arrow_width <- c(rep(1, 1),
                  rep(2, 7),
-                 rep(1, 6),
+                 rep(1, 7),
                  rep(2, 2),
-                 rep(1, 3),
+                 rep(1, 12),
                  2)
 
 ### create edges dataframe from variables in previous section
@@ -155,9 +192,9 @@ graph <- create_graph(nodes_df = nodes,
 graph %>% render_graph()
 
 # save file
-# graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/test.png',
+# graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r.png',
 #              file_type = "png")
-
+##########################################################################################################
 
 
 #### Old Code ############
