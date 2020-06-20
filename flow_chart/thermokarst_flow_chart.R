@@ -58,6 +58,7 @@ nodes <- create_node_df(n = length(node_labels),
                         type = node_types,
                         label = node_labels,
                         shape = node_shapes,
+                        fontname = 'Arial',
                         fontcolor = node_colors,
                         color = node_colors,
                         fillcolor = node_fill,
@@ -138,7 +139,7 @@ arrow_labels <- c('Pre-Processing',
                   'Combine Filled Thermokarst Layers',
                   'Validation',
                   'Terrain Function',
-                  'Reclassify\n0: <25&deg;, 1: >=25&deg;',
+                  'Reclassify\n0: <25&#176;, 1: >=25&deg;',
                   '',
                   'Fill Tool',
                   'Flow Direction Tool',
@@ -177,6 +178,7 @@ arrow_width <- c(rep(1, 1),
 ### create edges dataframe from variables in previous section
 edges <- create_edge_df(from = edges_from,
                         to = edges_to,
+                        fontname = 'Arial',
                         fontcolor = c('black'),
                         color = arrow_colors,
                         label = arrow_labels,
@@ -191,9 +193,9 @@ graph <- create_graph(nodes_df = nodes,
 ### visualize graph
 graph %>% render_graph()
 
-# save file
-# graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r.png',
-#              file_type = "png")
+# # save file
+graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r.pdf',
+             file_type = "pdf")
 ##########################################################################################################
 
 
