@@ -171,51 +171,118 @@ ggplot(sub_karst, aes(x = year, y = sub, color = as.factor(thermokarst))) +
 ########################################################################################################################
 
 ### Create EC Tower Footprint Slices ###################################################################################
-# point for ec tower location
-ec <- st_sfc(st_point(c(389389.25, 7085586.3), dim = 'XY'), crs = 32606)
-ec_sf <- st_sf(geometry = ec, crs = 32606)
+# # point for ec tower location
+# ec <- st_sfc(st_point(c(389389.25, 7085586.3), dim = 'XY'), crs = 32606)
+# ec_sf <- st_sf(geometry = ec, crs = 32606)
+# 
+# # create a circle around the ec tower with radius = 200 m
+# circle <- st_buffer(ec, dist = 200)
+# circle_sf <- st_sf(geometry = circle)
+# 
+# # create 360 lines at 1 degree angles around ec tower that reach to the circle
+# # start by creating a single line the length of the diameter
+# line <- st_sfc(st_linestring(matrix(c(389589.25, 389189.25, 7085586.3, 7085586.3), nrow = 2)), crs = 32606)
+# 
+# # then rotate the line by 1 degree 179 times
+# rot <- function(a) matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)
+# 
+# line_sf <- st_sf(geometry = line, crs = 32606)
+# for (i in 1:179) {
+#   rad <- i*pi/180
+#   line_rotate <- st_sf(geometry = (line - ec) * rot(rad) + ec, crs = 32606)
+#   line_sf <- rbind(line_sf, line_rotate)
+# }
+# 
+# # split each line into two halves at the ec tower
+# # and repeat the first line at the end to make sure that the last polygon isn't missing
+# ec_snap <- st_snap(ec_sf, line_sf, tol = 1e-9)
+# split_lines <- st_collection_extract(st_split(line_sf$geometry,
+#                                               ec_snap$geometry),
+#                                      'LINESTRING')
+# # add one more line - this doesn't add in the last, missing polygon when I split the circle...
+# # split_lines[[361]] <- split_lines[[1]]
+# 
+# # split the circle using the lines to create polygons
+# # this is losing one polygon, though...
+# # and it appears to be a polygon in the middle of the list of geometries
+# split_lines <- st_snap(split_lines, circle_sf, tol = 0.1)
+# wedges <- st_as_sf(st_collection_extract(st_split(circle_sf$geometry,
+#                                                   split_lines),
+#                                          "POLYGON"))
+# 
+# wedges_sf <- wedges %>%
+#   mutate(n = seq(1:360))
+# 
+# ggplot() + geom_sf(data = wedges_sf, aes(color = n)) + geom_sf(data = ec_sf) + geom_sf(data = circle_sf, fill = NA)
+# 
+# st_write(wedges_sf, 'Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly.shp')
+wedges_sf <- st_read('Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly.shp')
 
-# create a circle around the ec tower with radius = 200 m
-circle <- st_buffer(ec, dist = 200)
-circle_sf <- st_sf(geometry = circle)
+ggplot() + geom_sf(data = wedges_sf, aes(color = n)) + coord_sf(datum = st_crs(32606))
 
-# create 360 lines at 1 degree angles around ec tower that reach to the circle
-# start by creating a single line the length of the diameter
-line <- st_sfc(st_linestring(matrix(c(389589.25, 389189.25, 7085586.3, 7085586.3), nrow = 2)), crs = 32606)
+# tower_extract <- raster::extract(karst_1, as(wedges_sf, 'Spatial'), layer = 1, nl = 3, cellnumbers = TRUE, df = TRUE) %>%
+#   as.data.frame()
+# tower_extract_neat <- tower_extract %>%
+#   rename(karst.2017 = 3,
+#          karst.2018 = 4,
+#          karst.2019 = 5) %>%
+#   group_by(ID) %>%
+#   summarise(karst.2017 = sum(karst.2017)/n(),
+#             karst.2018 = sum(karst.2018)/n(),
+#             karst.2019 = sum(karst.2019)/n()) %>%
+#   pivot_longer(cols = karst.2017:karst.2019, names_to = 'year', values_to = 'karst.percent') %>%
+#   mutate(year = as.numeric(str_sub(year, 7)))
+# # write.csv(tower_extract_neat, '/scratch/hgr7/analysis/tower_extract.csv')
+# 
+# tower_karst_sf <- tower_extract %>%
+#   rename(n = ID, karst.2017 = 3, karst.2018 = 4, karst.2019 = 5) %>%
+#   group_by(n) %>%
+#   summarise(karst.percent.2017 = sum(karst.2017)/n(),
+#             karst.percent.2018 = sum(karst.2018)/n(),
+#             karst.percent.2019 = sum(karst.2019)/n()) %>%
+#   full_join(wedges_sf, by = c('n'))
+# st_write(tower_karst_sf, '/scratch/hgr7/analysis/tower_extract.shp')
+tower_karst_sf <- st_read('/scratch/hgr7/analysis/tower_extract.shp') %>%
+  rename(karst.percent.2017 = 2, karst.percent.2018 = 3, karst.percent.2019 = 4)
 
-# then rotate the line by 1 degree 179 times
-rot <- function(a) matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)
+# ggplot(tower_extract_neat, aes(x = year, y = karst.percent, color = ID, group = ID)) +
+#   geom_point() +
+#   geom_line()
 
-line_sf <- st_sf(geometry = line, crs = 32606)
-for (i in 1:179) {
-  rad <- i*pi/180
-  line_rotate <- st_sf(geometry = (line - ec) * rot(rad) + ec, crs = 32606)
-  line_sf <- rbind(line_sf, line_rotate)
-}
 
-# split each line into two halves at the ec tower
-# and repeat the first line at the end to make sure that the last polygon isn't missing
-ec_snap <- st_snap(ec_sf, line_sf, tol = 1e-9)
-split_lines <- st_collection_extract(st_split(line_sf$geometry,
-                                              ec_snap$geometry),
-                                     'LINESTRING')
-# add one more line - this doesn't add in the last, missing polygon when I split the circle...
-# split_lines[[361]] <- split_lines[[1]]
+ggplot() + 
+  geom_sf(data = tower_karst_sf,
+          aes(geometry = geometry,
+              color = karst.percent.2017,
+              fill = karst.percent.2017)) + 
+  coord_sf(datum = st_crs(32606)) +
+  scale_color_viridis(direction = -1,
+                      limits = c(0, 0.6)) +
+  scale_fill_viridis(direction = -1,
+                     limits = c(0, 0.6))
 
-# split the circle using the lines to create polygons
-# this is losing one polygon, though...
-# and it appears to be a polygon in the middle of the list of geometries
-split_lines <- st_snap(split_lines, circle_sf, tol = 0.1)
-wedges <- st_as_sf(st_collection_extract(st_split(circle_sf$geometry,
-                                                  split_lines),
-                                         "POLYGON"))
+ggplot() + 
+  geom_sf(data = tower_karst_sf,
+          aes(geometry = geometry,
+              color = karst.percent.2018,
+              fill = karst.percent.2018)) + 
+  coord_sf(datum = st_crs(32606)) +
+  scale_color_viridis(direction = -1,
+                      limits = c(0, 0.6)) +
+  scale_fill_viridis(direction = -1,
+                     limits = c(0, 0.6))
 
-wedges_sf <- wedges %>%
-  mutate(n = seq(1:360))
+ggplot() + 
+  geom_sf(data = tower_karst_sf,
+          aes(geometry = geometry,
+              color = karst.percent.2019,
+              fill = karst.percent.2019)) + 
+  coord_sf(datum = st_crs(32606)) +
+  scale_color_viridis(direction = -1,
+                      limits = c(0, 0.6)) +
+  scale_fill_viridis(direction = -1,
+                     limits = c(0, 0.6))
 
-ggplot() + geom_sf(data = wedges_sf, aes(color = n)) + geom_sf(data = ec_sf) + geom_sf(data = circle_sf, fill = NA)
-
-st_write(wedges_sf, 'Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly.shp')
 ########################################################################################################################
 
 ### Summary Statistics From Polygons ###################################################################################
