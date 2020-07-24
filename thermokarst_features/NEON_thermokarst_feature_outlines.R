@@ -23,7 +23,7 @@ UseCores <- 3
 filenames <- list.files('/scratch/hgr7/DTM_all',
                         full.names = TRUE,
                         pattern = '.tif$')
-crop_extent <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byrow = TRUE))
+crop_extent <- extent(matrix(c(386500, 396500, 7080000, 7090000), nrow = 2, byrow = TRUE))
 elev <- list(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]), crop_extent),
              crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), crop_extent),
              crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), crop_extent))
@@ -35,31 +35,33 @@ rm(filenames)
 ########################################################################################################################
 
 ### Calculate Slope ####################################################################################################
-# # Register CoreCluster
-# cl <- makeCluster(UseCores)
-# registerDoParallel(cl)
-# 
-# # Calculate slope for each year
-# # Use foreach loop and %dopar% command
-# start <- Sys.time()
-# foreach(i=1:length(elev)) %dopar% {
-#   library(raster)
-# 
-#   slope <- terrain(elev[[i]], opt = 'slope')
-# 
-# 
-#   outname <- paste('/scratch/hgr7/int_output/slope_',
-#                    i,
-#                    '.tif',
-#                    sep = '')
-# 
-#   writeRaster(slope,
-#               filename  = outname,
-#               overwrite = T)
-# 
-# }
-# end <- Sys.time()
-# difftime(end, start)
+# Calculate slope for each year
+# Use foreach loop and %dopar% command
+start <- Sys.time()
+foreach(i=1:length(elev)) %dopar% {
+  library(raster)
+  
+  # create final crop extent
+  crop_extent_final <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byrow = TRUE))
+  
+  # calculate slope
+  slope <- terrain(elev[[i]], opt = 'slope')
+  
+  # crop slope
+  slope_crop <- crop(slope, crop_extent_final)
+  
+  outname <- paste('/scratch/hgr7/int_output/slope_9km_',
+                   i,
+                   '.tif',
+                   sep = '')
+  
+  writeRaster(slope_crop,
+              filename  = outname,
+              overwrite = T)
+  
+}
+end <- Sys.time()
+difftime(end, start)
 
 # load slope rasters
 filenames <- list.files('/scratch/hgr7/int_output',
@@ -85,143 +87,94 @@ for (i in 1:length(radii)) {
   weights[[i]][weights[[i]] > 0] <- 1
 }
 
+
 ### calculate median elevation
-## using the median elevation should not be too influenced by the relatively small portion of thermokarst within any moving window
-#Register CoreCluster
-# cl <- makeCluster(UseCores)
-# registerDoParallel(cl)
+# using the median elevation should not be too influenced by the relatively small portion of thermokarst within any moving window
+# Register CoreCluster
+cl <- makeCluster(UseCores)
+registerDoParallel(cl)
 
 # 15 m radius mean will take about 4 hours on monsoon
-#Use foreach loop and %dopar% command
-# start <- Sys.time()
-# foreach(i=1:length(elev)) %dopar% {
-#   library(raster)
-#   
-#   median <- focal(elev[[i]], weights[[1]], fun = median)
-#   
-#   
-#   outname <- paste('/scratch/hgr7/int_output/median15_9km_',
-#                    i,
-#                    '.tif',
-#                    sep = '')
-#   
-#   writeRaster(median, 
-#               filename  = outname,
-#               overwrite = T)
-#   
-# }
-# end <- Sys.time()
-# difftime(end, start)
+# Use foreach loop and %dopar% command
+start <- Sys.time()
+foreach(i=1:length(elev)) %dopar% {
+  library(raster)
+  
+  # create final crop extent
+  crop_extent_final <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byrow = TRUE))
+  
+  # calculate median
+  median <- focal(elev[[i]], weights[[1]], fun = median)
+  
+  # crop median to final extent
+  median_crop <- crop(median, crop_extent_final)
+  
+  outname <- paste('/scratch/hgr7/int_output/median15_9km_',
+                   i,
+                   '.tif',
+                   sep = '')
+  
+  writeRaster(median_crop,
+              filename  = outname,
+              overwrite = T)
+  
+}
+end <- Sys.time()
+difftime(end, start)
 
 # 25 m radius will take about 6 hours on monsoon
-# start <- Sys.time()
-# foreach(i=1:length(elev)) %dopar% {
-#   library(raster)
-#   
-#   median <- focal(elev[[i]], weights[[2]], fun = median)
-#   
-#   
-#   outname <- paste('/scratch/hgr7/int_output/median2_9km5_',
-#                    i,
-#                    '.tif',
-#                    sep = '')
-#   
-#   writeRaster(median, 
-#               filename  = outname,
-#               overwrite = T)
-#   
-# }
-# end <- Sys.time()
-# difftime(end, start)
+start <- Sys.time()
+foreach(i=1:length(elev)) %dopar% {
+  library(raster)
+  
+  # create final crop extent
+  crop_extent_final <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byrow = TRUE))
+  
+  # calculate median
+  median <- focal(elev[[i]], weights[[2]], fun = median)
+  
+  # crop median to final extent
+  median_crop <- crop(median, crop_extent_final)
+  
+  outname <- paste('/scratch/hgr7/int_output/median25_9km_',
+                   i,
+                   '.tif',
+                   sep = '')
+  
+  writeRaster(median_crop,
+              filename  = outname,
+              overwrite = T)
+  
+}
+end <- Sys.time()
+difftime(end, start)
 
 # 35 m radius will take about 12 hours on monsoon
-# start <- Sys.time()
-# foreach(i=1:length(elev)) %dopar% {
-#   library(raster)
-#   
-#   median <- focal(elev[[i]], weights[[3]], fun = median)
-#   
-#   
-#   outname <- paste('/scratch/hgr7/int_output/median35_9km_',
-#                    i,
-#                    '.tif',
-#                    sep = '')
-#   
-#   writeRaster(median, 
-#               filename  = outname,
-#               overwrite = T)
-#   
-# }
-# end <- Sys.time()
-# difftime(end, start)
-# 
-# #end cluster
-# stopCluster(cl)
-# 
-# # load median rasters
-# filenames <- list.files('/scratch/hgr7/int_output',
-#                         full.names = TRUE,
-#                         pattern = '.tif$')
-# 
-# median15 <- list(raster(filenames[which(str_detect(filenames, 'median15_9km_1'))]), # 2017
-#                  raster(filenames[which(str_detect(filenames, 'median15_9km_2'))]), # 2018
-#                  raster(filenames[which(str_detect(filenames, 'median15_9km_3'))])) # 2019
-# 
-# median25 <- list(raster(filenames[which(str_detect(filenames, 'median25_9km_1'))]), # 2017
-#                  raster(filenames[which(str_detect(filenames, 'median25_9km_2'))]), # 2018
-#                  raster(filenames[which(str_detect(filenames, 'median25_9km_3'))])) # 2019
-# 
-# median35 <- list(raster(filenames[which(str_detect(filenames, 'median35_9km_1'))]), # 2017
-#                  raster(filenames[which(str_detect(filenames, 'median35_9km_2'))]), # 2018
-#                  raster(filenames[which(str_detect(filenames, 'median35_9km_3'))])) # 2019
-# 
-# plot(median15[[1]])
-# plot(median15[[2]])
-# plot(median15[[3]])
-# plot(median25[[1]])
-# plot(median25[[2]])
-# plot(median25[[3]])
-# plot(median35[[1]])
-# plot(median35[[2]])
-# plot(median35[[3]])
-
-
-# print(paste('start median15 time: ', Sys.time(), sep = ''))
-# median15_1 <- focal(elev[[1]], weights[[1]], fun = median)
-# median15 <- map(elev, ~ focal(.x, weights[[1]], fun = median))
-# print(paste('end median15 time: ', Sys.time(), sep = ''))
-# writeRaster(median15[[1]], '/scratch/hgr7/median/median15_1.tif')
-# writeRaster(median15[[2]], '/scratch/hgr7/median/median15_2.tif')
-# writeRaster(median15[[3]], '/scratch/hgr7/median/median15_3.tif')
-# 
-# print(paste('start median25 time: ', Sys.time(), sep = ''))
-# median25 <- map(elev, ~ focal(.x, weights[[2]], fun = median, progress = "text"))
-# print(paste('end median25 time: ', Sys.time(), sep = ''))
-# writeRaster(median25[[1]], '/scratch/hgr7/median/median25_1.tif')
-# writeRaster(median25[[2]], '/scratch/hgr7/median/median25_2.tif')
-# writeRaster(median25[[3]], '/scratch/hgr7/median/median25_3.tif')
-# 
-# print(paste('start median35 time: ', Sys.time(), sep = ''))
-# median35 <- map(elev, ~ focal(.x, weights[[3]], fun = median, progress = "text"))
-# print(paste('end median35 time: ', Sys.time(), sep = ''))
-# writeRaster(median35[[1]], '/scratch/hgr7/median/median35_1.tif')
-# writeRaster(median35[[2]], '/scratch/hgr7/median/median35_2.tif')
-# writeRaster(median35[[3]], '/scratch/hgr7/median/median35_3.tif')
-
-### Calculate Roughness Metrics
-# roughness18 <- terrain(elev18, opt = 'roughness')
-# plot(roughness18)
-# tri18 <- terrain(elev18, opt = 'TRI')
-# plot(tri18)
-# tpi18 <- terrain(elev18, opt = 'TPI')
-# plot(tpi18)
-
-# 5 meter focal window
-# weights_5m <- focalWeight(elev18, 2, type = 'circle')*13
-# 5 m mean roughness
-# roughness18_5 <- focal(roughness18, w = weights_5m, fun = mean)
-# tri18_5 <- focal(tri, w = weights_5m, fun = mean)
-# tpi18_5 <- focal(tpi, w = weights_5m, fun = mean)
+start <- Sys.time()
+foreach(i=1:length(elev)) %dopar% {
+  library(raster)
+  
+  # create final crop extent
+  crop_extent_final <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byrow = TRUE))
+  
+  # calculate median
+  median <- focal(elev[[i]], weights[[3]], fun = median)
+  
+  # crop median to final extent
+  median_crop <- crop(median, crop_extent_final)
+  
+  outname <- paste('/scratch/hgr7/int_output/median35_9km_',
+                   i,
+                   '.tif',
+                   sep = '')
+  
+  writeRaster(median_crop,
+              filename  = outname,
+              overwrite = T)
+  
+}
+end <- Sys.time()
+difftime(end, start)
 ########################################################################################################################
 
 ### Calculate Microtopography (deviance from median elevation) #########################################################
@@ -440,6 +393,7 @@ reclass_matrix_5cm <- matrix(c(-Inf,-0.05,1, -0.05,Inf,0), ncol = 3, byrow = TRU
 # map(karst15_5, ~ plot(.x))
 ########################################################################################################################
 
+# Skip this section as of 7/23/20 becausse it may make more sense to fill smoothr::fill_holes
 ### Fill in Holes in the Various Thermokarst Classification Rasters ####################################################
 # this function fills in holes by dilating (classifying cells next to thermokarst as thermokarst)
 # and then eroding (removing one layer of thermokarst cells from the outside of each thermokarst feature)
@@ -510,25 +464,25 @@ fill_gaps <- function(raster,
 # writeRaster(karst35_fill[[3]], '/scratch/hgr7/int_output/karst35_9km_fill_3.tiff')
 # 
 # load thermokarst rasters
-filenames <- list.files('/scratch/hgr7/int_output',
-                        full.names = TRUE,
-                        pattern = '.tif$')
-
-karst15_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_9km_fill_1'))]), # 2017
-                     raster(filenames[which(str_detect(filenames, 'karst15_9km_fill_2'))]), # 2018
-                     raster(filenames[which(str_detect(filenames, 'karst15_9km_fill_3'))])) # 2019
-
-karst25_fill <- list(raster(filenames[which(str_detect(filenames, 'karst25_9km_fill_1'))]), # 2017
-                     raster(filenames[which(str_detect(filenames, 'karst25_9km_fill_2'))]), # 2018
-                     raster(filenames[which(str_detect(filenames, 'karst25_9km_fill_3'))])) # 2019
-
-karst35_fill <- list(raster(filenames[which(str_detect(filenames, 'karst35_9km_fill_1'))]), # 2017
-                     raster(filenames[which(str_detect(filenames, 'karst35_9km_fill_2'))]), # 2018
-                     raster(filenames[which(str_detect(filenames, 'karst35_9km_fill_3'))])) # 2019
-
-karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_9km_fill_1'))]), # 2017
-                       raster(filenames[which(str_detect(filenames, 'karst15_5_9km_fill_2'))]), # 2018
-                       raster(filenames[which(str_detect(filenames, 'karst15_5_9km_fill_3'))])) # 2019
+# filenames <- list.files('/scratch/hgr7/int_output',
+#                         full.names = TRUE,
+#                         pattern = '.tif$')
+# 
+# karst15_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_9km_fill_1'))]), # 2017
+#                      raster(filenames[which(str_detect(filenames, 'karst15_9km_fill_2'))]), # 2018
+#                      raster(filenames[which(str_detect(filenames, 'karst15_9km_fill_3'))])) # 2019
+# 
+# karst25_fill <- list(raster(filenames[which(str_detect(filenames, 'karst25_9km_fill_1'))]), # 2017
+#                      raster(filenames[which(str_detect(filenames, 'karst25_9km_fill_2'))]), # 2018
+#                      raster(filenames[which(str_detect(filenames, 'karst25_9km_fill_3'))])) # 2019
+# 
+# karst35_fill <- list(raster(filenames[which(str_detect(filenames, 'karst35_9km_fill_1'))]), # 2017
+#                      raster(filenames[which(str_detect(filenames, 'karst35_9km_fill_2'))]), # 2018
+#                      raster(filenames[which(str_detect(filenames, 'karst35_9km_fill_3'))])) # 2019
+# 
+# karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_9km_fill_1'))]), # 2017
+#                        raster(filenames[which(str_detect(filenames, 'karst15_5_9km_fill_2'))]), # 2018
+#                        raster(filenames[which(str_detect(filenames, 'karst15_5_9km_fill_3'))])) # 2019
 ########################################################################################################################
 
 ### Remove Landscape Features Not Due to Thermokarst ###################################################################
@@ -598,7 +552,7 @@ karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_9
 # plot(stream_buffer_250)
 
 
-### Determine threshold value for slope (remove steep slopes)
+### Create a Slope Filter (remove steep slopes)
 # # determine threshold for slope
 # colors <- c('#000000', '#FFFFFF')
 # breaks <- c(0, 0.01, 1.58)
@@ -610,6 +564,53 @@ karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_9
 # # plot(slope_25)
 # writeRaster(slope_25, '/scratch/hgr7/int_output/slope18_25.tif')
 # slope_25 <- raster('/scratch/hgr7/int_output/slope18_25.tif')
+# 
+# # remove single cells/small areas with steep slope (keep larger steep slopes)
+# remove_cells <- function(raster,
+#                          erode_n = 1,
+#                          dilate_n = 1,
+#                          erode_kernel = matrix(c(0,1,0, 1,1,1, 0,1,0), nrow = 3),
+#                          dilate_kernel = matrix(c(0,1,0, 1,1,1, 0,1,0), nrow = 3)) {
+# 
+#   raster_array <- as.array(
+#     matrix(
+#       raster[,],
+#       nrow = raster@nrows,
+#       ncol = raster@ncols
+#     )
+#   )
+# 
+#   for (i in 1:erode_n) {
+#     raster_array <- mmand::erode(
+#       raster_array,
+#       erode_kernel)
+#   }
+# 
+#   for (i in 1:dilate_n) {
+#     raster_array <- mmand::dilate(
+#       raster_array,
+#       dilate_kernel)
+#   }
+# 
+#   filled_vector <- as.vector(raster_array)
+#   filled_raster <- raster
+#   filled_raster[,] <- filled_vector
+# 
+#   return(filled_raster)
+# }
+# 
+# slope_25_clean <- remove_cells(slope_25)
+# # summary(slope_25)
+# # summary(slope_25_clean)
+# # plot(slope_25)
+# # plot(slope_25_clean)
+# 
+# ### Buffer Steep Slopes
+# slope_25_buffer <- buffer(reclassify(slope_25_clean, rcl = c(-1,0.5,NA, 0.5,2,1)),
+#                           width = 25, dissolve = TRUE)
+# # plot(slope_25_buffer)
+# writeRaster(slope_25_buffer, '/scratch/hgr7/int_output/slope18_25_buffer.tif')
+slope_25_buffer <- raster('/scratch/hgr7/int_output/slope18_25_buffer.tif')
 
 ### Remove EML
 ### take difference of filled vs. unfilled DTM and intersect with streams
@@ -663,44 +664,6 @@ karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_9
 # sinks_sf <- st_read('/scratch/hgr7/hydrologic_flow/neon_sinks_2017_poly.shp') %>% st_transform(26906)
 # streams_sf <- st_read('/scratch/hgr7/hydrologic_flow/streams17_7000000.shp') %>% st_transform(26906)
 # 
-# # remove sinks that do not have inlet our outlet streams
-# # # test how the functions work
-# # # it looks like st_intersects with sparse = FALSE will return the lakes (polygons)
-# # #  which have a stream (polygons) that intersects it
-# # # (even if it doesn't completely cross the lake)
-# # test_stream <- raster(xmn = 385000,
-# #                       xmx = 385010,
-# #                       ymn = 7085000,
-# #                       ymx = 7085014,
-# #                       resolution = c(1,1),
-# #                       vals = c(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
-# #                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
-# #                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
-# #                                NA, 1, 1,NA,NA,NA,NA,NA,NA,NA,
-# #                                NA,NA, 1,NA,NA,NA,NA,NA,NA,NA,
-# #                                NA,NA, 1, 1,NA,NA,NA,NA,NA,NA,
-# #                                NA,NA,NA, 1,NA,NA,NA,NA,NA,NA,
-# #                                NA,NA,NA, 1, 1, 1,NA,NA,NA,NA,
-# #                                NA,NA,NA,NA,NA, 1, 1,NA,NA,NA,
-# #                                NA,NA,NA,NA,NA,NA, 1, 1, 1,NA,
-# #                                NA,NA,NA,NA,NA,NA,NA,NA, 1, 1,
-# #                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
-# #                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
-# #                                NA,NA,NA,NA,NA,NA,NA,NA,NA,NA),
-# #                       crs = 26905)
-# # test_stream_sf <- st_as_sf(rasterToPolygons(test_stream, dissolve = TRUE)) %>% st_set_crs(26905)
-# # 
-# # test_coords <- st_sfc(st_polygon(list(cbind(c(385008, 385010, 385010, 385008, 385008),
-# #                                             c(7085014, 7085014, 7085012, 7085012, 7085014)))),
-# #                       st_polygon(list(cbind(c(385001, 385004, 385004, 385001, 385001),
-# #                                             c(7085010, 7085010, 7085008, 7085008, 7085010)))),
-# #                       st_polygon(list(cbind(c(385000, 385002, 385002, 385000, 385000),
-# #                                             c(7085012, 7085012, 7085010, 7085010, 7085012)))))
-# # test_lakes <- st_sf(test_coords) %>% st_set_crs(26905)
-# # 
-# # test_index <- st_intersects(test_lakes, test_stream_sf, sparse = FALSE)
-# # test_intersects <- test_lakes %>% filter(as.vector(test_index))
-# 
 # # join lakes and streams to find lakes with an inlet or outlet
 # start <- Sys.time()
 # lakes_index <- st_join(sinks_sf, streams_sf)
@@ -723,13 +686,13 @@ karst15_5_fill <- list(raster(filenames[which(str_detect(filenames, 'karst15_5_9
 # lakes_filter <- reclassify(lakes_raster, rcl = matrix(c(0,0,0, 0,Inf,1), ncol = 3, byrow = TRUE))
 # lakes_filter[is.na(lakes_filter)] <- 0
 # 
-# # combine slope threshold, stream buffer, and lakes into one filter raster
-# filter <- reclassify(slope_25 + stream_buffer_50 + stream_buffer_100 + stream_buffer_250 + lakes_filter,
-#                      rcl = matrix(c(0,0,0, 0,5,1), ncol = 3, byrow = TRUE))
-# writeRaster(filter, '/scratch/hgr7/int_output/filter_18.tif')
+# combine slope threshold, stream buffer, and lakes into one filter raster
+filter <- reclassify(slope_25_buffer + stream_buffer_50 + stream_buffer_100 + stream_buffer_250 + lakes_filter,
+                     rcl = matrix(c(0,0,0, 0,5,1), ncol = 3, byrow = TRUE))
+writeRaster(filter, '/scratch/hgr7/int_output/filter_18_w_slope_buffer.tif')
 # # plot(filter)
 # filter17 <- raster('/scratch/hgr7/int_output/filter_17.tif')
-filter <- raster('/scratch/hgr7/int_output/filter_18.tif')
+filter <- raster('/scratch/hgr7/int_output/filter_18_w_slope_buffer.tif')
 
 ### filter out steep slopes and stream buffer
 #Register CoreCluster
