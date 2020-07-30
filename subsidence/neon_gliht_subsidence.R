@@ -20,9 +20,9 @@ neon <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]),
               crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), crop_extent))
 rm(filenames)
 # gliht14_old <- raster('Y:/scratch/hgr7/gliht/AK_20140807_UTM6N.tif')
-gliht14 <- raster('Y:/scratch/hgr7/gliht/AK_20140807_Healy_0_DTM.tif')
-gliht18 <- raster('Y:/scratch/hgr7/gliht/AK_20180713_Healy_0_DTM.tif')
-eml_sites <- st_read('Y:/scratch/hgr7/gps/EML_Sites.shp')
+gliht14 <- raster('Y:/hgr7/gliht/AK_20140807_Healy_0_DTM.tif')
+gliht18 <- raster('Y:/hgr7/gliht/AK_20180713_Healy_0_DTM.tif')
+eml_sites <- st_read('Y:/hgr7/gps/EML_Sites.shp')
 
 # # adjust gliht old to compare with gliht new
 # gliht14_old@extent@xmin <- gliht14_old@extent@xmin - 0
@@ -52,8 +52,56 @@ eml_sites <- st_read('Y:/scratch/hgr7/gps/EML_Sites.shp')
 ########################################################################################################################
 
 ### Data Prep/Horizontal Alignment of NEON and GLiHT ###################################################################
-# # convert gliht to use utm zone 6n (from utm zone 5n) - script now reads in file in UTM 6N
-# gliht_utm_6n <- projectRaster(gliht, crs = crs(neon))
+# align 2018 gliht data to 2018 neon data
+gliht18_test <- gliht18
+gliht_align_stats <- data.frame(x = c(),
+                                y = c(),
+                                mean.offset = c(),
+                                median.offset = c(),
+                                min.offset = c(),
+                                max.offset = c())
+for (i in 1:7) {
+  # create test offset correction in x direction
+  x <- i - 4
+  # adjust extent of gliht using test offset correction
+  gliht18_test@extent@xmin <- gliht18@extent@xmin + x
+  gliht18_test@extent@xmax <- gliht18@extent@xmax + x
+  
+  for (j in 1:7) {
+    # create test offset correction in y direction
+    y <- j - 4
+    # adjust extent of gliht using test offset correction
+    gliht18_test@extent@ymin <- gliht18@extent@ymin + y
+    gliht18_test@extent@ymax <- gliht18@extent@ymax + y
+    
+    # align gliht test to neon
+    gliht18_test_align <- projectRaster(gliht18_test, neon[[2]])
+    
+    # crop neon to extent of gliht test
+    neon_crop <- crop(neon[[2]], gliht18_test_align)
+    
+    # calculate difference raster between gliht test and neon
+    diff <- gliht18_test_align - neon_crop
+    
+    # summarize diff
+    mean.diff <- cellStats(diff, mean, na.rm = TRUE)
+    median.diff <- cellStats(diff, median, na.rm = TRUE)
+    min.diff <- cellStats(diff, min, na.rm = TRUE)
+    max.diff <- cellStats(diff, max, na.rm = TRUE)
+    
+    # calculate row number for updating table
+    count <- (i - 1)*7 + j
+    # update table
+    gliht_align_stats$x[count] <- x
+    gliht_align_stats$y[count] <- y
+    gliht_align_stats$mean[count] <- mean.diff
+    gliht_align_stats$median[count] <- median.diff
+    gliht_align_stats$min[count] <- min.diff
+    gliht_align_stats$max[count] <- max.diff
+    
+  }
+}
+
 
 # crop neon data to gliht extent
 neon_crop <- crop(neon, gliht14)
