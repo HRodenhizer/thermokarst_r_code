@@ -10,7 +10,7 @@ library(tidyverse)
 ########################################################################################################################
 
 ### Load Data ##########################################################################################################
-karst_extract <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/thermokarst_extract_18_9km.shp") %>%
+karst_extract <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/thermokarst_extract_18.shp") %>%
   st_set_crs(32606)
 validated_samples <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/samples_stratified_100_scrambled.shp") %>%
   st_set_crs(32606) %>%
@@ -26,7 +26,7 @@ validation_df <- full_join(st_drop_geometry(validated_samples),
 ########################################################################################################################
 
 ### Compare Performance of Different Thermokarst Classifications #######################################################
-# check number of thermokarst vs. non thermokarst points in validation (should be close to 100 for each)
+# check number of thermokarst vs. non thermokarst points in validation (should be close to 100 for each = near 0.5 mean)
 summary(validation_df$validation)
 # check my confidence for each validation point
 summary(validation_df$confidence)
@@ -73,10 +73,10 @@ tk_comb_3_performance
 tk_comb_4_performance
 
 # check out difference in number of false classifications by validation certainty
-# basically, my confidence means very little
-# there is lower accuracy at confidence level of 2, which I used for points that were at the edge of features
-# which indicates that the edge of features are hard to identify (either by me or the model)
-# slight orthorectification issues between wv2 imagery and neon lidar/neon imagery and neon lidar could contribute to this
+# my confidence in the thermokarst validation from imagery does impact how accurate each class was
+# essentially the more uncertain I was in the validation, the lower the accuracy
+# so at least some of the low accuracy level could be due to my inability to determine if features are thermokarst
+# from imagery
 accuracy_by_conf_1 <- mean(validation_df$validation[which(validation_df$confidence == 1)] == validation_df$tk_comb_3[which(validation_df$confidence == 1)])
 accuracy_by_conf_2 <- mean(validation_df$validation[which(validation_df$confidence == 2)] == validation_df$tk_comb_3[which(validation_df$confidence == 2)])
 accuracy_by_conf_3 <- mean(validation_df$validation[which(validation_df$confidence == 3)] == validation_df$tk_comb_3[which(validation_df$confidence == 3)])
