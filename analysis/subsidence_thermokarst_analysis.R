@@ -14,7 +14,7 @@ library(MuMIn)
 library(emmeans)
 library(pbkrtest)
 library(viridis)
-# library(lwgeom)
+library(lwgeom)
 library(tidyverse)
 ########################################################################################################################
 
@@ -531,12 +531,20 @@ karst_eml_cover <- karst_eml_area %>%
 # ec_sf <- st_sf(geometry = ec, crs = 32606)
 # 
 # # create a circle around the ec tower with radius = 200 m
-# circle <- st_buffer(ec, dist = 200)
+# circle <- st_buffer(ec, dist = 225)
 # circle_sf <- st_sf(geometry = circle)
+# 
+# ggplot() +
+#   geom_sf(data = circle_sf, aes(geometry = geometry)) +
+#   geom_sf(data = ec_sf, aes(geometry = geometry))
 # 
 # # create 360 lines at 1 degree angles around ec tower that reach to the circle
 # # start by creating a single line the length of the diameter
-# line <- st_sfc(st_linestring(matrix(c(389589.25, 389189.25, 7085586.3, 7085586.3), nrow = 2)), crs = 32606)
+# line <- st_sfc(st_linestring(matrix(c(389614.25, 389164.25, 7085586.3, 7085586.3), nrow = 2)), crs = 32606)
+# 
+# ggplot() +
+#   geom_sf(data = circle_sf, aes(geometry = geometry)) +
+#   geom_sf(data = line, aes(geometry = geometry))
 # 
 # # then rotate the line by 1 degree 179 times
 # rot <- function(a) matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)
@@ -548,27 +556,26 @@ karst_eml_cover <- karst_eml_area %>%
 #   line_sf <- rbind(line_sf, line_rotate)
 # }
 # 
-# # split each line into two halves at the ec tower
-# # and repeat the first line at the end to make sure that the last polygon isn't missing
-# ec_snap <- st_snap(ec_sf, line_sf, tol = 1e-9)
-# split_lines <- st_collection_extract(st_split(line_sf$geometry,
-#                                               ec_snap$geometry),
-#                                      'LINESTRING')
-# # add one more line - this doesn't add in the last, missing polygon when I split the circle...
-# # split_lines[[361]] <- split_lines[[1]]
+# ggplot() +
+#   geom_sf(data = circle_sf, aes(geometry = geometry)) +
+#   geom_sf(data = line_sf, aes(geometry = geometry))
 # 
-# # split the circle using the lines to create polygons
-# # this is losing one polygon, though...
-# # and it appears to be a polygon in the middle of the list of geometries
-# split_lines <- st_snap(split_lines, circle_sf, tol = 0.1)
+# # Snap the lines to the circle
+# line_sf <- st_snap(line_sf, circle_sf, tol = 0.1)
+# 
+# ggplot() +
+#   geom_sf(data = circle_sf, aes(geometry = geometry)) +
+#   geom_sf(data = split_lines, aes(geometry = geometry))
+# 
 # wedges <- st_as_sf(st_collection_extract(st_split(circle_sf$geometry,
-#                                                   split_lines),
+#                                                   line_sf$geometry),
 #                                          "POLYGON"))
 # 
 # wedges_sf <- wedges %>%
 #   mutate(n = seq(1:360))
-
-wedges_sf <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly.shp")
+# 
+# st_write(wedges_sf, "Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly_250.shp")
+wedges_sf <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly_250.shp")
 
 ggplot() + geom_sf(data = wedges_sf, aes(color = n)) + coord_sf(datum = st_crs(32606))
 ########################################################################################################################
