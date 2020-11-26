@@ -527,7 +527,7 @@ karst_eml_cover <- karst_eml_area %>%
 ### EC Tower Analysis
 ### Create EC Tower Footprint Slices ###################################################################################
 # # point for ec tower location
-# ec <- st_sfc(st_point(c(389389.25, 7085586.3), dim = 'XY'), crs = 32606)
+# ec <- st_sfc(st_point(c(389398.2, 7085591), dim = 'XY'), crs = 32606)
 # ec_sf <- st_sf(geometry = ec, crs = 32606)
 # 
 # # create a circle around the ec tower with radius = 200 m
@@ -536,15 +536,17 @@ karst_eml_cover <- karst_eml_area %>%
 # 
 # ggplot() +
 #   geom_sf(data = circle_sf, aes(geometry = geometry)) +
-#   geom_sf(data = ec_sf, aes(geometry = geometry))
+#   geom_sf(data = ec_sf, aes(geometry = geometry)) + 
+#   coord_sf(datum = st_crs(32606))
 # 
 # # create 360 lines at 1 degree angles around ec tower that reach to the circle
 # # start by creating a single line the length of the diameter
-# line <- st_sfc(st_linestring(matrix(c(389614.25, 389164.25, 7085586.3, 7085586.3), nrow = 2)), crs = 32606)
+# line <- st_sfc(st_linestring(matrix(c(389623.2, 389173.2, 7085591, 7085591), nrow = 2)), crs = 32606)
 # 
 # ggplot() +
 #   geom_sf(data = circle_sf, aes(geometry = geometry)) +
-#   geom_sf(data = line, aes(geometry = geometry))
+#   geom_sf(data = line, aes(geometry = geometry)) + 
+#   coord_sf(datum = st_crs(32606))
 # 
 # # then rotate the line by 1 degree 179 times
 # rot <- function(a) matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)
@@ -558,14 +560,16 @@ karst_eml_cover <- karst_eml_area %>%
 # 
 # ggplot() +
 #   geom_sf(data = circle_sf, aes(geometry = geometry)) +
-#   geom_sf(data = line_sf, aes(geometry = geometry))
+#   geom_sf(data = line_sf, aes(geometry = geometry)) + 
+#   coord_sf(datum = st_crs(32606))
 # 
 # # Snap the lines to the circle
 # line_sf <- st_snap(line_sf, circle_sf, tol = 0.1)
 # 
 # ggplot() +
 #   geom_sf(data = circle_sf, aes(geometry = geometry)) +
-#   geom_sf(data = split_lines, aes(geometry = geometry))
+#   geom_sf(data = line_sf, aes(geometry = geometry)) + 
+#   coord_sf(datum = st_crs(32606))
 # 
 # wedges <- st_as_sf(st_collection_extract(st_split(circle_sf$geometry,
 #                                                   line_sf$geometry),
@@ -577,7 +581,9 @@ karst_eml_cover <- karst_eml_area %>%
 # st_write(wedges_sf, "Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly_250.shp")
 wedges_sf <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly_250.shp")
 
-ggplot() + geom_sf(data = wedges_sf, aes(color = n)) + coord_sf(datum = st_crs(32606))
+ggplot() +
+  geom_sf(data = wedges_sf, aes(color = n)) +
+  coord_sf(datum = st_crs(32606))
 ########################################################################################################################
 
 ### Thermokarst Distribution at EC Tower ###############################################################################
