@@ -15,10 +15,11 @@ library(MuMIn)
 library(emmeans)
 library(pbkrtest)
 library(viridis)
-# library(lwgeom)
+library(lwgeom)
 library(mgcv)
-library(tidyverse)
+library(doParallel)
 library(mapview)
+library(tidyverse)
 ########################################################################################################################
 
 ### Load Data ##########################################################################################################
@@ -41,7 +42,7 @@ filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Fil
                         full.names = TRUE,
                         pattern = 'shp$')
 
-karst_1_poly <- map(filenames[which(str_detect(filenames, pattern = 'karst_combined_1_poly_fill_\\d'))],
+karst_1_poly <- map(filenames[which(str_detect(filenames, pattern = 'karst_combined_1_poly_fill_final_\\d'))],
                     ~ st_read(.x))
 names(karst_1_poly) <- c(2017, 2018, 2019)
 
@@ -392,6 +393,53 @@ karst_1_summary <- karst_1_summary_year %>%
             mean.sd.depth = mean(mean.sd.depth, na.rm = TRUE),
             mean.se.depth = mean(mean.se.depth, na.rm = TRUE))
 
+
+########################################################################################################################
+
+### Thermokarst Morphology (Polygon Compactness via Polsby-Popper Test) ################################################
+karst_morph <- list()
+for (i in 1:length(karst_1_poly)) {
+  
+  karst_morph[[i]] <- karst_1_poly[[i]] %>%
+    mutate(karst_pp = as.numeric(4*pi*st_area(karst_1_poly[[i]])/st_perimeter(karst_1_poly[[i]])^2))
+  
+}
+
+# # run each list item on a different core to speed up process - I thought I would need this
+# # but it was actually very fast (a few seconds to do all three in normal for loop), so it's not really necessary
+# # Define how many cores you want to use
+# UseCores <- 3
+# start <- Sys.time()
+# foreach(i=1:length(karst_1_poly)) %dopar% {
+#   library(sf)
+#   
+#   # calculate Polsby-Popper Values
+#   karst_morph <- karst_1_poly[[i]] %>%
+#     mutate(karst_pp = as.numeric(4*pi*st_area(karst_1_poly[[i]])/st_perimeter(karst_1_poly[[i]])^2))
+#   
+#   outname <- paste('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_poly_fill_final_w_morph_',
+#                    i,
+#                    '.shp',
+#                    sep = '')
+#   
+#   st_write(karst_morph,
+#            dsn  = outname)
+#   
+# }
+# end <- Sys.time()
+# difftime(end, start)
+
+### Make some plots to look for any interesting patterns
+karst_morph_df <- rbind(karst_morph[[1]], karst_morph[[2]], karst_morph[[3]])
+
+ggplot(karst_morph_df, aes(x = karst_pp, color = year)) +
+  geom_histogram()
+# Try 0.1 as cut-off for long features (water tracks or human paths)
+# or is there a way to break into groups? Could I use an unsupervised classification
+# with polsby-popper, length, perimeter, area, or something like that?
+
+ggplot(filter(karst_morph_df, year == 2017 & karst_pp <= 0.5), aes(color = karst_pp)) +
+  geom_sf()
 
 ########################################################################################################################
 
