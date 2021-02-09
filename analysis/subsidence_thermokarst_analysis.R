@@ -19,6 +19,8 @@ library(lwgeom)
 library(mgcv)
 library(doParallel)
 library(mapview)
+library(ggthemes)
+library(ggpubr)
 library(tidyverse)
 ########################################################################################################################
 
@@ -397,49 +399,131 @@ karst_1_summary <- karst_1_summary_year %>%
 ########################################################################################################################
 
 ### Thermokarst Morphology (Polygon Compactness via Polsby-Popper Test) ################################################
-karst_morph <- list()
-for (i in 1:length(karst_1_poly)) {
-  
-  karst_morph[[i]] <- karst_1_poly[[i]] %>%
-    mutate(karst_pp = as.numeric(4*pi*st_area(karst_1_poly[[i]])/st_perimeter(karst_1_poly[[i]])^2))
-  
-}
+# Load karst_1_stats_sf in previous section
+# remove the cleaned values here, because the summarizing will take care of extreme values
+karst_morph <- karst_1_stats_sf %>%
+  select(-ends_with('clean')) %>%
+  mutate(shape = as.numeric(4*pi*st_area(karst_1_stats_sf)/st_perimeter(karst_1_stats_sf)^2),
+         shape.cat.10 = ceiling(shape*10),
+         shape.cat.2 = as.factor(ifelse(shape <= 0.2,
+                                           1,
+                                           2)))
 
-# # run each list item on a different core to speed up process - I thought I would need this
-# # but it was actually very fast (a few seconds to do all three in normal for loop), so it's not really necessary
-# # Define how many cores you want to use
-# UseCores <- 3
-# start <- Sys.time()
-# foreach(i=1:length(karst_1_poly)) %dopar% {
-#   library(sf)
-#   
-#   # calculate Polsby-Popper Values
-#   karst_morph <- karst_1_poly[[i]] %>%
-#     mutate(karst_pp = as.numeric(4*pi*st_area(karst_1_poly[[i]])/st_perimeter(karst_1_poly[[i]])^2))
-#   
-#   outname <- paste('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_poly_fill_final_w_morph_',
-#                    i,
-#                    '.shp',
-#                    sep = '')
-#   
-#   st_write(karst_morph,
-#            dsn  = outname)
-#   
-# }
-# end <- Sys.time()
-# difftime(end, start)
 
 ### Make some plots to look for any interesting patterns
-karst_morph_df <- rbind(karst_morph[[1]], karst_morph[[2]], karst_morph[[3]])
+karst_morph_sum <- karst_morph %>%
+  select(-c(ID, FID)) %>%
+  st_drop_geometry() %>%
+  group_by(shape.cat.10) %>%
+  summarise(extent = sum(size, na.rm = TRUE),
+            mean.size = mean(size, na.rm = TRUE),
+            n = n(),
+            across(starts_with('min'), min, na.rm = TRUE),
+            across(starts_with('mean'), mean, na.rm = TRUE),
+            across(starts_with('max'), max, na.rm = TRUE),
+            across(starts_with('med'), median, na.rm = TRUE),
+            sd.depth = mean(sd.depth, na.rm = TRUE),
+            se.depth = mean(se.depth, na.rm = TRUE)) %>%
+  mutate(percent.cover = extent/8.1e+07,
+         percent.features = n/sum(n))
 
-ggplot(karst_morph_df, aes(x = karst_pp, color = year)) +
-  geom_histogram()
+# distribution of shapes
+prevalence_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.features)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1:8), labels = seq(1:8)) +
+  scale_y_continuous(name = 'Prevalence (%)') +
+  theme_bw() +
+  theme(axis.title.x = element_blank())
+prevalence_plot
+
+# areal coverage of thermokarst of different shapes
+cover_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.cover)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1:8), labels = seq(1:8)) +
+  scale_y_continuous(name = 'Percent Cover') +
+  theme_bw() +
+  theme(axis.title.x = element_blank())
+cover_plot
+
+# # average size of thermokarst of different shapes
+# ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.size)) +
+#   geom_point() +
+#   geom_line()
+
+# depth of thermokarst of different shapes
+depth_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.depth)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1:8), labels = seq(1:8), name = 'Thermokarst Shape') +
+  scale_y_continuous(name = 'Mean Depth') +
+  theme_bw()
+depth_plot
+
+# Combined plot
+### ADD ANNOTATION TO SHOW WHAT SHAPE MEANS!
+morphology_plot <- ggarrange(prevalence_plot,
+                            cover_plot,
+                            depth_plot,
+                            labels = c('a', 'b', 'c'),
+                            ncol = 1,
+                            nrow = 3)
+morphology_plot
+
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/morphology.jpg',
+#        morphology_plot,
+#        height = 8,
+#        width = 6)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/morphology.pdf',
+#        morphology_plot,
+#        height = 8,
+#        width = 6)
+
+# ggplot(karst_morph_sum, aes(x = shape.cat.10, y = min.depth)) +
+#   geom_point() +
+#   geom_line()
+# ggplot(karst_morph_sum, aes(x = shape.cat.10, y = max.depth)) +
+#   geom_point() +
+#   geom_line()
+
+# # variation in depth
+# ggplot(karst_morph_sum, aes(x = shape.cat.10, y = sd.depth)) +
+#   geom_point() +
+#   geom_line()
+# 
+# ggplot(karst_morph_sum, aes(x = shape.cat.10, y = se.depth)) +
+#   geom_point() +
+#   geom_line()
+
 # Try 0.1 as cut-off for long features (water tracks or human paths)
 # or is there a way to break into groups? Could I use an unsupervised classification
 # with polsby-popper, length, perimeter, area, or something like that?
 
-ggplot(filter(karst_morph_df, year == 2017 & karst_pp <= 0.5), aes(color = karst_pp)) +
+map(levels(karst_morph_df$karst_pp_cat),
+    ~ ggplot(filter(karst_morph_df, year == 2017 & karst_pp_cat == .x),
+             aes(color = karst_pp)) +
+      geom_sf() +
+      ggtitle(.x))
+
+ggplot(filter(karst_morph_df, year == 2017 & karst_pp <= 0.2), aes(color = karst_pp)) +
   geom_sf()
+
+ggplot(filter(karst_morph_df, year == 2017 & karst_pp > 0.2), aes(color = karst_pp)) +
+  geom_sf()
+
+ggplot(filter(karst_morph_df, year == 2017), aes(color = karst_pp_cat_2)) +
+  geom_sf() +
+  ggtitle(year)
+
+ggplot(filter(karst_morph_df, year == 2018), aes(color = karst_pp_cat_2)) +
+  geom_sf() +
+  ggtitle(year)
+
+ggplot(filter(karst_morph_df, year == 2019), aes(color = karst_pp_cat_2)) +
+  geom_sf() +
+  ggtitle(year)
+
 
 ########################################################################################################################
 
