@@ -21,6 +21,7 @@ library(doParallel)
 library(mapview)
 library(ggthemes)
 library(ggpubr)
+library(gridExtra)
 library(tidyverse)
 ########################################################################################################################
 
@@ -366,7 +367,8 @@ ggplot(karst_1_stats_sf) +
 mapview(karst_1_stats_sf, zcol = 'mean.depth', map.types = c("Esri.WorldImagery", "OpenStreetMap.Mapnik"))
 
 ### Thermokarst stats by year
-karst_1_summary_year <- karst_1_stats %>%
+karst_1_summary_year <- karst_1_stats_sf %>%
+  st_drop_geometry() %>%
   group_by(year) %>%
   summarize(n = n(), # there shouldn't be any NA (except for sd and se) so long as using depth not depth.clean
             mean.size = mean(size),
@@ -379,6 +381,8 @@ karst_1_summary_year <- karst_1_stats %>%
             max.depth = max(max.depth),
             mean.sd.depth = mean(sd.depth, na.rm = TRUE),
             mean.se.depth = mean(se.depth, na.rm = TRUE))
+# write.csv(karst_1_summary_year,
+#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/thermokarst_annual_summary.csv')
 
 ### Thermokarst stats overall
 karst_1_summary <- karst_1_summary_year %>%
@@ -395,11 +399,143 @@ karst_1_summary <- karst_1_summary_year %>%
             mean.sd.depth = mean(mean.sd.depth, na.rm = TRUE),
             mean.se.depth = mean(mean.se.depth, na.rm = TRUE))
 
+# write.csv(karst_1_summary,
+#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/thermokarst_summary.csv')
 
+# create a data frame to explore relationship between size classes and prevalence, percent cover,
+# percent volume, and mean depth
+karst_size <- karst_1_stats_sf %>%
+  select(-ends_with('clean')) %>%
+  mutate(size.cat.exp = ifelse(size <= 10^0,
+                              0,
+                              ifelse(size <= 10^1,
+                                     1,
+                                     ifelse(size <= 10^2,
+                                            2,
+                                            ifelse(size <= 10^3,
+                                                   3,
+                                                   ifelse(size <= 10^4,
+                                                          4,
+                                                          ifelse(size <= 10^5,
+                                                                 5,
+                                                                 ifelse(size <= 10^6,
+                                                                        6,
+                                                                        NA))))))),
+         size.cat = 10^size.cat.exp,
+         volume = size*mean.depth) %>%
+  select(-c(ID, FID)) %>%
+  st_drop_geometry() %>%
+  group_by(size.cat, size.cat.exp) %>%
+  summarise(extent = sum(size, na.rm = TRUE),
+            mean.size = mean(size, na.rm = TRUE),
+            total.volume = sum(volume, na.rm = TRUE),
+            n = n(),
+            across(starts_with('min'), min, na.rm = TRUE),
+            across(starts_with('mean'), mean, na.rm = TRUE),
+            across(starts_with('max'), max, na.rm = TRUE),
+            across(starts_with('med'), median, na.rm = TRUE),
+            sd.depth = mean(sd.depth, na.rm = TRUE),
+            se.depth = mean(se.depth, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(percent.cover = extent/8.1e+07,
+         percent.features = n/sum(n),
+         percent.volume = total.volume/sum(total.volume))
+
+### Make some plots to look for any interesting patterns
+# prevalence of features by size
+size_prevalence_plot <- ggplot(karst_size, aes(x = size.cat, y = percent.features)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = karst_size$size.cat,
+                     trans = 'log10') +
+  scale_y_continuous(name = 'Prevalence (%)',
+                     limits = c(0, 0.55),
+                     breaks = seq(0, 0.5, by = 0.1),
+                     labels = scales::number_format(accuracy = 0.01)) +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank())
+size_prevalence_plot
+
+# areal coverage of thermokarst of different sizes
+size_cover_plot <- ggplot(karst_size, aes(x = size.cat, y = percent.cover)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = karst_size$size.cat,
+                     trans = 'log10') +
+  scale_y_continuous(name = 'Percent Cover',
+                     limits = c(0, 0.15),
+                     breaks = seq(0, 0.15, by = 0.05),
+                     labels = scales::number_format(accuracy = 0.01)) +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank())
+size_cover_plot
+
+# volume of thermokarst of different sizes
+size_volume_plot <- ggplot(karst_size, aes(x = size.cat, y = percent.volume)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = karst_size$size.cat,
+                     trans = 'log10') +
+  scale_y_continuous(name = 'Percent Volume',
+                     limits = c(0, 0.85),
+                     breaks = seq(0, 0.8, by = 0.2),
+                     labels = scales::number_format(accuracy = 0.01)) +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank())
+size_volume_plot
+
+# depth of thermokarst of different sizes
+size_depth_plot <- ggplot(karst_size, aes(x = size.cat, y = mean.depth*-1)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = karst_size$size.cat,
+                     trans = 'log10', name = expression("Thermokarst Size" ~ (m^{2}))) +
+  scale_y_continuous(name = 'Mean Depth (m)',
+                     limits = c(0, 0.205),
+                     breaks = seq(0, 0.2, by = 0.05),
+                     labels = scales::number_format(accuracy = 0.01)) +
+  theme_bw()
+size_depth_plot
+
+# Combined plot
+### ADD ANNOTATION TO SHOW WHAT SHAPE MEANS!
+size_plot <- ggarrange(size_prevalence_plot,
+                       size_cover_plot,
+                       size_volume_plot,
+                       size_depth_plot,
+                       labels = c('a', 'b', 'c', 'd'),
+                       ncol = 1,
+                       nrow = 4)
+size_plot
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/size.jpg',
+#        size_plot,
+#        height = 10,
+#        width = 6)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/size.pdf',
+#        size_plot,
+#        height = 10,
+#        width = 6)
 ########################################################################################################################
 
 ### Thermokarst Morphology (Polygon Compactness via Polsby-Popper Test) ################################################
-# Load karst_1_stats_sf in previous section
+# Load karst_1_stats_sf from previous section
+karst_1_stats_sf <- read_sf('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_stats.shp') %>%
+  rename(min.depth = min_d,
+         mean.depth = mean_d,
+         median.depth = med_d,
+         max.depth = max_d,
+         sd.depth = sd_d,
+         se.depth = se_d,
+         min.depth.clean = min_d_c,
+         mean.depth.clean = mean_d_c,
+         median.depth.clean = med_d_c,
+         max.depth.clean = max_d_c,
+         sd.depth.clean = sd_d_c,
+         se.depth.clean= se_d_c)
+
 # remove the cleaned values here, because the summarizing will take care of extreme values
 karst_morph <- karst_1_stats_sf %>%
   select(-ends_with('clean')) %>%
@@ -407,7 +543,8 @@ karst_morph <- karst_1_stats_sf %>%
          shape.cat.10 = ceiling(shape*10),
          shape.cat.2 = as.factor(ifelse(shape <= 0.2,
                                            1,
-                                           2)))
+                                           2)),
+         volume = size*mean.depth)
 
 
 ### Make some plots to look for any interesting patterns
@@ -417,6 +554,7 @@ karst_morph_sum <- karst_morph %>%
   group_by(shape.cat.10) %>%
   summarise(extent = sum(size, na.rm = TRUE),
             mean.size = mean(size, na.rm = TRUE),
+            total.volume = sum(volume, na.rm = TRUE),
             n = n(),
             across(starts_with('min'), min, na.rm = TRUE),
             across(starts_with('mean'), mean, na.rm = TRUE),
@@ -425,27 +563,50 @@ karst_morph_sum <- karst_morph %>%
             sd.depth = mean(sd.depth, na.rm = TRUE),
             se.depth = mean(se.depth, na.rm = TRUE)) %>%
   mutate(percent.cover = extent/8.1e+07,
-         percent.features = n/sum(n))
+         percent.features = n/sum(n),
+         percent.volume = total.volume/sum(total.volume))
 
-# distribution of shapes
-prevalence_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.features)) +
+# prevalence of features by shape
+shape_prevalence_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.features)) +
   geom_point() +
   geom_line() +
-  scale_x_continuous(breaks = seq(1:8), labels = seq(1:8)) +
-  scale_y_continuous(name = 'Prevalence (%)') +
+  scale_x_continuous(breaks = seq(1:8)) +
+  scale_y_continuous(#name = 'Prevalence (%)',
+    limits = c(0, 0.55),
+    breaks = seq(0, 0.5, by = 0.1),
+    labels = scales::number_format(accuracy = 0.01)) +
   theme_bw() +
-  theme(axis.title.x = element_blank())
-prevalence_plot
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank())
+shape_prevalence_plot
 
 # areal coverage of thermokarst of different shapes
-cover_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.cover)) +
+shape_cover_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.cover)) +
   geom_point() +
   geom_line() +
-  scale_x_continuous(breaks = seq(1:8), labels = seq(1:8)) +
-  scale_y_continuous(name = 'Percent Cover') +
+  scale_x_continuous(breaks = seq(1:8)) +
+  scale_y_continuous(#name = 'Percent Cover'
+    limits = c(0, 0.15),
+    breaks = seq(0, 0.15, by = 0.05),
+    labels = scales::number_format(accuracy = 0.01)) +
   theme_bw() +
-  theme(axis.title.x = element_blank())
-cover_plot
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank())
+shape_cover_plot
+
+# volume of thermokarst of different shapes
+shape_volume_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.volume)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1:8)) +
+  scale_y_continuous(#name = 'Percent Volume',,
+    limits = c(0, 0.85),
+    breaks = seq(0, 0.8, by = 0.2),
+    labels = scales::number_format(accuracy = 0.01)) +
+  theme_bw() +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank())
+shape_volume_plot
 
 # # average size of thermokarst of different shapes
 # ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.size)) +
@@ -453,32 +614,55 @@ cover_plot
 #   geom_line()
 
 # depth of thermokarst of different shapes
-depth_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.depth)) +
+shape_depth_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.depth*-1)) +
   geom_point() +
   geom_line() +
-  scale_x_continuous(breaks = seq(1:8), labels = seq(1:8), name = 'Thermokarst Shape') +
-  scale_y_continuous(name = 'Mean Depth') +
-  theme_bw()
-depth_plot
+  geom_text(aes(x = 1, y = 0, label = 'Long'), inherit.aes = FALSE,
+            vjust = "inward", hjust = "inward") +
+  geom_text(aes(x = 8, y = 0, label = 'Round'), inherit.aes = FALSE,
+            vjust = "inward", hjust = "inward") +
+  geom_segment(aes(x = 2, y = 0.0005, xend = 6.8, yend = 0.0005), inherit.aes = FALSE,
+               arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
+  scale_x_continuous(breaks = seq(1:8), labels = seq(0.1, 0.8, by = 0.1), name = 'Thermokarst Shape') +
+  scale_y_continuous(#name = 'Mean Depth',
+    limits = c(0, 0.205),
+    breaks = seq(0, 0.2, by = 0.05),
+    labels = scales::number_format(accuracy = 0.01)) +
+  theme_bw() +
+  theme(axis.title.y = element_blank())
+shape_depth_plot
 
 # Combined plot
 ### ADD ANNOTATION TO SHOW WHAT SHAPE MEANS!
-morphology_plot <- ggarrange(prevalence_plot,
-                            cover_plot,
-                            depth_plot,
-                            labels = c('a', 'b', 'c'),
-                            ncol = 1,
-                            nrow = 3)
+morphology_plot <- ggarrange(shape_prevalence_plot,
+                             shape_cover_plot,
+                             shape_volume_plot,
+                             shape_depth_plot,
+                             labels = c('a', 'b', 'c', 'd'),
+                             ncol = 1,
+                             nrow = 4)
 morphology_plot
 
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/morphology.jpg',
-#        morphology_plot,
+size_morph_plot <- ggarrange(size_prevalence_plot,
+                             shape_prevalence_plot,
+                             size_cover_plot,
+                             shape_cover_plot,
+                             size_volume_plot,
+                             shape_volume_plot,
+                             size_depth_plot,
+                             shape_depth_plot,
+                             ncol = 2,
+                             nrow = 4)
+size_morph_plot
+
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/size_morphology.jpg',
+#        size_morph_plot,
 #        height = 8,
-#        width = 6)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/morphology.pdf',
-#        morphology_plot,
+#        width = 7)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/size_morphology.pdf',
+#        size_morph_plot,
 #        height = 8,
-#        width = 6)
+#        width = 7)
 
 # ggplot(karst_morph_sum, aes(x = shape.cat.10, y = min.depth)) +
 #   geom_point() +
@@ -593,7 +777,7 @@ graph_ci <- function(ci,figtitle,model) {ggplot(ci,aes(x=names,y=coefs))+
     coord_flip() } 
 ########################################################################################################################
 
-### Mixed Effects Model of Subsidence by Thermokarst Class Over Time ###################################################
+### Mixed Effects Model of Subsidence by Thermokarst Class #############################################################
 karst_edges <- brick(stack('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_1.tif',
                            '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_2.tif',
                            '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_3.tif'))
@@ -758,8 +942,6 @@ karst_extract <- raster::extract(karst_edges, as(samples, 'Spatial'),
 sub_karst_summary <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_summary_500.csv') %>%
   mutate(karst = factor(karst, levels = c(0, 1, 2)))
 
-ggplot(sub_karst_summary, aes(x = karst, y = sub, group = karst)) +
-  geom_boxplot()
 # model <- lm(sub ~ karst, sub_karst_summary)
 # saveRDS(model, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_anova_500.rds')
 model <- readRDS('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_anova_500.rds')
@@ -768,6 +950,39 @@ model.contrast <- emmeans(model, specs= pairwise~karst) %>%
   summary(level=0.90)
 model.contrast
 # write.csv(model.contrast, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_anova_500_contrast.csv')
+
+letters <- data.frame(karst = factor(c(0, 1, 2)),
+                      sub = 0.25,
+                      letters = c('a', 'b', 'ab'))
+
+model.table <- model.contrast[[1]] %>%
+  mutate(letters = c('a', 'b', 'ab'),
+         karst = ifelse(karst == 0,
+                        'Undisturbed',
+                        ifelse(karst == 1,
+                               'Thermokarst Center',
+                               'Thermokarst Edge'))) %>%
+  rename(Class = karst, Mean = emmean, `Lower CI` = lower.CL, `Upper CI` = upper.CL, Group = letters) %>%
+  select(Class, Group, Mean, `Lower CI`, `Upper CI`, SE, df)
+# write.csv(model.table,
+#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_model.csv',
+#           row.names = FALSE)
+
+ggplot(sub_karst_summary, aes(x = karst, y = sub, group = karst)) +
+  geom_boxplot() +
+  geom_text(data = letters, aes(label = letters)) +
+  scale_x_discrete(breaks = c(0, 1, 2),
+                   labels = c('Undisturbed', 'Thermokarst Center', 'Thermokarst Edge')) +
+  scale_y_continuous(name = expression(Delta ~ "Elevation")) +
+  theme_bw() +
+  theme(axis.title.x = element_blank())
+
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_boxplot.jpg',
+#        height = 4,
+#        width = 5)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_boxplot.pdf',
+#        height = 4,
+#        width = 5)
 
 # mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 0 & sub_karst_summary$year == 2018)])
 # mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 1 & sub_karst_summary$year == 2018)])
@@ -961,10 +1176,31 @@ karst_eml_mean_na[karst_eml_mean_na == 0] <- NA
 #          layer = 'eml_wtshd_mean_karst.shp',
 #          driver = 'ESRI Shapefile')
 # 
-# karst_eml_df <- karst_eml_mean %>%
-#   as.data.frame(xy = TRUE) %>%
-#   rename(thermokarst = 3)
-# 
+karst_eml_df <- karst_eml_mean %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(thermokarst = 3) %>%
+  mutate(thermokarst = factor(thermokarst))
+
+ggplot(karst_eml_df, aes(x = x, y = y, fill = thermokarst)) +
+  geom_raster() +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  # scale_fill_manual(breaks = c(0, 1),
+  #                   values = c('#FFFFFF', '#000000'),
+  #                   labels = c('Undisturbed', 'Thermokarst'),
+  #                   na.value = 'transparent') +
+  scale_fill_viridis(labels = c('Undisturbed', 'Thermokarst'),
+                     begin = 0,
+                     end = 1,
+                     discrete = TRUE,
+                     direction = -1) +
+  coord_fixed() +
+  theme_bw() +
+  theme(legend.title = element_blank())
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/eml_thermokarst_map.jpg',
+#        height = 10,
+#        width = 8)
+ 
 # karst_eml_cover <- karst_eml_df %>%
 #   filter(!is.na(thermokarst)) %>%
 #   mutate(thermokarst = ifelse(thermokarst == 0,
@@ -1422,8 +1658,13 @@ karst_ec_sf <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_File
 ggplot() +
   geom_sf(data = karst_ec_sf, aes(color = percent.thermokarst, fill = percent.thermokarst)) +
   coord_sf(datum = st_crs(32606)) +
-  scale_color_viridis(direction = -1) +
-  scale_fill_viridis(direction = -1)
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  scale_color_viridis(name = 'Thermokarst (%)',
+                      direction = -1) +
+  scale_fill_viridis(name = 'Thermokarst (%)',
+                     direction = -1) +
+  theme_bw()
 
 # could be useful if I end up using neon
 # karst_ec_extract_neat <- karst_ec_extract %>%
@@ -1543,17 +1784,20 @@ mtopo_ec_sf <- mtopo_sf %>%
   mutate(year = as.numeric(str_sub(year, 12, 15))) %>%
   group_by(n) %>%
   summarise(mtopo15.sd = mean(mtopo15.sd)) %>%
-  full_join(wedges_sf, by = c('n'))
+  full_join(wedges_sf, by = c('n')) %>%
+  st_as_sf()
 rm(mtopo_sf)
 
-ggplot() + 
-  geom_sf(data = mtopo_ec_sf,
-          aes(geometry = geometry,
-              color = mtopo15.sd,
-              fill = mtopo15.sd)) + 
+ggplot() +
+  geom_sf(data = mtopo_ec_sf, aes(color = mtopo15.sd, fill = mtopo15.sd)) +
   coord_sf(datum = st_crs(32606)) +
-  scale_color_viridis(direction = -1) +
-  scale_fill_viridis(direction = -1)
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  scale_color_viridis(name = 'Roughness (m)',
+                      direction = -1) +
+  scale_fill_viridis(name = 'Roughness (m)',
+                     direction = -1) +
+  theme_bw()
 
 # ggplot() + 
 #   geom_sf(data = mtopo_sf,
@@ -1707,21 +1951,77 @@ sub_tp_ec <- sub_ec_df %>%
 
 ### microtopography by thermokarst
 karst_mtopo_sf <- karst_ec_sf %>%
-  select(-geometry) %>%
+  st_drop_geometry() %>%
   full_join(mtopo_ec_sf, 
             by = c('n')) %>%
-    st_as_sf()
-
-karst_mtopo_2 <- karst_mtopo_sf %>%
+    st_as_sf() %>%
   mutate(percent.thermokarst.sqr = sqrt(percent.thermokarst),
-         color.group = as.factor(ifelse(n > 330 | n < 180,
-                              'SW-S-E',
-                              'W-N-NE')))
+         color.group.2 = as.factor(ifelse(n > 330 | n < 180,
+                                        'SW-S-E',
+                                        'W-N-NE')),
+         color.group.10 = as.factor(ceiling(n/36)),
+         direction = ifelse(n <= 270,
+                            n + 90,
+                            n - 270))
 
-ggplot(karst_mtopo_2, aes(x = percent.thermokarst, y = mtopo15.sd)) +
-  geom_point(aes(color = color.group))
+# used this to figure out direction from n (direction is 0 to 360 clockwise from N)
+ggplot(karst_mtopo_sf) +
+  geom_sf(aes(color = direction))
 
- # try to figure out why the mtopo values always have 999 or 000 in decimal places 3-5
+ec_karst_plot <- ggplot() +
+  geom_sf(data = karst_mtopo_sf, aes(color = percent.thermokarst, fill = percent.thermokarst)) +
+  coord_sf(datum = st_crs(32606)) +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  scale_color_viridis(name = 'Thermokarst (%)',
+                      direction = -1) +
+  scale_fill_viridis(name = 'Thermokarst (%)',
+                     direction = -1) +
+  theme_bw()
+ec_karst_plot
+
+ec_mtopo_plot <- ggplot() +
+  geom_sf(data = karst_mtopo_sf, aes(color = mtopo15.sd, fill = mtopo15.sd)) +
+  coord_sf(datum = st_crs(32606)) +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  scale_color_viridis(name = 'Roughness (m)',
+                      direction = -1) +
+  scale_fill_viridis(name = 'Roughness (m)',
+                     direction = -1) +
+  theme_bw()
+ec_mtopo_plot
+
+ec_karst_mtopo_class <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = mtopo15.sd)) +
+  geom_point(aes(color = color.group.2)) +
+  theme_bw()
+ec_karst_mtopo_class
+
+ec_karst_mtopo_cont <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = mtopo15.sd)) +
+  geom_point(aes(color = direction)) +
+  scale_x_continuous(name = 'Thermokarst (%)') +
+  scale_y_continuous(name = 'Roughness (m)') +
+  scale_color_gradient(name = "Direction",
+                       low = '#CCCCCC',
+                       high = '#000000') +
+  theme_bw()
+ec_karst_mtopo_cont
+
+karst_mtopo <- grid.arrange(ec_karst_plot,
+                            ec_mtopo_plot,
+                            ec_karst_mtopo_cont,
+                            layout_matrix = rbind(c(1, 2),
+                                                  c(3, 3)))
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/thermokarst_roughness.jpg',
+#        karst_mtopo,
+#        height = 8,
+#        width = 10)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/thermokarst_roughness.pdf',
+#        karst_mtopo,
+#        height = 8,
+#        width = 10)
+
+# try to figure out why the mtopo values always have 999 or 000 in decimal places 3-5
 # # I guess the raw LiDAR elevation somehow is only actually significant to 2 decimal places. Why?
 # values_df <- data.frame(elev = getValues(elev[[1]]), median = getValues(median15))
 # values_df <- mutate(values_df, diff = elev - median)
