@@ -446,6 +446,11 @@ karst_size <- karst_1_stats_sf %>%
 size_prevalence_plot <- ggplot(karst_size, aes(x = size.cat, y = percent.features)) +
   geom_point() +
   geom_line() +
+  geom_text(aes(label = n),
+            vjust = 0,
+            nudge_y = 0.02,
+            hjust = "left",
+            size = 3) +
   scale_x_continuous(breaks = karst_size$size.cat,
                      trans = 'log10') +
   scale_y_continuous(name = 'Prevalence (%)',
@@ -492,7 +497,8 @@ size_depth_plot <- ggplot(karst_size, aes(x = size.cat, y = mean.depth*-1)) +
   geom_point() +
   geom_line() +
   scale_x_continuous(breaks = karst_size$size.cat,
-                     trans = 'log10', name = expression("Thermokarst Size" ~ (m^{2}))) +
+                     trans = 'log10',
+                     name = expression("Thermokarst Size" ~ (m^{2}))) +
   scale_y_continuous(name = 'Mean Depth (m)',
                      limits = c(0, 0.205),
                      breaks = seq(0, 0.2, by = 0.05),
@@ -564,12 +570,18 @@ karst_morph_sum <- karst_morph %>%
             se.depth = mean(se.depth, na.rm = TRUE)) %>%
   mutate(percent.cover = extent/8.1e+07,
          percent.features = n/sum(n),
-         percent.volume = total.volume/sum(total.volume))
+         percent.volume = total.volume/sum(total.volume),
+         position = c(0, 0.3, 0.45, 0.6, 0.7, 1, 1, 1))
 
 # prevalence of features by shape
 shape_prevalence_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.features)) +
   geom_point() +
   geom_line() +
+  geom_text(aes(label = n,
+                hjust = position),
+            vjust = 0,
+            nudge_y = 0.02,
+            size = 3) +
   scale_x_continuous(breaks = seq(1:8)) +
   scale_y_continuous(#name = 'Prevalence (%)',
     limits = c(0, 0.55),
@@ -608,22 +620,24 @@ shape_volume_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.v
         axis.text.x = element_blank())
 shape_volume_plot
 
-# # average size of thermokarst of different shapes
-# ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.size)) +
-#   geom_point() +
-#   geom_line()
-
 # depth of thermokarst of different shapes
 shape_depth_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.depth*-1)) +
   geom_point() +
   geom_line() +
-  geom_text(aes(x = 1, y = 0, label = 'Long'), inherit.aes = FALSE,
-            vjust = "inward", hjust = "inward") +
-  geom_text(aes(x = 8, y = 0, label = 'Round'), inherit.aes = FALSE,
-            vjust = "inward", hjust = "inward") +
-  geom_segment(aes(x = 2, y = 0.0005, xend = 6.8, yend = 0.0005), inherit.aes = FALSE,
+  geom_text(aes(x = 1, y = 0, label = 'Long'),
+            inherit.aes = FALSE,
+            vjust = "inward",
+            hjust = "inward") +
+  geom_text(aes(x = 8, y = 0, label = 'Round'),
+            inherit.aes = FALSE,
+            vjust = "inward",
+            hjust = "inward") +
+  geom_segment(aes(x = 2, y = 0.0005, xend = 6.8, yend = 0.0005),
+               inherit.aes = FALSE,
                arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
-  scale_x_continuous(breaks = seq(1:8), labels = seq(0.1, 0.8, by = 0.1), name = 'Thermokarst Shape') +
+  scale_x_continuous(breaks = seq(1:8),
+                     labels = seq(0.1, 0.8, by = 0.1),
+                     name = 'Thermokarst Shape') +
   scale_y_continuous(#name = 'Mean Depth',
     limits = c(0, 0.205),
     breaks = seq(0, 0.2, by = 0.05),
@@ -957,18 +971,20 @@ letters <- data.frame(karst = factor(c(0, 1, 2)),
 
 model.table <- model.contrast[[1]] %>%
   mutate(letters = c('a', 'b', 'ab'),
-         karst = ifelse(karst == 0,
+         karst = factor(ifelse(karst == 0,
                         'Undisturbed',
                         ifelse(karst == 1,
                                'Thermokarst Center',
-                               'Thermokarst Edge'))) %>%
+                               'Thermokarst Edge')),
+                        levels = c('Undisturbed', 'Thermokarst Edge', 'Thermokarst Center'))) %>%
   rename(Class = karst, Mean = emmean, `Lower CI` = lower.CL, `Upper CI` = upper.CL, Group = letters) %>%
   select(Class, Group, Mean, `Lower CI`, `Upper CI`, SE, df)
 # write.csv(model.table,
 #           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_model.csv',
 #           row.names = FALSE)
 
-ggplot(sub_karst_summary, aes(x = karst, y = sub, group = karst)) +
+# boxplot looks really messy
+boxplot <- ggplot(sub_karst_summary, aes(x = karst, y = sub, group = karst)) +
   geom_boxplot() +
   geom_text(data = letters, aes(label = letters)) +
   scale_x_discrete(breaks = c(0, 1, 2),
@@ -978,9 +994,32 @@ ggplot(sub_karst_summary, aes(x = karst, y = sub, group = karst)) +
   theme(axis.title.x = element_blank())
 
 # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_boxplot.jpg',
+#        boxplot,
 #        height = 4,
 #        width = 5)
 # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_boxplot.pdf',
+#        boxplot,
+#        height = 4,
+#        width = 5)
+
+# try mean points with se
+points_plot <- ggplot(model.table, aes(x = Class, y = Mean)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin =`Lower CI`, ymax = `Upper CI`),
+                width = 0.1) +
+  geom_text(aes(y = -0.08, label = Group)) +
+  scale_y_continuous(name = expression(Delta ~ "Elevation"),
+                     limits = c(-0.08, 0)) +
+  theme_bw() +
+  theme(axis.title.x = element_blank())
+points_plot
+
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_points_se.jpg',
+#        points_plot,
+#        height = 4,
+#        width = 5)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_points_se.pdf',
+#        points_plot,
 #        height = 4,
 #        width = 5)
 
