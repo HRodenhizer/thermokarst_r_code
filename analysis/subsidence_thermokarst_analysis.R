@@ -1023,6 +1023,126 @@ points_plot
 #        height = 4,
 #        width = 5)
 
+### Add in GPS points as comparison
+elev.cip <- list(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/CiPEHR & DryPEHR/GPS survey/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/AElevStack_unfilled_unclipped.tif'),
+                 brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/CiPEHR & DryPEHR/GPS survey/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/BElevStack_unfilled_unclipped.tif'),
+                 brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/CiPEHR & DryPEHR/GPS survey/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/CElevStack_unfilled_unclipped.tif'))
+
+sub.gps <- list()
+for (i in 1:3) {
+  sub.gps[[i]] <- elev.cip[[i]][[7]] - elev.cip[[i]][[5]]
+}
+
+sub.gps <- map_dfr(sub.gps,
+                   ~ as.data.frame(.x, xy = TRUE)) %>%
+  rename(sub = layer) %>%
+  st_as_sf(coords = c('x', 'y'),
+           crs = '+proj=tmerc +lat_0=54 +lon_0=-150 +k=0.9999 +x_0=500000 +y_0=0 +ellps=WGS84 +units=m
++no_defs ') %>%
+  st_transform(crs = crs(karst_edges))
+
+gps.sub.extract <- raster::extract(karst_edges, as(sub.gps, 'Spatial'),
+                                        cellnumbers = TRUE,
+                                        df = TRUE) %>%
+  as.data.frame()
+
+sub.gps.summary <- gps.sub.extract %>%
+  pivot_longer(karst_edges_1:karst_edges_3, names_to = 'year', values_to = 'karst') %>%
+  group_by(ID, cells) %>%
+  summarise(karst = ifelse(any(karst == 2),
+                           2,
+                           ifelse(any(karst == 1),
+                                      1,
+                                      0))) %>%
+  cbind.data.frame(sub.gps) %>%
+  select(-c(ID, cells, geometry)) %>%
+  group_by(karst) %>%
+  summarise(mean.sub = mean(sub, na.rm = TRUE),
+            se.sub = sd(sub, na.rm = TRUE)) %>%
+  mutate(`Lower CI` = mean.sub - se.sub,
+         `Upper CI` = mean.sub + se.sub,
+         karst = factor(ifelse(karst == 0,
+                               'Undisturbed',
+                               ifelse(karst == 1,
+                                      'Thermokarst Center',
+                                      'Thermokarst Edge')),
+                        levels = c('Undisturbed', 'Thermokarst Edge', 'Thermokarst Center')))
+
+# plot mean lidar sub with mean gps sub
+points_plot_2 <- ggplot(model.table, aes(x = Class, y = Mean)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_point(data = sub.gps.summary,
+             aes(x = karst, y = mean.sub, color = 'GPS'),
+             size = 2,
+             inherit.aes = FALSE) +
+  geom_errorbar(data = sub.gps.summary,
+                aes(x = karst, ymin = `Lower CI`, ymax = `Upper CI`, color = 'GPS'),
+                inherit.aes = FALSE,
+                width = 0.1) +
+  geom_point(size = 3, aes(color = 'LiDAR')) +
+  geom_errorbar(aes(ymin =`Lower CI`, ymax = `Upper CI`, color = 'LiDAR'),
+                width = 0.1) +
+  geom_text(aes(y = -0.14, label = Group)) +
+  scale_y_continuous(name = expression(Delta ~ "Elevation"),
+                     limits = c(-0.15, 0.05)) +
+  scale_color_manual(breaks = c('GPS', 'LiDAR'),
+                     values = c('gray', 'black'),
+                     guide = guide_legend(reverse = TRUE)) +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        legend.title = element_blank())
+points_plot_2
+
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_points_w_gps.jpg',
+#        points_plot_2,
+#        height = 4,
+#        width = 5)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_points_w_gps.pdf',
+#        points_plot_2,
+#        height = 4,
+#        width = 5)
+
+
+# points <- list(st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/All_Points/All_Points_2017_SPCSAK4.shp'),
+#                st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/All_Points/All_Points_2018_SPCSAK4.shp'),
+#                st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/All_Points/All_Points_2019_Aug_SPCSAK4.shp'))
+# 
+# gps <- map2_dfr(points,
+#                 c(2017, 2018, 2019),
+#                ~ .x %>%
+#                  select(-starts_with('Type')) %>%
+#                  mutate(year = .y))
+# rm(points)
+# 
+# gps_grid <- gps %>%
+#   mutate(Name = as.character(Name)) %>%
+#   mutate(Name = as.numeric(Name)) %>%
+#   filter(Name != is.na(Name) & Name < 13000) %>%
+#   arrange(Name) %>%
+#   mutate(block = as.factor(ifelse(Name >= 10000 & Name < 11000,
+#                                   'a',
+#                                   ifelse(Name >= 11000 & Name < 12000,
+#                                          'b',
+#                                          ifelse(Name >= 12000 & Name < 13000,
+#                                                 'c',
+#                                                 NA))))) %>%
+#   filter(!is.na(block)) %>%
+#   select(year, block, Name, Easting, Northing, Elevation) %>%
+#   st_as_sf() %>%
+#   st_transform(crs = 32606) %>%
+#   st_zm()
+# 
+# # check that I got the right points
+# ggplot(gps_grid, aes(color = year)) +
+#   geom_sf(aes(geometry = geometry)) +
+#   facet_wrap(~year)
+# 
+# karst_points_extract <- raster::extract(karst_edges, as(gps_grid, 'Spatial'),
+#                                         cellnumbers = TRUE,
+#                                         df = TRUE) %>%
+#   as.data.frame()
+
+
 # mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 0 & sub_karst_summary$year == 2018)])
 # mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 1 & sub_karst_summary$year == 2018)])
 # mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 0 & sub_karst_summary$year == 2019)])
@@ -2038,6 +2158,9 @@ ec_karst_mtopo_class
 
 ec_karst_mtopo_cont <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = mtopo15.sd)) +
   geom_point(aes(color = direction)) +
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, bs = "cs"),
+              color = 'black') +
   scale_x_continuous(name = 'Thermokarst (%)') +
   scale_y_continuous(name = 'Roughness (m)') +
   scale_color_gradient(name = "Direction",
