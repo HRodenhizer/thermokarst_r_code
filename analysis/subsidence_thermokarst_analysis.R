@@ -1892,7 +1892,28 @@ ggplot() +
 mtopo_brick <- brick(mtopo[[1]][[1]],
                      mtopo[[2]][[1]],
                      mtopo[[3]][[1]])
-mtopo_mean <- calc(mtopo_brick, function(x) mean(x), na.rm = FALSE)
+mtopo_mean <- calc(mtopo_brick, mean, na.rm = FALSE)
+
+# Plot microtopography at ec tower
+mtopo_ec <- mask(crop(mtopo_mean, as(wedges_sf, 'Spatial')), as(wedges_sf, 'Spatial'))
+mtopo_ec_df <- mtopo_ec %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(mtopo15 = 3)
+
+ggplot(mtopo_ec_df, aes(x = x, y = y, fill = mtopo15)) +
+  geom_raster() +
+  scale_fill_viridis(name = 'Microtopography',
+                     na.value = 'transparent') +
+  theme_bw() +
+  coord_fixed() +
+  theme(axis.title = element_blank())
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/microtopgraphy_map.jpg',
+#        height = 4,
+#        width = 6)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/microtopgraphy_map.pdf',
+#        height = 4,
+#        width = 6)
+
 ### Extract Thermokarst values at ALT points
 mtopo_points_extract_2017 <- raster::extract(mtopo_mean,
                                              as(filter(ec_alt_sf, year == 2017),
@@ -1990,6 +2011,38 @@ ggplot() +
 #                       limits = c(0, 0.25)) +
 #   scale_fill_viridis(direction = -1,
 #                      limits = c(0, 0.25))
+
+# Plot relationship between microtopography and ALT
+mtopo_alt <- raster::extract(mtopo_brick, filter(ec_alt_sf, year == 2017 | year == 2019), df = TRUE) %>%
+  as.data.frame() %>%
+  rename(mtopo15.2017 = 2,
+         mtopo15.2018 = 3,
+         mtopo15.2019 = 4) %>%
+  full_join(filter(ec_alt_sf, year == 2017 | year == 2019), by = 'ID') %>%
+  st_as_sf() %>%
+  mutate(mtopo15 = ifelse(year == 2017,
+                          mtopo15.2017,
+                          ifelse(year == 2019,
+                                 mtopo15.2019,
+                                 NA))) %>%
+  select(-c(mtopo15.2017:mtopo15.2019))
+
+ggplot(mtopo_alt, aes(x = mtopo15, y = alt, color = factor(year), group = year)) +
+  geom_point() +
+  # geom_smooth(method = 'lm',
+  #             formula = y ~ poly(x, 2)) +
+  scale_colour_manual(name = 'Year',
+                      breaks = c(2017, 2019),
+                      values = c('gray30', 'gray70')) +
+  scale_x_continuous(name = 'Microtopography (m)') +
+  scale_y_continuous(name = 'Active Layer Thickness (cm)') +
+  theme_bw()
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/mtopo_alt_plot_v2.jpg',
+#        height = 4,
+#        width = 6)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/mtopo_alt_plot_v2.pdf',
+#        height = 4,
+#        width = 6)
 ########################################################################################################################
 
 ### ALT Thermokarst Microtopography Analysis ###########################################################################
@@ -2187,4 +2240,180 @@ karst_mtopo <- grid.arrange(ec_karst_plot,
 # # I guess the raw LiDAR elevation somehow is only actually significant to 2 decimal places. Why?
 # values_df <- data.frame(elev = getValues(elev[[1]]), median = getValues(median15))
 # values_df <- mutate(values_df, diff = elev - median)
+########################################################################################################################
+
+### CO2 Analysis #######################################################################################################
+# ameriflux
+co2 <- read.table('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/Ameriflux/AMF_US-EML_BASE_HH_3-5.csv',
+                  sep = ',',
+                  skip = 2,
+                  header = TRUE,
+                  na.strings = "-9999")
+
+# for now, also read in 2018-2019 and 2019-2020 from separate files
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
+
+new <- rbind(Tower18.19, Tower19.20)
+
+# Select correct times from Ameriflux
+co2 <- co2 %>%
+  mutate(ts = parse_date_time(TIMESTAMP_START, orders = c('Y!m!*d!H!M!'))) %>%
+  filter(ts >= parse_date_time('2017-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')) &
+           ts < parse_date_time('2020-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')))
+
+# Select needed data for tower analysis
+co2.small <- co2 %>%
+  select(ts, NEE_PI_F, WD, PPFD_IN_PI_F) %>%
+  mutate(n = ceiling(WD),
+         month = month(ts),
+         season = ifelse(month >= 5 & month <= 9,
+                         'gs',
+                         'ngs'),
+         day = ifelse(PPFD_IN_PI_F >= 10,
+                      'day',
+                      'night'),
+         group = ifelse(season == 'gs' & day == 'day',
+                        'GS Day',
+                        ifelse(season == 'gs' & day == 'night',
+                               'GS Night Respiration',
+                               'NGS Respiration')),
+         year = ifelse(month >= 5,
+                       year(ts),
+                       ifelse(month < 5,
+                              year(ts) - 1,
+                              NA))) %>%
+  filter(!is.na(n))
+
+new.small <- new %>%
+  select(-46) %>%
+  rename(NEE_PI_F = nee_gapfilled, WD = wind_dir, PPFD_IN_PI_F = PAR_filter) %>%
+  select(ts, NEE_PI_F, WD, PPFD_IN_PI_F) %>%
+  mutate(n = ceiling(WD),
+         month = month(ts),
+         season = ifelse(month >= 5 & month <= 9,
+                         'gs',
+                         'ngs'),
+         day = ifelse(PPFD_IN_PI_F >= 10,
+                      'day',
+                      'night'),
+         group = ifelse(season == 'gs' & day == 'day',
+                        'GS Day',
+                        ifelse(season == 'gs' & day == 'night',
+                               'GS Night Respiration',
+                               'NGS Respiration')),
+         year = ifelse(month >= 5,
+                       year(ts),
+                       ifelse(month < 5,
+                              year(ts) - 1,
+                              NA))) %>%
+  filter(!is.na(n))
+
+co2.small <- co2.small %>%
+  rbind.data.frame(new.small)
+
+ggplot(co2.small, aes(x = n, group = group, fill = group)) +
+  geom_bar(position = position_dodge())
+
+# Don't actually need this part? Keep all raw data rather than averaging for plot
+co2.mean <- co2.small %>%
+  group_by(year, n, group) %>%
+  summarise(NEE = mean(NEE_PI_F, na.rm = TRUE))
+
+
+# combine karst and roughness data for the ec tower
+karst_roughness <- karst_ec_sf %>%
+  st_drop_geometry() %>%
+  full_join(mtopo_ec_sf, by = 'n')
+
+# Join co2 and karst/roughness data
+co2.model.data <- co2.small %>%
+  full_join(karst_roughness, by = 'n')
+
+co2.model.data.mean <- co2.mean %>%
+  full_join(karst_roughness, by = 'n')
+
+# thermokarst
+# this is very busy, use the one with summarized data instead
+# ggplot(co2.model.data,
+#        aes(x = percent.thermokarst,
+#            y = NEE_PI_F,
+#            color = group,
+#            group = group,
+#            shape = factor(year))) +
+#   geom_point(alpha = 0.3) +
+#   geom_smooth(method = 'lm') +
+#   scale_x_continuous(name = 'Thermokarst Cover (%)') +
+#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+#   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+#                      values = c('#339900', '#990000', '#000033')) +
+#   theme_bw() +
+#   theme(legend.title = element_blank())
+
+co2.karst.plot <- ggplot(co2.model.data.mean,
+       aes(x = percent.thermokarst,
+           y = NEE,
+           color = group,
+           group = group,
+           shape = factor(year))) +
+  geom_point(alpha = 0.3, size = 2) +
+  geom_smooth(method = 'lm' #,
+              # formula = y ~ poly(x, 2) # not sure about using a polynomial, particularly for respiration
+              ) +
+  scale_x_continuous(name = 'Thermokarst Cover (%)') +
+  scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+  scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+                     values = c('#339900', '#990000', '#000033')) +
+  theme_bw() +
+  theme(legend.position = 'none')
+co2.karst.plot
+
+# roughness
+# this is very busy, use the one with summarized data instead
+# ggplot(co2.model.data,
+#        aes(x = mtopo15.sd,
+#            y = NEE_PI_F,
+#            color = group,
+#            group = group,
+#            shape = factor(year))) +
+#   geom_point(alpha = 0.3) +
+#   geom_smooth(method = 'lm') +
+#   scale_x_continuous(name = 'Roughness') +
+#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+#   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+#                      values = c('#339900', '#990000', '#000033')) +
+#   theme_bw() +
+#   theme(legend.title = element_blank())
+
+co2.roughness.plot <- ggplot(co2.model.data.mean,
+       aes(x = mtopo15.sd,
+           y = NEE,
+           color = group,
+           group = group,
+           shape = factor(year))) +
+  geom_point(alpha = 0.3, size = 2) +
+  geom_smooth(method = 'lm') +
+  scale_x_continuous(name = 'Roughness') +
+  # scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+  scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+                     values = c('#339900', '#990000', '#000033')) +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        axis.title.y = element_blank())
+co2.roughness.plot
+
+co2.plot <- ggarrange(co2.karst.plot,
+                      co2.roughness.plot,
+                      nrow = 1,
+                      ncol = 2,
+                      widths = c(0.68, 1))
+co2.plot
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/co2_karst_roughness.jpg',
+#        co2.plot,
+#        height = 6,
+#        width = 8)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/co2_karst_roughness.pdf',
+#        co2.plot,
+#        height = 6,
+#        width = 8)
 ########################################################################################################################
