@@ -1892,10 +1892,91 @@ ggplot() +
 mtopo_brick <- brick(mtopo[[1]][[1]],
                      mtopo[[2]][[1]],
                      mtopo[[3]][[1]])
-mtopo_mean <- calc(mtopo_brick, mean, na.rm = FALSE)
+mean_mtopo <- calc(mtopo_brick, mean, na.rm = FALSE)
+
+# read in Fay's microtopography
+mtopo_08 <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS footprint/GIS footprint/Microtopography/micro_clip/w001001.adf')
+mtopo_08_df <- as.data.frame(mtopo_08, xy = TRUE) %>%
+  rename(mtopo = 3)
+
+transects <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS footprint/GIS footprint/360 degree transects/degree_trans.shp')
+
+# re-calculate microtopography using mean rather than median to compare with Fay's
+filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All',
+                        full.names = TRUE,
+                        pattern = '.tif$')
+ec_elev <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]), wedges_sf),
+                     crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), wedges_sf),
+                     crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), wedges_sf))
+
+ec_elev_buf <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]), extend(extent(wedges_sf), c(25, 25, 25, 25))),
+              crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), extend(extent(wedges_sf), c(25, 25, 25, 25))),
+              crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), extend(extent(wedges_sf), c(25, 25, 25, 25))))
+
+weights <- focalWeight(ec_elev[[1]], 15, type = 'circle')
+
+ec_mean <- list()
+ec_mtopo_mean <- list()
+for (i in 1:3) {
+  
+  ec_mean[[i]] <- focal(ec_elev_buf[[i]], weights)
+  ec_mean[[i]] <- mask(crop(ec_mean[[i]], wedges_sf), wedges_sf)
+  ec_mtopo_mean[[i]] <- ec_elev[[i]] - ec_mean[[i]]
+}
+
+ec_mtopo_mean <- brick(ec_mtopo_mean[[1]],
+                       ec_mtopo_mean[[2]],
+                       ec_mtopo_mean[[3]])
+mtopo_17_19 <- calc(ec_mtopo_mean, mean, na.rm = FALSE)
+mtopo_17_19_df <- as.data.frame(mtopo_17_19, xy = TRUE) %>%
+  rename(mtopo = 3)
+
+# Change in mtopo (using mean elevation in 15 m )
+mtopo_change <- mtopo_17_19 - mtopo_08
+mtopo_change_df <- as.data.frame(mtopo_change, xy = TRUE) %>%
+  rename(mtopo_change = 3)
+
+change_plot <- ggplot(mtopo_change_df, aes(x = x, y = y)) +
+  geom_raster(aes(fill = mtopo_change)) +
+  # geom_sf(data = transects, aes(geometry = geometry), inherit.aes = FALSE) +
+  scale_fill_viridis(name = expression(Delta ~ 'Microtopography'),
+                     na.value = 'transparent') +
+  theme_bw() +
+  coord_fixed() +
+  theme(axis.title = element_blank())
+change_plot
+
+mtopo_08_plot <- ggplot(mtopo_08_df, aes(x = x, y = y)) +
+  geom_raster(aes(fill = mtopo)) +
+  # geom_sf(data = transects, aes(geometry = geometry), inherit.aes = FALSE) +
+  scale_fill_viridis(name = 'Microtopography 2008',
+                     limits = c(-1, 0.5),
+                     na.value = 'transparent') +
+  theme_bw() +
+  coord_fixed() +
+  theme(axis.title = element_blank())
+mtopo_08_plot
+
+mtopo_17_19_plot <- ggplot(mtopo_17_19_df, aes(x = x, y = y)) +
+  geom_raster(aes(fill = mtopo)) +
+  # geom_sf(data = transects, aes(geometry = geometry), inherit.aes = FALSE) +
+  scale_fill_viridis(name = 'Avg. Microtopography 2017-2019',
+                     limits = c(-1, 0.5),
+                     na.value = 'transparent') +
+  theme_bw() +
+  coord_fixed() +
+  theme(axis.title = element_blank())
+mtopo_17_19_plot
+
+mtopo_plot <- ggarrange(mtopo_08_plot,
+                        mtopo_17_19_plot,
+                        change_plot,
+                        nrow = 1,
+                        ncol = 3)
+mtopo_plot
 
 # Plot microtopography at ec tower
-mtopo_ec <- mask(crop(mtopo_mean, as(wedges_sf, 'Spatial')), as(wedges_sf, 'Spatial'))
+mtopo_ec <- mask(crop(mean_mtopo, as(wedges_sf, 'Spatial')), as(wedges_sf, 'Spatial'))
 mtopo_ec_df <- mtopo_ec %>%
   as.data.frame(xy = TRUE) %>%
   rename(mtopo15 = 3)
@@ -1915,7 +1996,7 @@ ggplot(mtopo_ec_df, aes(x = x, y = y, fill = mtopo15)) +
 #        width = 6)
 
 ### Extract Thermokarst values at ALT points
-mtopo_points_extract_2017 <- raster::extract(mtopo_mean,
+mtopo_points_extract_2017 <- raster::extract(mean_mtopo,
                                              as(filter(ec_alt_sf, year == 2017),
                                                 'Spatial'),
                                              cellnumbers = TRUE,
@@ -1923,7 +2004,7 @@ mtopo_points_extract_2017 <- raster::extract(mtopo_mean,
   as.data.frame() %>%
   mutate(year = 2017)
 
-mtopo_points_extract_2019 <- raster::extract(mtopo_mean,
+mtopo_points_extract_2019 <- raster::extract(mean_mtopo,
                                              as(filter(ec_alt_sf, year == 2019),
                                                 'Spatial'),
                                              cellnumbers = TRUE,
