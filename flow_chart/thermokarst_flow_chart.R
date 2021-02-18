@@ -214,6 +214,137 @@ graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/N
              file_type = "pdf")
 ##########################################################################################################
 
+### Create Simplified Flow Chart of Thermokarst Model ####################################################
+### list of node labels
+# node labels for the main classification flow
+main_labels <- c('Digital Terrain Model\n[Floating Point]',
+                 'Median Elevation\n[Floating Point]',
+                 'Microtopography\n[0,1]',
+                 'Elevation Minima\n[0,1]',
+                 'Thermokarst Classification\n[0,1]',
+                 'Thermokarst Polygons\n[Vector]')
+# node labels for the landscape features filter
+filter_labels <- c('Slope Filter\n[0,1]',
+                   'Stream Filter\n[0,1]',
+                   'Non-Thermokarst Lakes\n[0,1]',
+                   'Filter\n[0,1]')
+# combine all node labels into one
+node_labels <- c(main_labels, filter_labels)
+
+# types to distinguish between the main classification and landscape features filter
+node_types <- c(rep('main', length(main_labels)),
+                rep('filter', length(filter_labels)))
+# shapes - all rectangle currently
+node_shapes <- c(rep('rectangle', length(node_labels)))
+# node outline colors - black for main model, gray for filter
+node_colors <- c(rep('black', length(main_labels)), rep('DimGray', length(filter_labels)))
+# node fill color - all white currently
+node_fill <- c(rep('white', length(node_labels)))
+# node width - set to a fixed width currently. I don't think there is a way to automatically adjust.
+node_widths <- c(2.25)
+
+### create node dataframe using input variables from previous section
+nodes <- create_node_df(n = length(node_labels),
+                        type = node_types,
+                        label = node_labels,
+                        shape = node_shapes,
+                        fontname = 'Arial',
+                        fontcolor = node_colors,
+                        color = node_colors,
+                        fillcolor = node_fill,
+                        width = node_widths)
+
+### Edge Definitions
+# from and to nodes
+edges_from <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Median Elevation\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+                nodes$id[which(nodes$label == 'Elevation Minima\n[0,1]')],
+                nodes$id[which(nodes$label == 'Thermokarst Classification\n[0,1]')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Slope Filter\n[0,1]')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Stream Filter\n[0,1]')],
+                nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
+                nodes$id[which(nodes$label == 'Non-Thermokarst Lakes\n[0,1]')],
+                nodes$id[which(nodes$label == 'Filter\n[0,1]')])
+
+edges_to <- c(nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+              nodes$id[which(nodes$label == 'Median Elevation\n[Floating Point]')],
+              nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+              nodes$id[which(nodes$label == 'Elevation Minima\n[0,1]')],
+              nodes$id[which(nodes$label == 'Thermokarst Classification\n[0,1]')],
+              nodes$id[which(nodes$label == 'Thermokarst Polygons\n[Vector]')],
+              nodes$id[which(nodes$label == 'Slope Filter\n[0,1]')],
+              nodes$id[which(nodes$label == 'Filter\n[0,1]')],
+              nodes$id[which(nodes$label == 'Stream Filter\n[0,1]')],
+              nodes$id[which(nodes$label == 'Filter\n[0,1]')],
+              nodes$id[which(nodes$label == 'Non-Thermokarst Lakes\n[0,1]')],
+              nodes$id[which(nodes$label == 'Filter\n[0,1]')],
+              nodes$id[which(nodes$label == 'Thermokarst Classification\n[0,1]')])
+
+# edge labels
+# arrow_labels <- c('',
+#                   'Circular Focal Mean',
+#                   'DTM - Median Elevation',
+#                   'Reclassify\n0: >=0, 1: <0',
+#                   '',
+#                   'Raster to Polygon',
+#                   'Find Steep Slopes',
+#                   '',
+#                   'Find Big Streams',
+#                   'Steep Slopes + Stream Buffer + Non-Thermokarst Lakes',
+#                   '',
+#                   'Sink Fill - Digital Terrain Model',
+#                   'Reclassify\n0: <=0, 1: >0',
+#                   'Raster to Polygon',
+#                   'Raster to Polygon',
+#                   '',
+#                   'Intersect',
+#                   'Rasterize',
+#                   '',
+#                   'Reclassify\n0: <1, 1: >=1',
+#                   'Elevation Minima - Filter')
+# edge arrow colors - currently set by software used for that step
+# black = NEON
+# blue = R
+# green = ArcMap
+arrow_colors <- c('black',
+                  rep('SteelBlue2',15),
+                  rep('DarkOliveGreen3', 3),
+                  rep('SteelBlue2', 15))
+# edge arrow width - currently set by number of times the step is run
+arrow_width <- c(rep(1, 1),
+                 rep(2, 7),
+                 rep(1, 11),
+                 rep(2, 2),
+                 rep(1, 12),
+                 2)
+
+### create edges dataframe from variables in previous section
+edges <- create_edge_df(from = edges_from,
+                        to = edges_to,
+                        fontname = 'Arial',
+                        fontcolor = c('black'),
+                        # color = arrow_colors,
+                        # label = arrow_labels,
+                        headport = 'n',
+                        arrowhead = c('vee'),
+                        penwidth = arrow_width)
+
+### create graph
+graph <- create_graph(nodes_df = nodes,
+                      edges_df = edges,
+                      attr_theme = 'tb')
+### visualize graph
+graph %>% render_graph()
+
+# # save file
+graph %>% export_graph(file_name = '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r_simple.pdf',
+                       file_type = "pdf")
+##########################################################################################################
+
 
 #### Old Code ############
 
