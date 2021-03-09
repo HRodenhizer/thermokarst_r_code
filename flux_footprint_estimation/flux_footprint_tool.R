@@ -5,6 +5,7 @@
 
 ### Libraries ###########################################################################
 library(sf)
+library(raster)
 library(data.table)
 library(lubridate)
 library(viridis)
@@ -129,6 +130,7 @@ final.19 <- final[yyyy == 2019 & mm >= 5 | yyyy == 2020 & mm < 5]
 
 ### Run FFP #############################################################################
 # To use this function, you have to run the function in calc_footprint_FFP.R
+test.data <- final.17[1,]
 test.data <- final.17[4300,]
 latitude <- 63.879933
 longitude <- -149.252103
@@ -143,46 +145,52 @@ test <- calc_footprint_FFP(lat = latitude,
                            wind_dir = as.numeric(test.data[, "wind_dir"]),
                            r = seq(10, 90, 10))
 
+### Need to figure out rotation - i.e. create a raster that has been rotated correctly
+### Need to iterate over all rows of the input data.frame
+
 # format as data frame to plot with ggplot
-x <- test$x_2d %>%
-  as.data.frame() %>%
-  pivot_longer(cols = 1:1001, names_to = 'remove', values_to = 'x') %>%
-  select(x) %>%
-  data.table()
-y <- test$y_2d %>%
-  as.data.frame() %>%
-  pivot_longer(cols = 1:1001, names_to = 'remove', values_to = 'y') %>%
-  select(y) %>%
-  data.table()
-f <- test$f_2d %>%
-  as.data.frame() %>%
-  pivot_longer(cols = 1:1001, names_to = 'remove', values_to = 'f') %>%
-  select(f) %>%
-  data.table()
-test.df <- cbind(x, y, f)
+matrices <- c('x_2d', 'y_2d', 'f_2d')
+test.df <- map_dfc(matrices,
+                   ~ test[[.x]] %>%
+                     as.data.frame() %>%
+                     pivot_longer(cols = 1:1001, names_to = 'remove', values_to = .x) %>%
+                     select(-matches('remove')) %>%
+                     data.table())  %>%
+  mutate(x_2d = round(x_2d, 4),
+         y_2d = round(y_2d, 4),
+         f_2d_scaled = f_2d/sum(f_2d, na.rm = TRUE))
+
+# test.xy <- test.df %>%
+#   mutate(x_size = x_2d - lag(x_2d),
+#          y_size = y_2d - lag(y_2d)) %>%
+#   filter(x_size < 0 & y_size > 0)
+
+test.raster <- rasterFromXYZ(test.df) # works if the output of FFP is not rotated to wind_dir
+# could try rasterize if this doesn't work
+
+test.sp <- test.df
+coordinates(test.sp) <- ~ x_2d + y_2d
+gridded(test.sp) <- TRUE
+test.raster <- raster(test.sp)
+plot(test.raster)
 
 # reformat contours
-xr <- test$xr[[1]]
-yr <- test$yr[[1]]
-matrix.10 <- matrix(c(xr, yr), ncol = 2, byrow = FALSE)
-sfc.10 <- st_sfc(st_polygon(list(matrix.10)))
-sf.10 <- st_sf(geometry = sfc.10)
-
-r.sfc <- vector()
+r.polygon <- list()
 for (i in 1:length(test$xr)) {
   xr <- test$xr[[i]]
   yr <- test$yr[[i]]
-  r.polygon[i] <- st_polygon(list(matrix(c(xr, yr), ncol = 2, byrow = FALSE)))
+  r.polygon[[i]] <- st_polygon(list(matrix(c(xr, yr), ncol = 2, byrow = FALSE)))
 }
 r.sfc <- st_as_sfc(r.polygon)
-r.sf <- st_sf(geometry = test.sfc)
+r.sf <- st_sf(geometry = r.sfc) %>%
+  mutate(interval = seq(10, 90, 10))
 
 # sum of all weights - why not 1?
 # sum changes for each time period, so I think it just needs to be scaled?
 sum(test.df$f)
 
 # plot
-ggplot(filter(test.df, x < 0 & x > -275 & y < 100 & y > -50), aes(x = x, y = y, color = sqrt(f))) +
+ggplot(filter(test.df), aes(x = x_2d, y = y_2d, color = sqrt(f_2d))) +
   geom_point() +
   # coord_fixed() +
   geom_sf(data = r.sf, inherit.aes = FALSE, color = 'red', fill = 'transparent') +
