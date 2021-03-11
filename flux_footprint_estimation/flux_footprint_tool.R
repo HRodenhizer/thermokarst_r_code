@@ -9,6 +9,7 @@ library(raster)
 library(data.table)
 library(lubridate)
 library(viridis)
+library(doParallel)
 library(tidyverse)
 #########################################################################################
 
@@ -142,76 +143,111 @@ karst_1 <- brick(stack("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_File
 crs(karst_1) <- CRS('+init=epsg:32606')
 mean.karst <- calc(karst_1, mean, na.rm = TRUE)
 
+filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output',
+                        full.names = TRUE,
+                        pattern = '^mtopo15.+9km')
+
+mtopo15 <- brick(stack(filenames[which(str_detect(filenames, pattern = 'mtopo15.+_1\\.tif$'))],
+                     filenames[which(str_detect(filenames, pattern = 'mtopo15.+_2\\.tif$'))],
+                     filenames[which(str_detect(filenames, pattern = 'mtopo15.+_3\\.tif$'))]))
+mean.mtopo <- calc(mtopo15, mean, na.rm = TRUE)
+karst.mtopo.brick <- brick(mean.karst, mean.mtopo)
+
+rm(filenames, karst_1, mena.karst, mtopo15, mean.mtopo)
+
+# # This section was used to help build/test the calc.ffp.loop function, below
+# # test.data <- final.17[1,]
+# test.data <- final.17[4300,]
+# test.data <- final.17[14985,]
+# latitude <- 63.879933
+# # longitude <- -149.252103
+# # extract tower location information as numeric 
+# tower.x.utm <- st_coordinates(ec_sf)[,1]
+# tower.y.utm <- st_coordinates(ec_sf)[,2]
+# 
+# # create raster template onto which output should be projected
+# crop.extent <- extent(tower.x.utm - 500,
+#                       tower.x.utm + 500,
+#                       tower.y.utm - 500,
+#                       tower.y.utm + 500)
+# raster.brick.crop <- crop(karst.mtopo.brick, crop.extent)
+# 
+# ffp <- calc_footprint_FFP(lat = latitude,
+#                           zm = as.numeric(test.data[,"zm"]),
+#                           z0 = as.numeric(test.data[,"z0"]),
+#                           #h = 1000,
+#                           umean = as.numeric(test.data[,"u_mean"]),
+#                           ol = as.numeric(test.data[, "L"]),
+#                           sigmav = as.numeric(test.data[, "sigma_v"]),
+#                           ustar = as.numeric(test.data[, "u_star"]),
+#                           wind_dir = as.numeric(test.data[, "wind_dir"]),
+#                           r = seq(10, 90, 10))
+# 
+# # format as data frame (this allows easy alignment of points to ec tower)
+# matrices <- c('x_2d', 'y_2d', 'f_2d')
+# ffp.sf <- map_dfc(matrices,
+#                    ~ ffp[[.x]] %>% # select x, y, or f matrix
+#                      as.data.frame() %>%
+#                      pivot_longer(cols = 1:1001, names_to = 'remove', values_to = .x) %>% # make it into a 'tidy' data frame (long format with single column for x, y, or f)
+#                      select(-matches('remove'))) %>% # we don't need the names column which just contains original column information
+#   mutate(x_geo = x_2d + 389389.25, # add ec tower latitude location to x distance values
+#          y_geo = y_2d + 7085586.3, # add ec tower longitude location to y distance values
+#          f_2d_scaled = f_2d/sum(f_2d, na.rm = TRUE)) %>% # scale the flux measurement for each cell to a percentage of total flux
+#   st_as_sf(coords = c('x_geo', 'y_geo'), crs = 32606, remove = FALSE)
+# 
+# # ggplot(test.df, aes(color = f_2d_scaled)) +
+# #   geom_sf() +
+# #   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'red')
+# 
+# # use rasterize to convert points to raster aligned with thermokarst model
+# ffp.raster <- rasterize(as(ffp.sf, 'Spatial'),
+#                          raster.brick.crop,
+#                          field = 'f_2d_scaled',
+#                          fun = 'sum',
+#                          na.rm = TRUE)
+# 
+# # plot(test.raster)
+# 
+# # reformat contours as sf
+# ffp.sa.polygon <- list()
+# for (i in 1:length(ffp$xr)) {
+#   xr <- ffp$xr[[i]] + 389389.25
+#   yr <- ffp$yr[[i]] + 7085586.3
+#   ffp.sa.polygon[[i]] <- st_polygon(list(matrix(c(xr, yr), ncol = 2, byrow = FALSE)))
+# }
+# ffp.sa.sfc <- st_as_sfc(ffp.sa.polygon, crs = 32606)
+# ffp.sa.sf <- st_sf(geometry = ffp.sa.sfc) %>%
+#   mutate(interval = seq(10, 90, 10))
+# 
+# # mask to 90% area
+# ffp.raster.mask <- mask(ffp.raster, ffp.sa.sf)
+# raster.brick.mask <- mask(raster.brick.crop, ffp.sa.sf)
+# # plot(ffp.raster.mask)
+# # check flux sum
+# output <- vector()
+# for (i in 1:nrow(ffp.sa.sf)) {
+#   mask <- slice(ffp.sa.sf, i)
+#   output[i] <- cellStats(mask(ffp.raster.mask, mask), sum, na.rm = TRUE)
+# }
+# 
+# # plot
+# ggplot(as.data.frame(ffp.raster.mask, xy = TRUE), aes(x = x, y = y, fill = sqrt(layer))) +
+#   geom_tile() +
+#   # coord_fixed() +
+#   geom_sf(data = ffp.sa.sf, inherit.aes = FALSE, color = 'red', fill = 'transparent') +
+#   scale_fill_viridis(na.value = 'transparent')
+# 
+# ggplot(test.df, aes(x = f)) +
+#   geom_bar()
+
+
 # To use this function, you have to run the function in calc_footprint_FFP.R
 # takes about 20 seconds per iteration through raster mask
 # which means about 100 hours to run for an entire year on my computer...
 # can either try to mask before converting to raster and parallelize
 # or run on monsoon (or both)
-# test.data <- final.17[1,]
-test.data <- final.17[4300,]
-latitude <- 63.879933
-longitude <- -149.252103
-ffp <- calc_footprint_FFP(lat = latitude,
-                          zm = as.numeric(test.data[,"zm"]),
-                          z0 = as.numeric(test.data[,"z0"]),
-                          #h = 1000,
-                          umean = as.numeric(test.data[,"u_mean"]),
-                          ol = as.numeric(test.data[, "L"]),
-                          sigmav = as.numeric(test.data[, "sigma_v"]),
-                          ustar = as.numeric(test.data[, "u_star"]),
-                          wind_dir = as.numeric(test.data[, "wind_dir"]),
-                          r = seq(10, 90, 10))
 
-# format as data frame (this allows easy alignment of points to ec tower)
-matrices <- c('x_2d', 'y_2d', 'f_2d')
-ffp.df <- map_dfc(matrices,
-                   ~ ffp[[.x]] %>% # select x, y, or f matrix
-                     as.data.frame() %>%
-                     pivot_longer(cols = 1:1001, names_to = 'remove', values_to = .x) %>% # make it into a 'tidy' data frame (long format with single column for x, y, or f)
-                     select(-matches('remove'))) %>% # we don't need the names column which just contains original column information
-  mutate(x_geo = x_2d + 389389.25, # add ec tower latitude location to x distance values
-         y_geo = y_2d + 7085586.3, # add ec tower longitude location to y distance values
-         f_2d_scaled = f_2d/sum(f_2d, na.rm = TRUE)) %>% # scale the flux measurement for each cell to a percentage of total flux
-  st_as_sf(coords = c('x_geo', 'y_geo'), crs = 32606, remove = FALSE)
-
-# ggplot(test.df, aes(color = f_2d_scaled)) +
-#   geom_sf() +
-#   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'red')
-
-# use rasterize to convert points to raster aligned with thermokarst model
-ffp.raster <- rasterize(as(ffp.df, 'Spatial'),
-                         raster.template,
-                         field = 'f_2d_scaled',
-                         fun = 'sum',
-                         na.rm = TRUE)
-
-# plot(test.raster)
-
-# reformat contours as sf
-ffp.sa.polygon <- list()
-for (i in 1:length(ffp$xr)) {
-  xr <- ffp$xr[[i]] + 389389.25
-  yr <- ffp$yr[[i]] + 7085586.3
-  ffp.sa.polygon[[i]] <- st_polygon(list(matrix(c(xr, yr), ncol = 2, byrow = FALSE)))
-}
-ffp.sa.sfc <- st_as_sfc(ffp.sa.polygon, crs = 32606)
-ffp.sa.sf <- st_sf(geometry = ffp.sa.sfc) %>%
-  mutate(interval = seq(10, 90, 10))
-
-# mask to 90% area
-ffp.raster.mask <- mask(ffp.raster, ffp.sa.sf)
-# plot(ffp.raster.mask)
-# check flux sum
-cellStats(ffp.raster.mask, 'sum') # why not 0.9?
-
-### Need to iterate over all rows of the input data.frame
-# this requires knowing what output we want...
-# do I need to save ffp output at all, or should I just run
-# source area thermokarst stats for each flux?
-
-# need to change this so that the input raster is a raster brick with thermokarst
-# and microtopography and add in a microtopography calculation near end of function
-calc.ffp.loop <- function(df, tower.loc, raster, contour.range) {
+calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
   
   # extract tower location information as numeric 
   tower.x.utm <- st_coordinates(tower.loc)[,1]
@@ -223,21 +259,17 @@ calc.ffp.loop <- function(df, tower.loc, raster, contour.range) {
                         tower.x.utm + 500,
                         tower.y.utm - 500,
                         tower.y.utm + 500)
-  raster.template <- crop(raster, crop.extent)
+  raster.brick.crop <- crop(raster.brick, crop.extent)
   
   # create vector of ffp output names
   matrices <- c('x_2d', 'y_2d', 'f_2d')
   
   # create output objects
   karst.pc <- vector()
-  mean.mtopo <- vector()
-  output <- list()
-  output[[1]] <- list()
+  sd.mtopo <- vector()
   
   # run ffp model on each row of data in the input (each row is a half hour period)
-  for (i in 1:3) { # use 3 now to be able to test without starting an interminable process, will need to be nrows(input.data)
-    
-    output[[1]][[i]] <- list()
+  for (i in 1:nrow(df)) { 
     
     # run ffp model
     ffp <- calc_footprint_FFP(lat = latitude.wgs84,
@@ -249,76 +281,87 @@ calc.ffp.loop <- function(df, tower.loc, raster, contour.range) {
                               ustar = as.numeric(df[i, "u_star"]),
                               wind_dir = as.numeric(df[i, "wind_dir"]),
                               r = contour.range)
-  
-    # format as data frame (this allows easy alignment of points to ec tower)
-    ffp.df <- map_dfc(matrices,
-                      ~ ffp[[.x]] %>% # select x, y, or f matrix
-                        as.data.frame() %>%
-                        pivot_longer(cols = 1:ncol(.),
-                                     names_to = 'remove',
-                                     values_to = .x) %>% # make it into a 'tidy' data frame (long format with single column for x, y, or f)
-                        select(-matches('remove'))) %>% # we don't need the names column which just contains original column information
-      mutate(x_geo = x_2d + tower.x.utm, # add ec tower latitude location to x distance values
-             y_geo = y_2d + tower.y.utm, # add ec tower longitude location to y distance values
-             f_2d_scaled = f_2d/sum(f_2d, na.rm = TRUE)) %>% # scale the flux measurement for each cell to a percentage of total flux
-      st_as_sf(coords = c('x_geo', 'y_geo'), crs = 32606, remove = FALSE)
     
-    # use rasterize to convert points to a raster aligned with thermokarst model
-    ffp.raster <- rasterize(as(ffp.df, 'Spatial'),
-                            raster.template,
-                            field = 'f_2d_scaled',
-                            fun = 'sum',
-                            na.rm = TRUE)
-    
-    # reformat contours as sf
-    ffp.sa.polygon <- list()
-    for (j in 1:length(ffp$xr)) {
-      # extract vectors with contour location information
-      xr <- ffp$xr[[j]] + tower.x.utm
-      yr <- ffp$yr[[j]] + tower.y.utm
-      # convert contour information to an sf polygon object
-      ffp.sa.polygon[[j]] <- st_polygon(list(matrix(c(xr, yr), ncol = 2, byrow = FALSE)))
+    if (ffp$flag_err == 0) {
+      
+      # format as data frame (this allows easy alignment of points to ec tower)
+      ffp.sf <- map_dfc(matrices,
+                        ~ ffp[[.x]] %>% # select x, y, or f matrix
+                          as.data.frame() %>%
+                          pivot_longer(cols = 1:ncol(.),
+                                       names_to = 'remove',
+                                       values_to = .x) %>% # make it into a 'tidy' data frame (long format with single column for x, y, or f)
+                          select(-matches('remove'))) %>% # we don't need the names column which just contains original column information
+        mutate(x_geo = x_2d + tower.x.utm, # add ec tower latitude location to x distance values
+               y_geo = y_2d + tower.y.utm, # add ec tower longitude location to y distance values
+               f_2d_scaled = f_2d/sum(f_2d, na.rm = TRUE)) %>% # scale the flux measurement for each cell to a percentage of total flux
+        st_as_sf(coords = c('x_geo', 'y_geo'), crs = 32606, remove = FALSE)
+      
+      # reformat contours as sf
+      ffp.sa.polygon <- list()
+      for (j in 1:length(ffp$xr)) {
+        # extract vectors with contour location information
+        xr <- ffp$xr[[j]] + tower.x.utm
+        yr <- ffp$yr[[j]] + tower.y.utm
+        # convert contour information to an sf polygon object
+        ffp.sa.polygon[[j]] <- st_polygon(list(matrix(c(xr, yr), ncol = 2, byrow = FALSE)))
+      }
+      ffp.sa.sfc <- st_as_sfc(ffp.sa.polygon, crs = 32606)
+      ffp.sa.sf <- st_sf(geometry = ffp.sa.sfc) %>%
+        mutate(interval = contour.range)
+      
+      # use rasterize to convert points to a raster aligned with thermokarst model
+      ffp.raster <- rasterize(as(ffp.sf, 'Spatial'),
+                              raster.brick.crop,
+                              field = 'f_2d_scaled',
+                              fun = 'sum',
+                              na.rm = TRUE)
+      
+      # mask to maximum requested contour polygon
+      ffp.raster.mask <- mask(ffp.raster, ffp.sa.sf)
+      raster.brick.mask <- mask(raster.brick.crop, ffp.sa.sf)
+      # plot(ffp.raster.mask)
+      
+      # calculate thermokarst percent cover
+      karst.pc[i] <- cellStats(raster.brick.mask[[1]]*ffp.raster.mask, sum, na.rm = TRUE)/cellStats(ffp.raster.mask, sum, na.rm = TRUE)
+      
+      # calculate mean microtopography
+      sd.mtopo[i] <- sqrt(cellStats(ffp.raster.mask*(raster.brick.mask[[2]] - cellStats(raster.brick.mask[[2]], mean, na.rm = TRUE))^2, sum, na.rm = TRUE)/((length(ffp.raster.mask[!is.na(ffp.raster.mask)]) - 1)/length(ffp.raster.mask[!is.na(ffp.raster.mask)])*cellStats(ffp.raster.mask, sum, na.rm = TRUE)))
+      
+    } else { # if the model didn't run for the current time period
+      
+      # fill in karst.pc and sd.mtopo with NA
+      karst.pc[i] <- NA
+      sd.mtopo[i] <- NA
+      
     }
-    ffp.sa.sfc <- st_as_sfc(ffp.sa.polygon, crs = 32606)
-    ffp.sa.sf <- st_sf(geometry = ffp.sa.sfc) %>%
-      mutate(interval = seq(10, 90, 10))
-    
-    # mask to 90% area
-    ffp.raster.mask <- mask(ffp.raster, ffp.sa.sf)
-    # plot(ffp.raster.mask)
-    
-    # calculate thermokarst percent cover
-    karst.pc[i] <- cellStats(raster.template*ffp.raster.mask, sum, na.rm = TRUE)
-    
-    # calculate mean microtopography
-    mean.mtopo[i] <- NA
-    
-    output[[1]][[i]][[1]] <- ffp.raster.mask
-    output[[1]][[i]][[2]] <- ffp.sa.sf
     
   }
   
-  output[[2]] <- df %>%
-    mutate(karst.pc = c(karst.pc, rep(NA, nrow(df) - length(karst.pc))),
-           mean.mtopo = c(mean.mtopo, rep(NA, nrow(df) - length(mean.mtopo))))
-
+  # output[[2]] <- df %>%
+  #   mutate(karst.pc = c(karst.pc, rep(NA, nrow(df) - length(karst.pc))),
+  #          sd.mtopo = c(sd.mtopo, rep(NA, nrow(df) - length(sd.mtopo))))
+  
+  output <- df %>%
+    mutate(karst.pc = karst.pc,
+           sd.mtopo = sd.mtopo)
+  
   
   return(output)
   
 }
 
-test <- calc.ffp.loop(final, ec_sf, mean.karst, seq(10, 90, 10))
-plot(test[[1]][[1]])
-plot(test[[1]][[2]]$geometry, add = TRUE)
-plot(test[[1]][[3]])
+# # test the function on a small set of data
+# start.time <- Sys.time()
+# test <- calc.ffp.loop(final.17[14980:14990], ec_sf, karst.mtopo.brick, seq(10, 90, 10))
+# end.time <- Sys.time()
+# difftime(start.time, end.time)
 
-# plot
-ggplot(filter(test.df), aes(x = x_2d, y = y_2d, color = sqrt(f_2d))) +
-  geom_point() +
-  # coord_fixed() +
-  geom_sf(data = r.sf, inherit.aes = FALSE, color = 'red', fill = 'transparent') +
-  scale_color_viridis()
+# # run the function on 2017
+# calculate ffp
+ffp.2017 <- calc.ffp.loop(final.17.list[[i]], ec_sf, karst.mtopo.brick, seq(10, 90, 10))
 
-ggplot(test.df, aes(x = f)) +
-  geom_bar()
+write.csv(ffp.2017,
+          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_2017.csv',
+          row.names = FALSE)
 #########################################################################################
