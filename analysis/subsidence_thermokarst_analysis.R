@@ -552,6 +552,33 @@ karst_morph <- karst_1_stats_sf %>%
                                            2)),
          volume = size*mean.depth)
 
+# extract mean slope for all polygons
+slope <- stack('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/slope_9km_1.tif',
+               '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/slope_9km_2.tif',
+               '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/slope_9km_3.tif')
+slope <- calc(slope, mean, na.rm = TRUE)
+
+slope_extract <- raster::extract(slope,
+                                 as(karst_morph, 'Spatial'),
+                                 fun = mean,
+                                 na.rm = TRUE,
+                                 df = TRUE) %>%
+  as.data.frame()
+
+karst_morph_slope <- cbind.data.frame(karst_morph, select(slope_extract, -ID)) %>%
+  rename(mean.slope = layer)
+st_write(karst_morph_slope,
+         '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp')
+test <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp')
+
+ggplot(test, aes(x = ID, y = men_slp)) +
+  geom_point()
+
+ggplot(test, aes(x = shape, y = men_slp)) +
+  geom_point()
+
+ggplot(test, aes(x = size, y = men_slp)) +
+  geom_point()
 
 ### Make some plots to look for any interesting patterns
 karst_morph_sum <- karst_morph %>%
