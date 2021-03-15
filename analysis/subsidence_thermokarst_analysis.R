@@ -569,19 +569,19 @@ karst_morph_slope <- cbind.data.frame(karst_morph, select(slope_extract, -ID)) %
   rename(mean.slope = layer)
 st_write(karst_morph_slope,
          '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp')
-test <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp')
-
-ggplot(test, aes(x = ID, y = men_slp)) +
-  geom_point()
-
-ggplot(test, aes(x = shape, y = men_slp)) +
-  geom_point()
-
-ggplot(test, aes(x = size, y = men_slp)) +
-  geom_point()
+karst_morph_slope <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp') %>%
+  rename(min.depth = min_dpth,
+         mean.depth = men_dpth,
+         median.depth = mdn_dpt,
+         max.depth = mx_dpth,
+         sd.depth = sd_dpth,
+         se.depth = se_dpth,
+         shape.cat.10 = shp__10,
+         shape.cat.2 = shp_c_2,
+         mean.slope = men_slp)
 
 ### Make some plots to look for any interesting patterns
-karst_morph_sum <- karst_morph %>%
+karst_morph_sum <- karst_morph_slope %>%
   select(-c(ID, FID)) %>%
   st_drop_geometry() %>%
   group_by(shape.cat.10) %>%
@@ -598,7 +598,21 @@ karst_morph_sum <- karst_morph %>%
   mutate(percent.cover = extent/8.1e+07,
          percent.features = n/sum(n),
          percent.volume = total.volume/sum(total.volume),
-         position = c(0, 0.3, 0.45, 0.6, 0.7, 1, 1, 1))
+         position = c(0, 0.3, 0.45, 0.6, 0.7, 1, 1, 1),
+         mean.slope = mean.slope*180/pi)
+
+# # slope by shape - not interesting, not much variation in slope
+# shape_slope_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.slope)) +
+#   geom_point() +
+#   geom_line() +
+#   scale_x_continuous(breaks = seq(1:8)) +
+#   scale_y_continuous(#name = 'Prevalence (%)',
+#     breaks = seq(0.08, 0.09, by = 0.025),
+#     labels = scales::number_format(accuracy = 0.01)) +
+#   theme_bw() +
+#   theme(axis.title = element_blank(),
+#         axis.text.x = element_blank())
+# shape_slope_plot
 
 # prevalence of features by shape
 shape_prevalence_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.features)) +
