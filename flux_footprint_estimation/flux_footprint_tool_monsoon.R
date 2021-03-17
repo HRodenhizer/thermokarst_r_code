@@ -8,13 +8,14 @@ library(sf)
 library(raster)
 library(data.table)
 library(lubridate)
-library(viridis)
 library(doParallel)
 library(tidyverse)
 #########################################################################################
 
 ### Load data ###########################################################################
-final.17 <- read.csv('/scratch/hgr7/flux_tower_footprint/data_input/ffp_ready_2017.csv')
+final.17 <- read.csv('/scratch/hgr7/flux_tower_footprint/data_input/ffp_ready_2017.csv',
+                     na.strings = '-999')
+final.17 <- data.table(final.17)
 #########################################################################################
 
 ### Run FFP #############################################################################
@@ -41,7 +42,7 @@ mtopo15 <- brick(stack(filenames[which(str_detect(filenames, pattern = 'mtopo15.
 mean.mtopo <- calc(mtopo15, mean, na.rm = TRUE)
 karst.mtopo.brick <- brick(mean.karst, mean.mtopo)
 
-rm(filenames, karst_1, mena.karst, mtopo15, mean.mtopo)
+rm(filenames, karst_1, mean.karst, mtopo15, mean.mtopo)
 
 
 # # run the function on 2017
@@ -62,8 +63,10 @@ for (i in 1:UseCores) {
   final.17.list[[i]] <- final.17[start.row:end.row]
 }
 
+cl <- makeCluster(UseCores, file = '/scratch/hgr7/flux_tower_footprint/ffp_raw_output/log.txt')
+registerDoParallel(cl)
 
-foreach(i=1:UseCores) %dopar% {
+ffp.df.2017 <- foreach(i=1:UseCores, .combine = rbind) %dopar% {
   # load libraries
   library(sf)
   library(raster)
@@ -552,6 +555,8 @@ foreach(i=1:UseCores) %dopar% {
   
   calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
     
+    print(paste('Function prep starting at', Sys.time()))
+    
     # extract tower location information as numeric 
     tower.x.utm <- st_coordinates(tower.loc)[,1]
     tower.y.utm <- st_coordinates(tower.loc)[,2]
@@ -574,6 +579,8 @@ foreach(i=1:UseCores) %dopar% {
     # run ffp model on each row of data in the input (each row is a half hour period)
     for (i in 1:nrow(df)) { 
       
+      print(paste('Iteration', i, 'footprint model starting at', Sys.time()))
+      
       # run ffp model
       ffp <- calc_footprint_FFP(lat = latitude.wgs84,
                                 zm = as.numeric(df[i, "zm"]),
@@ -586,6 +593,8 @@ foreach(i=1:UseCores) %dopar% {
                                 r = contour.range)
       
       if (ffp$flag_err == 0) {
+        
+        print(paste('Iteration', i, 'footprint model done. Reformating starting at', Sys.time()))
         
         # format as data frame (this allows easy alignment of points to ec tower)
         ffp.sf <- map_dfc(matrices,
@@ -633,6 +642,8 @@ foreach(i=1:UseCores) %dopar% {
         
       } else { # if the model didn't run for the current time period
         
+        print(paste('Iteration', i, 'footprint model failed at', Sys.time()))
+        
         # fill in karst.pc and sd.mtopo with NA
         karst.pc[i] <- NA
         sd.mtopo[i] <- NA
@@ -641,13 +652,13 @@ foreach(i=1:UseCores) %dopar% {
       
     }
     
-    # output[[2]] <- df %>%
-    #   mutate(karst.pc = c(karst.pc, rep(NA, nrow(df) - length(karst.pc))),
-    #          sd.mtopo = c(sd.mtopo, rep(NA, nrow(df) - length(sd.mtopo))))
+    print(paste('Loop completed at', Sys.time()))
     
     output <- df %>%
       mutate(karst.pc = karst.pc,
              sd.mtopo = sd.mtopo)
+    
+    print(paste('Output being returned at', Sys.time()))
     
     
     return(output)
@@ -655,25 +666,13 @@ foreach(i=1:UseCores) %dopar% {
   }
   
   # calculate ffp
-  ffp.2017 <- calc.ffp.loop(final.17.list[[i]], ec_sf, karst.mtopo.brick, seq(10, 90, 10))
-  
-  # save output
-  outname <- paste0('/scratch/hgr7/flux_tower_footprint/ffp_raw_output/ffp_2017_',
-                   i,
-                   '.csv')
-  
-  write.csv(slope_crop,
-              filename  = outname,
-              row.names = FALSE)
+  calc.ffp.loop(final.17.list[[i]], ec_sf, karst.mtopo.brick, seq(10, 90, 10))
   
 }
 
-filenames <- list.files('/scratch/hgr7/flux_tower_footprint/ffp_raw_output',
-                        full.names = TRUE)
-ffp.2017 <- map_dfr(filenames,
-                    ~ read.csv(.x))
+stopCluster(cl)
 
-write.csv(ffp.2017,
+write.csv(ffp.df.2017,
           '/scratch/hgr7/flux_tower_footprint/ffp_2017.csv',
           row.names = FALSE)
 #########################################################################################

@@ -131,6 +131,9 @@ final.19 <- final[yyyy == 2019 & mm >= 5 | yyyy == 2020 & mm < 5]
 
 ### Run FFP #############################################################################
 ### set up data needed for ffp formatting
+final.17 <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_ready_2017.csv',
+                     na.strings = '-999')
+final.17 <- data.table(final.17)
 # point for ec tower location UTM zone 6N
 ec <- st_sfc(st_point(c(389389.25, 7085586.3), dim = 'XY'), crs = 32606)
 ec_sf <- st_sf(geometry = ec, crs = 32606)
@@ -249,6 +252,8 @@ rm(filenames, karst_1, mean.karst, mtopo15, mean.mtopo)
 
 calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
   
+  print(paste('Function prep starting at', Sys.time()))
+  
   # extract tower location information as numeric 
   tower.x.utm <- st_coordinates(tower.loc)[,1]
   tower.y.utm <- st_coordinates(tower.loc)[,2]
@@ -271,6 +276,8 @@ calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
   # run ffp model on each row of data in the input (each row is a half hour period)
   for (i in 1:nrow(df)) { 
     
+    print(paste('Iteration', i, 'footprint model starting at', Sys.time()))
+    
     # run ffp model
     ffp <- calc_footprint_FFP(lat = latitude.wgs84,
                               zm = as.numeric(df[i, "zm"]),
@@ -283,6 +290,8 @@ calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
                               r = contour.range)
     
     if (ffp$flag_err == 0) {
+      
+      print(paste('Iteration', i, 'footprint model done. Reformating starting at', Sys.time()))
       
       # format as data frame (this allows easy alignment of points to ec tower)
       ffp.sf <- map_dfc(matrices,
@@ -330,6 +339,8 @@ calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
       
     } else { # if the model didn't run for the current time period
       
+      print(paste('Iteration', i, 'footprint model failed at', Sys.time()))
+      
       # fill in karst.pc and sd.mtopo with NA
       karst.pc[i] <- NA
       sd.mtopo[i] <- NA
@@ -342,9 +353,13 @@ calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
   #   mutate(karst.pc = c(karst.pc, rep(NA, nrow(df) - length(karst.pc))),
   #          sd.mtopo = c(sd.mtopo, rep(NA, nrow(df) - length(sd.mtopo))))
   
+  print(paste('Loop completed at', Sys.time()))
+  
   output <- df %>%
     mutate(karst.pc = karst.pc,
            sd.mtopo = sd.mtopo)
+  
+  print(paste('Output being returned at', Sys.time()))
   
   
   return(output)
@@ -361,9 +376,9 @@ calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
 # calculate ffp
 ffp.2017 <- calc.ffp.loop(final.17.list[[i]], ec_sf, karst.mtopo.brick, seq(10, 90, 10))
 
-write.csv(ffp.2017,
-          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_2017.csv',
-          row.names = FALSE)
+# write.csv(ffp.2017,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_2017.csv',
+#           row.names = FALSE)
 #########################################################################################
 
 ### Test parallelization on my computer #################################################
@@ -371,21 +386,21 @@ write.csv(ffp.2017,
 UseCores <- 5
 
 # split up data
-chunk.length <- 10
+chunk.length <- 1
 final.17.list <- list()
 for (i in 1:UseCores) {
   start.row <- (i - 1)*chunk.length + 1
   if (i < UseCores) {
     end.row <- i*chunk.length
   } else {
-    end.row <- nrow(final.17)
+    end.row <- UseCores*chunk.length
   }
   final.17.list[[i]] <- final.17[start.row:end.row]
 }
 
-cl <- makeCluster(UseCores)
+cl <- makeCluster(UseCores, outfile = "/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/test/log.txt")
 registerDoParallel(cl)
-ffp.2017 <- foreach(i=1:UseCores) %dopar% {
+ffp.2017 <- foreach(i=1:UseCores, .combine = rbind) %dopar% {
   # load libraries
   library(sf)
   library(raster)
@@ -872,7 +887,11 @@ ffp.2017 <- foreach(i=1:UseCores) %dopar% {
            wind_dir = wind_dir, nx = nx, r = r, crop = crop)
     }
   
+
+  
   calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
+    
+    print(paste('Function prep starting at', Sys.time()))
     
     # extract tower location information as numeric 
     tower.x.utm <- st_coordinates(tower.loc)[,1]
@@ -896,6 +915,8 @@ ffp.2017 <- foreach(i=1:UseCores) %dopar% {
     # run ffp model on each row of data in the input (each row is a half hour period)
     for (i in 1:nrow(df)) { 
       
+      print(paste('Iteration', i, 'footprint model starting at', Sys.time()))
+      
       # run ffp model
       ffp <- calc_footprint_FFP(lat = latitude.wgs84,
                                 zm = as.numeric(df[i, "zm"]),
@@ -908,6 +929,8 @@ ffp.2017 <- foreach(i=1:UseCores) %dopar% {
                                 r = contour.range)
       
       if (ffp$flag_err == 0) {
+        
+        print(paste('Iteration', i, 'footprint model done. Reformating starting at', Sys.time()))
         
         # format as data frame (this allows easy alignment of points to ec tower)
         ffp.sf <- map_dfc(matrices,
@@ -955,6 +978,8 @@ ffp.2017 <- foreach(i=1:UseCores) %dopar% {
         
       } else { # if the model didn't run for the current time period
         
+        print(paste('Iteration', i, 'footprint model failed at', Sys.time()))
+        
         # fill in karst.pc and sd.mtopo with NA
         karst.pc[i] <- NA
         sd.mtopo[i] <- NA
@@ -967,36 +992,41 @@ ffp.2017 <- foreach(i=1:UseCores) %dopar% {
     #   mutate(karst.pc = c(karst.pc, rep(NA, nrow(df) - length(karst.pc))),
     #          sd.mtopo = c(sd.mtopo, rep(NA, nrow(df) - length(sd.mtopo))))
     
+    print(paste('Loop completed at', Sys.time()))
+    
     output <- df %>%
       mutate(karst.pc = karst.pc,
              sd.mtopo = sd.mtopo)
+    
+    print(paste('Output being returned at', Sys.time()))
     
     
     return(output)
     
   }
   
+  
   # calculate ffp
-  ffp.2017 <- calc.ffp.loop(final.17.list[[i]], ec_sf, karst.mtopo.brick, seq(10, 90, 10))
+  calc.ffp.loop(final.17.list[[i]], ec_sf, karst.mtopo.brick, seq(10, 90, 10))
   
   # # save output
-  # outname <- paste0('/scratch/hgr7/flux_tower_footprint/ffp_raw_output/ffp_2017_',
+  # outname <- paste0('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/test/ffp_2017_',
   #                   i,
   #                   '.csv')
   # 
-  # write.csv(slope_crop,
-  #           filename  = outname,
+  # write.csv(ffp.2017,
+  #           file = outname,
   #           row.names = FALSE)
-  
+  # 
 }
 stopCluster(cl)
 
-# filenames <- list.files('/scratch/hgr7/flux_tower_footprint/ffp_raw_output',
+# filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/test/',
 #                         full.names = TRUE)
 # ffp.2017 <- map_dfr(filenames,
 #                     ~ read.csv(.x))
 
-write.csv(ffp.2017,
-          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_2017.csv',
-          row.names = FALSE)
+# write.csv(ffp.2017,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_2017.csv',
+#           row.names = FALSE)
 #########################################################################################
