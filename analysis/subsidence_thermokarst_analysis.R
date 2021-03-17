@@ -2380,11 +2380,12 @@ new <- rbind(Tower18.19, Tower19.20)
 
 # Select correct times from Ameriflux
 co2 <- co2 %>%
-  mutate(ts = parse_date_time(TIMESTAMP_START, orders = c('Y!m!*d!H!M!'))) %>%
+  mutate(ts = parse_date_time(TIMESTAMP_END, orders = c('Y!m!*d!H!M!'))) %>%
   filter(ts >= parse_date_time('2017-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')) &
            ts < parse_date_time('2020-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')))
 
 # Select needed data for tower analysis
+# could potentially include short term variables such as VPD, PAR, etc
 co2.small <- co2 %>%
   select(ts, NEE_PI_F, WD, PPFD_IN_PI_F) %>%
   mutate(n = ceiling(WD),
@@ -2513,6 +2514,132 @@ co2.roughness.plot <- ggplot(co2.model.data.mean,
            color = group,
            group = group,
            shape = factor(year))) +
+  geom_point(alpha = 0.3, size = 2) +
+  geom_smooth(method = 'lm') +
+  scale_x_continuous(name = 'Roughness') +
+  # scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+  scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+                     values = c('#339900', '#990000', '#000033')) +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        axis.title.y = element_blank())
+co2.roughness.plot
+
+co2.plot <- ggarrange(co2.karst.plot,
+                      co2.roughness.plot,
+                      nrow = 1,
+                      ncol = 2,
+                      widths = c(0.68, 1))
+co2.plot
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/co2_karst_roughness.jpg',
+#        co2.plot,
+#        height = 6,
+#        width = 8)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/co2_karst_roughness.pdf',
+#        co2.plot,
+#        height = 6,
+#        width = 8)
+########################################################################################################################
+
+### CH4 Analysis #######################################################################################################
+# Fluxnet
+ch4 <- read.table('/home/heidi/Documents/School/NAU/Schuur Lab/Eddy Covariance/methane/FLX_US-EML_FLUXNET-CH4_2015-2018_1-1/FLX_US-EML_FLUXNET-CH4_HH_2015-2018_1-1.csv',
+                  sep = ',',
+                  header = TRUE,
+                  na.strings = "-9999")
+
+# Select correct times from Fluxnet
+ch4 <- ch4 %>%
+  mutate(ts = parse_date_time(TIMESTAMP_END, orders = c('Y!m!*d!H!M!'))) %>%
+  filter(ts >= parse_date_time('2017-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')) &
+           ts < parse_date_time('2020-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')))
+
+# Select needed data for tower analysis
+# could potentially include short term variables such as VPD, PAR, WS, TA, TS, etc
+ch4.small <- ch4 %>%
+  select(ts, FCH4, PPFD_IN_F) %>%
+  mutate(month = month(ts),
+         season = ifelse(month >= 5 & month <= 9,
+                         'gs',
+                         'ngs'),
+         day = ifelse(PPFD_IN_F >= 10,
+                      'day',
+                      'night'),
+         year = ifelse(month >= 5,
+                       year(ts),
+                       ifelse(month < 5,
+                              year(ts) - 1,
+                              NA)))
+
+ggplot(ch4.small, aes(x = season, group = season, fill = season)) +
+  geom_bar(position = position_dodge())
+
+ggplot(ch4.small, aes(x = day, group = day, fill = day)) +
+  geom_bar(position = position_dodge())
+
+
+# combine karst and roughness data for the ec tower
+
+# Join ch4 and karst/roughness data
+
+# thermokarst
+# this is very busy, use the one with summarized data instead
+# ggplot(co2.model.data,
+#        aes(x = percent.thermokarst,
+#            y = NEE_PI_F,
+#            color = group,
+#            group = group,
+#            shape = factor(year))) +
+#   geom_point(alpha = 0.3) +
+#   geom_smooth(method = 'lm') +
+#   scale_x_continuous(name = 'Thermokarst Cover (%)') +
+#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+#   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+#                      values = c('#339900', '#990000', '#000033')) +
+#   theme_bw() +
+#   theme(legend.title = element_blank())
+
+co2.karst.plot <- ggplot(co2.model.data.mean,
+                         aes(x = percent.thermokarst,
+                             y = NEE,
+                             color = group,
+                             group = group,
+                             shape = factor(year))) +
+  geom_point(alpha = 0.3, size = 2) +
+  geom_smooth(method = 'lm' #,
+              # formula = y ~ poly(x, 2) # not sure about using a polynomial, particularly for respiration
+  ) +
+  scale_x_continuous(name = 'Thermokarst Cover (%)') +
+  scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+  scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+                     values = c('#339900', '#990000', '#000033')) +
+  theme_bw() +
+  theme(legend.position = 'none')
+co2.karst.plot
+
+# roughness
+# this is very busy, use the one with summarized data instead
+# ggplot(co2.model.data,
+#        aes(x = mtopo15.sd,
+#            y = NEE_PI_F,
+#            color = group,
+#            group = group,
+#            shape = factor(year))) +
+#   geom_point(alpha = 0.3) +
+#   geom_smooth(method = 'lm') +
+#   scale_x_continuous(name = 'Roughness') +
+#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+#   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+#                      values = c('#339900', '#990000', '#000033')) +
+#   theme_bw() +
+#   theme(legend.title = element_blank())
+
+co2.roughness.plot <- ggplot(co2.model.data.mean,
+                             aes(x = mtopo15.sd,
+                                 y = NEE,
+                                 color = group,
+                                 group = group,
+                                 shape = factor(year))) +
   geom_point(alpha = 0.3, size = 2) +
   geom_smooth(method = 'lm') +
   scale_x_continuous(name = 'Roughness') +
