@@ -386,7 +386,7 @@ ffp.2017 <- calc.ffp.loop(final.17[8690,], ec_sf, karst.mtopo.brick, seq(10, 90,
 UseCores <- 5
 
 # split up data
-chunk.length <- 10
+chunk.length <- 2
 final.17.list <- list()
 for (i in 1:UseCores) {
   start.row <- (i - 1)*chunk.length
@@ -495,7 +495,6 @@ ffp.2017 <- foreach(i=1:UseCores, .combine = rbind) %dopar% {
                                 wind_dir, nx, r, rslayer, crop, ind_return, flag_err)
       for (v in 1:length(output_list)) assign(names(output_list)[v], 
                                               output_list[[v]])
-      print(output_list)
       
       #--------------------------------------------------------------------
       # Create output array
@@ -896,6 +895,7 @@ ffp.2017 <- foreach(i=1:UseCores, .combine = rbind) %dopar% {
     }
   
   
+  
   calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
     
     print(paste('Function prep starting at', Sys.time()))
@@ -1016,15 +1016,6 @@ ffp.2017 <- foreach(i=1:UseCores, .combine = rbind) %dopar% {
   # calculate ffp
   calc.ffp.loop(final.17.list[[i]], ec_sf, karst.mtopo.brick, seq(10, 90, 10))
   
-  # # save output
-  # outname <- paste0('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/test/ffp_2017_',
-  #                   i,
-  #                   '.csv')
-  # 
-  # write.csv(ffp.2017,
-  #           file = outname,
-  #           row.names = FALSE)
-  # 
 }
 stopCluster(cl)
 

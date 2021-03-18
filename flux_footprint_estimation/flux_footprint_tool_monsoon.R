@@ -161,7 +161,6 @@ ffp.df.2017 <- foreach(i=1:UseCores, .combine = rbind) %dopar% {
                                 wind_dir, nx, r, rslayer, crop, ind_return, flag_err)
       for (v in 1:length(output_list)) assign(names(output_list)[v], 
                                               output_list[[v]])
-      print(output_list)
       
       #--------------------------------------------------------------------
       # Create output array
@@ -560,7 +559,6 @@ ffp.df.2017 <- foreach(i=1:UseCores, .combine = rbind) %dopar% {
       list(ind_return = ind_return, flag_err = flag_err, zm = zm, h = h, z0 = z0, 
            wind_dir = wind_dir, nx = nx, r = r, crop = crop)
     }
-  
   
   
   calc.ffp.loop <- function(df, tower.loc, raster.brick, contour.range) {
