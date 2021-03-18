@@ -22,6 +22,7 @@ library(mapview)
 library(ggthemes)
 library(ggpubr)
 library(gridExtra)
+library(data.table)
 library(tidyverse)
 ########################################################################################################################
 
@@ -1614,11 +1615,10 @@ rm(points_2008_clean, points_2017_clean, points_2019_clean, id_fix_2017, id_fix_
 # 
 # st_write(wedges_sf, "Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly_250.shp")
 wedges_sf <- st_read("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly_250.shp")
-
 ggplot() +
   geom_sf(data = wedges_sf, aes(color = n)) +
-  geom_sf(data = alt_points) +
-  coord_sf(datum = st_crs(32606))
+  coord_sf(datum = st_crs(32606)) +
+  geom_sf(data = alt_points)
 ########################################################################################################################
 
 ### Subsidence Distribution at EC Tower ################################################################################
@@ -2371,12 +2371,30 @@ co2 <- read.table('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DAT
                   skip = 2,
                   header = TRUE,
                   na.strings = "-9999")
+co2 <- data.table(co2)
+co2 <- unique(co2)
 
 # for now, also read in 2018-2019 and 2019-2020 from separate files
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
 
-new <- rbind(Tower18.19, Tower19.20)
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
+carbon.18 <- export
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
+carbon.19 <- export
+rm(export)
+
+new <- rbind(Tower18.19[, `:=` (u_var = NULL, v_var = NULL, w_var = NULL)], Tower19.20)
+new <- data.table(new)
+new <- unique(new)
+new[, 46 := NULL]
+
+carbon <- rbind(carbon.18[, `:=` (u_var = NULL, v_var = NULL, w_var = NULL)], carbon.19)
+carbon <- data.table(carbon)
+carbon <- unique(carbon)
+carbon <- carbon[, .(ts, NEP, GEP, Reco)]
+
+new <- merge(new, carbon, by = c('ts', 'NEP'))
 
 # Select correct times from Ameriflux
 co2 <- co2 %>%
@@ -2387,8 +2405,11 @@ co2 <- co2 %>%
 # Select needed data for tower analysis
 # could potentially include short term variables such as VPD, PAR, etc
 co2.small <- co2 %>%
-  select(ts, NEE_PI_F, WD, PPFD_IN_PI_F) %>%
-  mutate(n = ceiling(WD),
+  select(ts, NEE_PI_F, RECO_PI_F, GPP_PI_F, WD, PPFD_IN_PI_F) %>%
+  mutate(NEP = NEE_PI_F * (12.0107 * 1800)/1000000, # convert to g/half hour from micromol/s
+         GEP = GPP_PI_F * (12.0107 * 1800)/1000000,
+         Reco = RECO_PI_F * (12.0107 * 1800)/1000000,
+         direction = ceiling(WD),
          month = month(ts),
          season = ifelse(month >= 5 & month <= 9,
                          'gs',
@@ -2406,13 +2427,13 @@ co2.small <- co2 %>%
                        ifelse(month < 5,
                               year(ts) - 1,
                               NA))) %>%
-  filter(!is.na(n))
+  filter(!is.na(WD)) %>%
+  select(ts, NEP, GEP, Reco, WD, direction, PPFD_IN_PI_F, year, season, month, day, group)
 
 new.small <- new %>%
-  select(-46) %>%
-  rename(NEE_PI_F = nee_gapfilled, WD = wind_dir, PPFD_IN_PI_F = PAR_filter) %>%
-  select(ts, NEE_PI_F, WD, PPFD_IN_PI_F) %>%
-  mutate(n = ceiling(WD),
+  rename(WD = wind_dir, PPFD_IN_PI_F = PAR_filter) %>%
+  select(ts, NEP, GEP, Reco, WD, PPFD_IN_PI_F) %>%
+  mutate(direction = ceiling(WD),
          month = month(ts),
          season = ifelse(month >= 5 & month <= 9,
                          'gs',
@@ -2430,107 +2451,226 @@ new.small <- new %>%
                        ifelse(month < 5,
                               year(ts) - 1,
                               NA))) %>%
-  filter(!is.na(n))
+  filter(!is.na(WD)) %>%
+  select(ts, NEP, GEP, Reco, WD, direction, PPFD_IN_PI_F, year, season, month, day, group)
 
 co2.small <- co2.small %>%
-  rbind.data.frame(new.small)
+  rbind(new.small)
+co2.small <- unique(co2.small)
 
-ggplot(co2.small, aes(x = n, group = group, fill = group)) +
+# full screen this one, otherwise certain bars will not be visible, making it
+# look like there are certain wind directions missing certain flux groups!
+ggplot(co2.small, aes(x = direction, group = group, fill = group)) +
   geom_bar(position = position_dodge())
 
-# Don't actually need this part? Keep all raw data rather than averaging for plot
-co2.mean <- co2.small %>%
-  group_by(year, n, group) %>%
-  summarise(NEE = mean(NEE_PI_F, na.rm = TRUE))
-
-
 # combine karst and roughness data for the ec tower
-karst_roughness <- karst_ec_sf %>%
-  st_drop_geometry() %>%
-  full_join(mtopo_ec_sf, by = 'n')
+karst_roughness.2017 <- fread('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_2017.csv')
+karst_roughness.2017[, ts := ymd_hm(paste(paste(yyyy, mm, day, sep = '/'), paste(HH, MM, sep = ':')))]
+karst_roughness.2017 <- karst_roughness.2017[, .(ts, wind_dir, karst.pc, sd.mtopo)]
+test <- karst_roughness.2017[, .N, by = 'ts']
+# View(test[N > 1])
+# View(test[N == 1])
+duplicates <- karst_roughness.2017[karst_roughness.2017$ts %in% test[N > 1,]$ts,]
+# View(duplicates[order(ts)])
+karst_roughness.2017 <- unique(karst_roughness.2017)
+test <- karst_roughness.2017[, .N, by = 'ts']
+karst_roughness.2017 <- karst_roughness.2017[, N := .N, by = 'ts']
+karst_roughness.2017 <- karst_roughness.2017[!(is.na(wind_dir & N == 2)),]
+karst_roughness.2017 <- karst_roughness.2017[, N := .N, by = 'ts']
+all(karst_roughness.2017$N == 1)
+karst_roughness.2017[, N := NULL]
 
 # Join co2 and karst/roughness data
 co2.model.data <- co2.small %>%
-  full_join(karst_roughness, by = 'n')
+  full_join(karst_roughness.2017, by = 'ts') %>%
+  rename(percent.thermokarst.ffp = karst.pc, mtopo15.sd.ffp = sd.mtopo) %>%
+  as.data.table()
 
-co2.model.data.mean <- co2.mean %>%
-  full_join(karst_roughness, by = 'n')
+# did the join get the right timestamps?
+test <- co2.model.data[!is.na(wind_dir), offset := WD - wind_dir]
+test <- test[!is.na(offset) & round(offset, 4) != 0, ] # should have 0 rows
 
-# thermokarst
-# this is very busy, use the one with summarized data instead
+# remove duplicate wind rows
+co2.model.data[, wind_dir := NULL]
+co2.model.data[, n := direction]
+
+### Should compare thermokarst cover and roughness using slices vs. ffp ###
+### microtopography by thermokarst
+karst_mtopo_sf <- karst_ec_sf %>%
+  st_drop_geometry() %>%
+  full_join(mtopo_ec_sf, 
+            by = c('n')) %>%
+  st_as_sf() %>%
+  mutate(direction = ifelse(n <= 270,
+                            n + 90,
+                            n - 270)) %>%
+  rename(percent.thermokarst.slice = percent.thermokarst, mtopo15.sd.slice = mtopo15.sd)
+
+# Join co2 and karst/roughness data
+co2.model.data <- co2.model.data %>%
+  full_join(karst_mtopo_sf, by = 'direction') %>%
+  st_as_sf()
+
+ggplot(co2.model.data, aes(x = percent.thermokarst.ffp, y = percent.thermokarst.slice)) +
+  geom_point()
+
+ggplot(co2.model.data, aes(x = mtopo15.sd.ffp, y = mtopo15.sd.slice)) +
+  geom_point()
+
+# thermokarst - ffp
+ggplot(co2.model.data,
+       aes(x = percent.thermokarst.ffp,
+           y = NEP,
+           color = group,
+           group = group,
+           shape = factor(year))) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = 'lm') +
+  scale_x_continuous(name = 'Thermokarst Cover (%)') +
+  scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
+  scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+                     values = c('#339900', '#990000', '#000033')) +
+  theme_bw() +
+  theme(legend.title = element_blank())
+
+# # thermokarst - slices
 # ggplot(co2.model.data,
-#        aes(x = percent.thermokarst,
-#            y = NEE_PI_F,
+#        aes(x = percent.thermokarst.slice,
+#            y = NEP,
 #            color = group,
 #            group = group,
 #            shape = factor(year))) +
 #   geom_point(alpha = 0.3) +
 #   geom_smooth(method = 'lm') +
 #   scale_x_continuous(name = 'Thermokarst Cover (%)') +
-#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
 #   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
 #                      values = c('#339900', '#990000', '#000033')) +
 #   theme_bw() +
 #   theme(legend.title = element_blank())
 
-co2.karst.plot <- ggplot(co2.model.data.mean,
-       aes(x = percent.thermokarst,
-           y = NEE,
+# # NEP no groups - not sure if it makes sense to use this?
+# ggplot(co2.model.data,
+#        aes(x = percent.thermokarst.ffp,
+#            y = NEP,
+#            shape = factor(year))) +
+#   geom_point(alpha = 0.3, aes(color = WD)) +
+#   geom_smooth(method = 'lm', color = 'black') +
+#   scale_x_continuous(name = 'Thermokarst Cover (%)') +
+#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
+#   theme_bw() +
+#   theme(legend.title = element_blank()) +
+#   scale_color_viridis()
+# 
+# GEP growing season daytime only
+ggplot(filter(co2.model.data, group == 'GS Day'),
+       aes(x = percent.thermokarst.ffp,
+           y = GEP,
+           shape = factor(year))) +
+  geom_point(alpha = 0.3, color = '#339900') +
+  geom_smooth(method = 'lm', color = 'black') +
+  scale_x_continuous(name = 'Thermokarst Cover (%)') +
+  scale_y_continuous(name = expression('Gross Primary Production' ~ ('g C' ~ 's'^-2)),
+                     limits = c(0, 0.3)) +
+  theme_bw() +
+  theme(legend.title = element_blank())
+
+# Reco
+ggplot(co2.model.data,
+       aes(x = percent.thermokarst.ffp,
+           y = Reco,
            color = group,
            group = group,
            shape = factor(year))) +
-  geom_point(alpha = 0.3, size = 2) +
-  geom_smooth(method = 'lm' #,
-              # formula = y ~ poly(x, 2) # not sure about using a polynomial, particularly for respiration
-              ) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = 'lm', color = 'black') +
   scale_x_continuous(name = 'Thermokarst Cover (%)') +
-  scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+  scale_y_continuous(name = expression('Ecosystem Respiration' ~ ('g C' ~ 's'^-2))) +
   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
                      values = c('#339900', '#990000', '#000033')) +
   theme_bw() +
-  theme(legend.position = 'none')
-co2.karst.plot
+  theme(legend.title = element_blank())
 
-# roughness
-# this is very busy, use the one with summarized data instead
+# roughness - ffp
+ggplot(co2.model.data,
+       aes(x = mtopo15.sd.ffp,
+           y = NEP,
+           color = group,
+           group = group,
+           shape = factor(year))) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = 'lm') +
+  scale_x_continuous(name = 'Roughness (m)') +
+  scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
+  scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
+                     values = c('#339900', '#990000', '#000033')) +
+  theme_bw() +
+  theme(legend.title = element_blank())
+
+# # roughness - slices
 # ggplot(co2.model.data,
-#        aes(x = mtopo15.sd,
-#            y = NEE_PI_F,
+#        aes(x = mtopo15.sd.slice,
+#            y = NEP,
 #            color = group,
 #            group = group,
 #            shape = factor(year))) +
 #   geom_point(alpha = 0.3) +
 #   geom_smooth(method = 'lm') +
-#   scale_x_continuous(name = 'Roughness') +
-#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+#   scale_x_continuous(name = 'Roughness (m)') +
+#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
 #   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
 #                      values = c('#339900', '#990000', '#000033')) +
 #   theme_bw() +
 #   theme(legend.title = element_blank())
 
-co2.roughness.plot <- ggplot(co2.model.data.mean,
-       aes(x = mtopo15.sd,
-           y = NEE,
+# # NEP no groups - not sure if it makes sense to use this?
+# ggplot(co2.model.data,
+#        aes(x = mtopo15.sd.ffp,
+#            y = NEP,
+#            shape = factor(year))) +
+#   geom_point(alpha = 0.3, aes(color = WD)) +
+#   geom_smooth(method = 'lm', color = 'black') +
+#   scale_x_continuous(name = 'Roughness (m)') +
+#   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
+#   theme_bw() +
+#   theme(legend.title = element_blank()) +
+#   scale_color_viridis()
+
+# GEP growing season daytime only
+ggplot(filter(co2.model.data, group == 'GS Day'),
+       aes(x = mtopo15.sd.ffp,
+           y = GEP,
+           shape = factor(year))) +
+  geom_point(alpha = 0.3, color = '#339900') +
+  geom_smooth(method = 'lm', color = 'black') +
+  scale_x_continuous(name = 'Roughness (m)') +
+  scale_y_continuous(name = expression('Gross Primary Production' ~ ('g C' ~ 's'^-2)),
+                     limits = c(0, 0.3)) +
+  theme_bw() +
+  theme(legend.title = element_blank())
+
+# Reco
+ggplot(co2.model.data,
+       aes(x = mtopo15.sd.ffp,
+           y = Reco,
            color = group,
            group = group,
            shape = factor(year))) +
-  geom_point(alpha = 0.3, size = 2) +
-  geom_smooth(method = 'lm') +
-  scale_x_continuous(name = 'Roughness') +
-  # scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ (mu ~ 'mol' ~ 's'^-2))) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = 'lm', color = 'black') +
+  scale_x_continuous(name = 'Roughness (m)') +
+  scale_y_continuous(name = expression('Ecosystem Respiration' ~ ('g C' ~ 's'^-2))) +
   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
                      values = c('#339900', '#990000', '#000033')) +
   theme_bw() +
-  theme(legend.title = element_blank(),
-        axis.title.y = element_blank())
-co2.roughness.plot
+  theme(legend.title = element_blank())
 
-co2.plot <- ggarrange(co2.karst.plot,
-                      co2.roughness.plot,
-                      nrow = 1,
-                      ncol = 2,
-                      widths = c(0.68, 1))
-co2.plot
+# co2.plot <- ggarrange(co2.karst.plot,
+#                       co2.roughness.plot,
+#                       nrow = 1,
+#                       ncol = 2,
+#                       widths = c(0.68, 1))
+# co2.plot
 # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/co2_karst_roughness.jpg',
 #        co2.plot,
 #        height = 6,
