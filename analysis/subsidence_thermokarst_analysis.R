@@ -2056,6 +2056,8 @@ mtopo_points_extract_2019 <- raster::extract(mean_mtopo,
 mtopo_points_extract <- rbind(mtopo_points_extract_2017, mtopo_points_extract_2019) %>%
   rename(mtopo_15 = layer)
 rm(mtopo_points_extract_2017, mtopo_points_extract_2019)
+
+# # Extract mtopo at ec tower slices
 # mtopo_extract <- raster::extract(mtopo_brick, as(wedges_sf, 'Spatial'), layer = 1, nl = 3, cellnumbers = TRUE, df = TRUE) %>%
 #   as.data.frame()
 # mtopo_extract_neat <- mtopo_extract %>%
@@ -2405,7 +2407,7 @@ co2 <- co2 %>%
 # Select needed data for tower analysis
 # could potentially include short term variables such as VPD, PAR, etc
 co2.small <- co2 %>%
-  select(ts, NEE_PI_F, RECO_PI_F, GPP_PI_F, WD, PPFD_IN_PI_F) %>%
+  select(ts, NEE_PI_F, RECO_PI_F, GPP_PI_F, WS, WD, TA_PI_F, TS, PPFD_IN_PI_F, VPD_PI) %>%
   mutate(NEP = NEE_PI_F * (12.0107 * 1800)/1000000, # convert to g/half hour from micromol/s
          GEP = GPP_PI_F * (12.0107 * 1800)/1000000,
          Reco = RECO_PI_F * (12.0107 * 1800)/1000000,
@@ -2417,6 +2419,7 @@ co2.small <- co2 %>%
          day = ifelse(PPFD_IN_PI_F >= 10,
                       'day',
                       'night'),
+         doy = yday(ts),
          group = ifelse(season == 'gs' & day == 'day',
                         'GS Day',
                         ifelse(season == 'gs' & day == 'night',
@@ -2428,19 +2431,24 @@ co2.small <- co2 %>%
                               year(ts) - 1,
                               NA))) %>%
   filter(!is.na(WD)) %>%
-  select(ts, NEP, GEP, Reco, WD, direction, PPFD_IN_PI_F, year, season, month, day, group)
+  select(ts, year, season, month, day, doy, group, NEP, GEP, Reco, WS, WD, direction, tair = TA_PI_F, tsoil = TS,
+         PAR = PPFD_IN_PI_F, VPD = VPD_PI)
+
+ggplot(co2.small, aes(x = year, y = GEP, group = year)) +
+  geom_boxplot()
 
 new.small <- new %>%
-  rename(WD = wind_dir, PPFD_IN_PI_F = PAR_filter) %>%
-  select(ts, NEP, GEP, Reco, WD, PPFD_IN_PI_F) %>%
-  mutate(direction = ceiling(WD),
+  select(ts, NEP, GEP, Reco, wind_speed_filter, wind_dir, tair, Ts_20_KT_Avg, PAR_filter, VPD) %>%
+  mutate(GEP = -1*GEP,
+         direction = ceiling(wind_dir),
          month = month(ts),
          season = ifelse(month >= 5 & month <= 9,
                          'gs',
                          'ngs'),
-         day = ifelse(PPFD_IN_PI_F >= 10,
+         day = ifelse(PAR_filter >= 10,
                       'day',
                       'night'),
+         doy = yday(ts),
          group = ifelse(season == 'gs' & day == 'day',
                         'GS Day',
                         ifelse(season == 'gs' & day == 'night',
@@ -2451,8 +2459,12 @@ new.small <- new %>%
                        ifelse(month < 5,
                               year(ts) - 1,
                               NA))) %>%
-  filter(!is.na(WD)) %>%
-  select(ts, NEP, GEP, Reco, WD, direction, PPFD_IN_PI_F, year, season, month, day, group)
+  filter(!is.na(wind_dir)) %>%
+  select(ts, year, season, month, day, doy, group, NEP, GEP, Reco, WS = wind_speed_filter,
+         WD = wind_dir, direction, tair, tsoil = Ts_20_KT_Avg, PAR = PAR_filter, VPD)
+
+ggplot(new.small, aes(x = year, y = GEP, group = year)) +
+  geom_boxplot()
 
 co2.small <- co2.small %>%
   rbind(new.small)
@@ -2464,35 +2476,49 @@ ggplot(co2.small, aes(x = direction, group = group, fill = group)) +
   geom_bar(position = position_dodge())
 
 # combine karst and roughness data for the ec tower
-karst_roughness.2017 <- fread('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_2017.csv')
-karst_roughness.2017[, ts := ymd_hm(paste(paste(yyyy, mm, day, sep = '/'), paste(HH, MM, sep = ':')))]
-karst_roughness.2017 <- karst_roughness.2017[, .(ts, wind_dir, karst.pc, sd.mtopo)]
-test <- karst_roughness.2017[, .N, by = 'ts']
+filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint',
+                        full.names = TRUE,
+                        pattern = '^ffp_20.+csv')
+karst_roughness <- map_dfr(filenames,
+                           ~ fread(.x))
+karst_roughness[, ts := ymd_hm(paste(paste(yyyy, mm, day, sep = '/'), paste(HH, MM, sep = ':')))]
+karst_roughness <- karst_roughness[, .(ts, wind_dir, karst.pc, sd.mtopo)]
+karst_roughness[, wind_dir_round := round(wind_dir, 2)]
+karst_roughness[, karst.pc_round := round(karst.pc, 2)]
+karst_roughness[, sd.mtopo_round := round(sd.mtopo, 2)]
+test <- karst_roughness[, .N, by = 'ts']
 # View(test[N > 1])
 # View(test[N == 1])
-duplicates <- karst_roughness.2017[karst_roughness.2017$ts %in% test[N > 1,]$ts,]
+duplicates <- karst_roughness[karst_roughness$ts %in% test[N > 1,]$ts,]
 # View(duplicates[order(ts)])
-karst_roughness.2017 <- unique(karst_roughness.2017)
-test <- karst_roughness.2017[, .N, by = 'ts']
-karst_roughness.2017 <- karst_roughness.2017[, N := .N, by = 'ts']
-karst_roughness.2017 <- karst_roughness.2017[!(is.na(wind_dir & N == 2)),]
-karst_roughness.2017 <- karst_roughness.2017[, N := .N, by = 'ts']
-all(karst_roughness.2017$N == 1)
-karst_roughness.2017[, N := NULL]
+karst_roughness <- unique(karst_roughness, by = c('ts', 'wind_dir_round', 'karst.pc_round', 'sd.mtopo_round'))
+test <- karst_roughness[, .N, by = 'ts']
+duplicates <- karst_roughness[karst_roughness$ts %in% test[N > 1,]$ts,]
+# View(duplicates[order(ts)])
+karst_roughness <- karst_roughness[, N := .N, by = 'ts']
+karst_roughness <- karst_roughness[!(is.na(wind_dir & N == 2)),]
+karst_roughness <- karst_roughness[, N := .N, by = 'ts']
+all(karst_roughness$N == 1) # should be TRUE
+karst_roughness[, N := NULL]
+karst_roughness[, wind_dir_round := NULL]
+karst_roughness[, karst.pc_round := NULL]
+karst_roughness[, sd.mtopo_round := NULL]
 
 # Join co2 and karst/roughness data
 co2.model.data <- co2.small %>%
-  full_join(karst_roughness.2017, by = 'ts') %>%
+  full_join(karst_roughness, by = 'ts') %>%
   rename(percent.thermokarst.ffp = karst.pc, mtopo15.sd.ffp = sd.mtopo) %>%
   as.data.table()
 
+co2.model.data <- co2.model.data[order(ts)]
+
 # did the join get the right timestamps?
-test <- co2.model.data[!is.na(wind_dir), offset := WD - wind_dir]
+test <- co2.model.data[!is.na(wind_dir), offset := round(WD, 2) - round(wind_dir, 2)]
 test <- test[!is.na(offset) & round(offset, 4) != 0, ] # should have 0 rows
 
 # remove duplicate wind rows
 co2.model.data[, wind_dir := NULL]
-co2.model.data[, n := direction]
+co2.model.data[, offset := NULL]
 
 ### Should compare thermokarst cover and roughness using slices vs. ffp ###
 ### microtopography by thermokarst
@@ -2504,19 +2530,21 @@ karst_mtopo_sf <- karst_ec_sf %>%
   mutate(direction = ifelse(n <= 270,
                             n + 90,
                             n - 270)) %>%
-  rename(percent.thermokarst.slice = percent.thermokarst, mtopo15.sd.slice = mtopo15.sd)
+  select(percent.thermokarst.slice = percent.thermokarst, mtopo15.sd.slice = mtopo15.sd, direction)
 
 # Join co2 and karst/roughness data
 co2.model.data <- co2.model.data %>%
+  filter(!is.na(year)) %>%
   full_join(karst_mtopo_sf, by = 'direction') %>%
   st_as_sf()
 
-ggplot(co2.model.data, aes(x = percent.thermokarst.ffp, y = percent.thermokarst.slice)) +
+ggplot(co2.model.data, aes(x = percent.thermokarst.ffp, y = percent.thermokarst.slice, color = direction)) +
   geom_point()
 
-ggplot(co2.model.data, aes(x = mtopo15.sd.ffp, y = mtopo15.sd.slice)) +
+ggplot(co2.model.data, aes(x = mtopo15.sd.ffp, y = mtopo15.sd.slice, color = direction)) +
   geom_point()
 
+### First make some graphs
 # thermokarst - ffp
 ggplot(co2.model.data,
        aes(x = percent.thermokarst.ffp,
@@ -2524,7 +2552,7 @@ ggplot(co2.model.data,
            color = group,
            group = group,
            shape = factor(year))) +
-  geom_point(alpha = 0.3) +
+  geom_point(alpha = 0.3, size = 1) +
   geom_smooth(method = 'lm') +
   scale_x_continuous(name = 'Thermokarst Cover (%)') +
   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
@@ -2540,7 +2568,7 @@ ggplot(co2.model.data,
 #            color = group,
 #            group = group,
 #            shape = factor(year))) +
-#   geom_point(alpha = 0.3) +
+#   geom_point(alpha = 0.3, size = 1) +
 #   geom_smooth(method = 'lm') +
 #   scale_x_continuous(name = 'Thermokarst Cover (%)') +
 #   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
@@ -2566,14 +2594,25 @@ ggplot(co2.model.data,
 ggplot(filter(co2.model.data, group == 'GS Day'),
        aes(x = percent.thermokarst.ffp,
            y = GEP,
-           shape = factor(year))) +
-  geom_point(alpha = 0.3, color = '#339900') +
-  geom_smooth(method = 'lm', color = 'black') +
+           group = factor(month))) +
+  geom_point(alpha = 0.3,
+             size = 1,
+             #color = '#339900',
+             aes(color = factor(month),
+                 shape = factor(year))) +
+  geom_smooth(method = 'lm',
+              #color = 'black',
+              aes(color = factor(month))) +
   scale_x_continuous(name = 'Thermokarst Cover (%)') +
   scale_y_continuous(name = expression('Gross Primary Production' ~ ('g C' ~ 's'^-2)),
                      limits = c(0, 0.3)) +
   theme_bw() +
   theme(legend.title = element_blank())
+
+# # looks like units don't agree between 2017 an other years - sign changed!
+# # has been fixed
+# ggplot(filter(co2.model.data, group == 'GS Day'), aes(x = year, y = GEP, group = year)) +
+#   geom_boxplot()
 
 # Reco
 ggplot(co2.model.data,
@@ -2582,7 +2621,7 @@ ggplot(co2.model.data,
            color = group,
            group = group,
            shape = factor(year))) +
-  geom_point(alpha = 0.3) +
+  geom_point(alpha = 0.3, size = 1) +
   geom_smooth(method = 'lm', color = 'black') +
   scale_x_continuous(name = 'Thermokarst Cover (%)') +
   scale_y_continuous(name = expression('Ecosystem Respiration' ~ ('g C' ~ 's'^-2))) +
@@ -2591,6 +2630,10 @@ ggplot(co2.model.data,
   theme_bw() +
   theme(legend.title = element_blank())
 
+# # check units between years - looks good!
+# ggplot(co2.model.data, aes(x = year, y = Reco, group = year)) +
+#   geom_boxplot()
+
 # roughness - ffp
 ggplot(co2.model.data,
        aes(x = mtopo15.sd.ffp,
@@ -2598,7 +2641,7 @@ ggplot(co2.model.data,
            color = group,
            group = group,
            shape = factor(year))) +
-  geom_point(alpha = 0.3) +
+  geom_point(alpha = 0.3, size = 1) +
   geom_smooth(method = 'lm') +
   scale_x_continuous(name = 'Roughness (m)') +
   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
@@ -2614,7 +2657,7 @@ ggplot(co2.model.data,
 #            color = group,
 #            group = group,
 #            shape = factor(year))) +
-#   geom_point(alpha = 0.3) +
+#   geom_point(alpha = 0.3, size = 1) +
 #   geom_smooth(method = 'lm') +
 #   scale_x_continuous(name = 'Roughness (m)') +
 #   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
@@ -2628,7 +2671,7 @@ ggplot(co2.model.data,
 #        aes(x = mtopo15.sd.ffp,
 #            y = NEP,
 #            shape = factor(year))) +
-#   geom_point(alpha = 0.3, aes(color = WD)) +
+#   geom_point(alpha = 0.3, size = 1, aes(color = WD)) +
 #   geom_smooth(method = 'lm', color = 'black') +
 #   scale_x_continuous(name = 'Roughness (m)') +
 #   scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 's'^-2))) +
@@ -2640,9 +2683,15 @@ ggplot(co2.model.data,
 ggplot(filter(co2.model.data, group == 'GS Day'),
        aes(x = mtopo15.sd.ffp,
            y = GEP,
-           shape = factor(year))) +
-  geom_point(alpha = 0.3, color = '#339900') +
-  geom_smooth(method = 'lm', color = 'black') +
+           shape = factor(year),
+           group = factor(month))) +
+  geom_point(alpha = 0.3,
+             size = 1,
+             #color = '#339900',
+             aes(color = factor(month))) +
+  geom_smooth(method = 'lm',
+              #color = 'black',
+              aes(color = factor(month))) +
   scale_x_continuous(name = 'Roughness (m)') +
   scale_y_continuous(name = expression('Gross Primary Production' ~ ('g C' ~ 's'^-2)),
                      limits = c(0, 0.3)) +
@@ -2656,14 +2705,72 @@ ggplot(co2.model.data,
            color = group,
            group = group,
            shape = factor(year))) +
-  geom_point(alpha = 0.3) +
-  geom_smooth(method = 'lm', color = 'black') +
+  geom_point(alpha = 0.3, size = 1) +
+  geom_smooth(method = 'lm',
+              #color = 'black',
+              aes(color = group)) +
   scale_x_continuous(name = 'Roughness (m)') +
   scale_y_continuous(name = expression('Ecosystem Respiration' ~ ('g C' ~ 's'^-2))) +
   scale_color_manual(breaks = c('GS Day', 'GS Night Respiration', 'NGS Respiration'),
                      values = c('#339900', '#990000', '#000033')) +
   theme_bw() +
   theme(legend.title = element_blank())
+
+### Run some models
+co2.model.data  %>%
+  st_drop_geometry() %>%
+  mutate(tair2 = tair^2,
+         PAR2 = PAR^(1/2)) %>%
+  select(NEP, GEP, Reco, WS, tair, tair2, tsoil, PAR2, VPD, percent.thermokarst.ffp, mtopo15.sd.ffp) %>%
+  GGally::ggpairs(upper=list(continuous='points'), lower=list(continuous='cor'))
+
+co2.model.data <- co2.model.data %>%
+  mutate(tair2 = tair^2,
+         PAR2 = PAR^(1/2))
+
+# NEE
+smallest <- NEP ~ 1
+biggest <- NEP ~ percent.thermokarst.ffp*PAR2*WS*group
+start <- lm(NEP ~ percent.thermokarst.ffp*PAR2*group + WS*group,
+            data = co2.model.data)
+
+stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+nee.model <- lm(NEP ~ percent.thermokarst.ffp + PAR2 + group + WS + 
+                  percent.thermokarst.ffp:PAR2 + percent.thermokarst.ffp:group + 
+                  PAR2:group + group:WS + percent.thermokarst.ffp:WS + PAR2:WS + 
+                  percent.thermokarst.ffp:PAR2:group + percent.thermokarst.ffp:group:WS + 
+                  PAR2:group:WS + percent.thermokarst.ffp:PAR2:WS,
+                data = co2.model.data)
+
+# GPP
+smallest <- GEP ~ 1
+biggest <- GEP ~ percent.thermokarst.ffp*PAR2*WS*month
+start <- lm(GEP ~ percent.thermokarst.ffp*PAR2*month + WS*month, data = co2.model.data)
+
+stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+gpp.model <- lm(GEP ~ percent.thermokarst.ffp + PAR2 + month + WS + 
+                  PAR2:month + PAR2:WS + percent.thermokarst.ffp:PAR2 + percent.thermokarst.ffp:WS + 
+                  percent.thermokarst.ffp:month + month:WS + percent.thermokarst.ffp:PAR2:WS + 
+                  percent.thermokarst.ffp:PAR2:month + PAR2:month:WS,
+                data = co2.model.data)
+
+# Reco
+smallest <- Reco ~ 1
+biggest <- Reco ~ tair + tair2*percent.thermokarst.ffp*WS*group
+start <- lm(Reco ~ tair + tair2*percent.thermokarst.ffp*group + WS*group, data = co2.model.data)
+
+stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+reco.model <- lm(Reco ~ tair + tair2 + percent.thermokarst.ffp + 
+                   group + WS + tair2:percent.thermokarst.ffp + tair2:group + 
+                   percent.thermokarst.ffp:group + group:WS + percent.thermokarst.ffp:WS + 
+                   tair2:percent.thermokarst.ffp:group + percent.thermokarst.ffp:group:WS,
+                 data = co2.model.data)
+
+### Perhaps best way to display this is to make a graph of effect size
+### and a table of coefficients
 
 # co2.plot <- ggarrange(co2.karst.plot,
 #                       co2.roughness.plot,
