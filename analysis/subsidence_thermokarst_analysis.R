@@ -2390,13 +2390,16 @@ new <- rbind(Tower18.19[, `:=` (u_var = NULL, v_var = NULL, w_var = NULL)], Towe
 new <- data.table(new)
 new <- unique(new)
 new[, 46 := NULL]
+rm(Tower18.19, Tower19.20)
 
 carbon <- rbind(carbon.18[, `:=` (u_var = NULL, v_var = NULL, w_var = NULL)], carbon.19)
+rm(carbon.18, carbon.19)
 carbon <- data.table(carbon)
 carbon <- unique(carbon)
 carbon <- carbon[, .(ts, NEP, GEP, Reco)]
 
 new <- merge(new, carbon, by = c('ts', 'NEP'))
+rm(carbon)
 
 # Select correct times from Ameriflux
 co2 <- co2 %>%
@@ -2469,6 +2472,7 @@ ggplot(new.small, aes(x = year, y = GEP, group = year)) +
 co2.small <- co2.small %>%
   rbind(new.small)
 co2.small <- unique(co2.small)
+rm(new, new.small, co2)
 
 # full screen this one, otherwise certain bars will not be visible, making it
 # look like there are certain wind directions missing certain flux groups!
@@ -2503,18 +2507,21 @@ karst_roughness[, N := NULL]
 karst_roughness[, wind_dir_round := NULL]
 karst_roughness[, karst.pc_round := NULL]
 karst_roughness[, sd.mtopo_round := NULL]
+rm(duplicates)
 
 # Join co2 and karst/roughness data
 co2.model.data <- co2.small %>%
   full_join(karst_roughness, by = 'ts') %>%
   rename(percent.thermokarst.ffp = karst.pc, mtopo15.sd.ffp = sd.mtopo) %>%
   as.data.table()
+rm(co2.small)
 
 co2.model.data <- co2.model.data[order(ts)]
 
 # did the join get the right timestamps?
 test <- co2.model.data[!is.na(wind_dir), offset := round(WD, 2) - round(wind_dir, 2)]
 test <- test[!is.na(offset) & round(offset, 4) != 0, ] # should have 0 rows
+rm(test)
 
 # remove duplicate wind rows
 co2.model.data[, wind_dir := NULL]
@@ -2531,6 +2538,7 @@ karst_mtopo_sf <- karst_ec_sf %>%
                             n + 90,
                             n - 270)) %>%
   select(percent.thermokarst.slice = percent.thermokarst, mtopo15.sd.slice = mtopo15.sd, direction)
+rm(karst_ec_sf, mtopo_sf, mtopo_ec_sf)
 
 # Join co2 and karst/roughness data
 co2.model.data <- co2.model.data %>%
@@ -2716,62 +2724,6 @@ ggplot(co2.model.data,
   theme_bw() +
   theme(legend.title = element_blank())
 
-### Run some models
-co2.model.data  %>%
-  st_drop_geometry() %>%
-  mutate(tair2 = tair^2,
-         PAR2 = PAR^(1/2)) %>%
-  select(NEP, GEP, Reco, WS, tair, tair2, tsoil, PAR2, VPD, percent.thermokarst.ffp, mtopo15.sd.ffp) %>%
-  GGally::ggpairs(upper=list(continuous='points'), lower=list(continuous='cor'))
-
-co2.model.data <- co2.model.data %>%
-  mutate(tair2 = tair^2,
-         PAR2 = PAR^(1/2))
-
-# NEE
-smallest <- NEP ~ 1
-biggest <- NEP ~ percent.thermokarst.ffp*PAR2*WS*group
-start <- lm(NEP ~ percent.thermokarst.ffp*PAR2*group + WS*group,
-            data = co2.model.data)
-
-stats::step(start, scope = list(lower = smallest, upper = biggest))
-
-nee.model <- lm(NEP ~ percent.thermokarst.ffp + PAR2 + group + WS + 
-                  percent.thermokarst.ffp:PAR2 + percent.thermokarst.ffp:group + 
-                  PAR2:group + group:WS + percent.thermokarst.ffp:WS + PAR2:WS + 
-                  percent.thermokarst.ffp:PAR2:group + percent.thermokarst.ffp:group:WS + 
-                  PAR2:group:WS + percent.thermokarst.ffp:PAR2:WS,
-                data = co2.model.data)
-
-# GPP
-smallest <- GEP ~ 1
-biggest <- GEP ~ percent.thermokarst.ffp*PAR2*WS*month
-start <- lm(GEP ~ percent.thermokarst.ffp*PAR2*month + WS*month, data = co2.model.data)
-
-stats::step(start, scope = list(lower = smallest, upper = biggest))
-
-gpp.model <- lm(GEP ~ percent.thermokarst.ffp + PAR2 + month + WS + 
-                  PAR2:month + PAR2:WS + percent.thermokarst.ffp:PAR2 + percent.thermokarst.ffp:WS + 
-                  percent.thermokarst.ffp:month + month:WS + percent.thermokarst.ffp:PAR2:WS + 
-                  percent.thermokarst.ffp:PAR2:month + PAR2:month:WS,
-                data = co2.model.data)
-
-# Reco
-smallest <- Reco ~ 1
-biggest <- Reco ~ tair + tair2*percent.thermokarst.ffp*WS*group
-start <- lm(Reco ~ tair + tair2*percent.thermokarst.ffp*group + WS*group, data = co2.model.data)
-
-stats::step(start, scope = list(lower = smallest, upper = biggest))
-
-reco.model <- lm(Reco ~ tair + tair2 + percent.thermokarst.ffp + 
-                   group + WS + tair2:percent.thermokarst.ffp + tair2:group + 
-                   percent.thermokarst.ffp:group + group:WS + percent.thermokarst.ffp:WS + 
-                   tair2:percent.thermokarst.ffp:group + percent.thermokarst.ffp:group:WS,
-                 data = co2.model.data)
-
-### Perhaps best way to display this is to make a graph of effect size
-### and a table of coefficients
-
 # co2.plot <- ggarrange(co2.karst.plot,
 #                       co2.roughness.plot,
 #                       nrow = 1,
@@ -2786,6 +2738,221 @@ reco.model <- lm(Reco ~ tair + tair2 + percent.thermokarst.ffp +
 #        co2.plot,
 #        height = 6,
 #        width = 8)
+
+### Run some models
+co2.model.data  %>%
+  st_drop_geometry() %>%
+  mutate(tair2 = tair^2,
+         PAR2 = PAR^(1/2)) %>%
+  select(NEP, GEP, Reco, WS, tair, tair2, tsoil, PAR2, VPD, percent.thermokarst.ffp, mtopo15.sd.ffp) %>%
+  GGally::ggpairs(upper=list(continuous='points'), lower=list(continuous='cor'))
+
+co2.model.data <- co2.model.data %>%
+  mutate(tair2 = tair^2,
+         PAR2 = PAR^(1/2))
+
+# NEE
+# smallest <- NEP ~ 1
+# biggest <- NEP ~ percent.thermokarst.ffp*PAR2*WS*group
+# start <- lm(NEP ~ percent.thermokarst.ffp*PAR2*group + WS*group,
+#             data = co2.model.data)
+# 
+# stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+nee.model <- lm(NEP ~ percent.thermokarst.ffp + PAR2 + group + WS + 
+                  percent.thermokarst.ffp:PAR2 + percent.thermokarst.ffp:group + 
+                  PAR2:group + group:WS + percent.thermokarst.ffp:WS + PAR2:WS + 
+                  percent.thermokarst.ffp:PAR2:group + percent.thermokarst.ffp:group:WS + 
+                  PAR2:group:WS + percent.thermokarst.ffp:PAR2:WS,
+                data = co2.model.data)
+nee.effect.size <- effectsize::effectsize(nee.model) %>%
+  mutate(group = ifelse(str_detect(Parameter, 'groupGS Night Respiration'),
+                        'GS Night Respiration',
+                        ifelse(str_detect(Parameter, 'groupNGS Respiration'),
+                               'NGS Respiration',
+                               'GS Day')),
+         parameter.no.group = ifelse(group == 'GS Day',
+                                     Parameter,
+                                     ifelse(group == 'GS Night Respiration',
+                                            str_replace(Parameter,
+                                                        ':groupGS Night Respiration|groupGS Night Respiration:',
+                                                        ''),
+                                            str_replace(Parameter,
+                                                        ':groupNGS Respiration|groupNGS Respiration:',
+                                                        ''))),
+         parameter.no.group = ifelse(str_detect(parameter.no.group,
+                                                'groupGS Night Respiration|groupNGS Respiration'),
+                                     '(Intercept)',
+                                     parameter.no.group),
+         parameter.no.group = str_replace(parameter.no.group, 'PAR2', 'PAR'),
+         parameter.no.group = str_replace(parameter.no.group, 'WS', 'Wind Speed'),
+         parameter.no.group = str_replace(parameter.no.group, 'percent.thermokarst.ffp', 'Thermokarst'),
+         parameter.no.group = factor(parameter.no.group,
+                                     levels = c('Thermokarst:PAR:Wind Speed',
+                                                'Thermokarst:Wind Speed',
+                                                'Thermokarst:PAR',
+                                                'PAR:Wind Speed',
+                                                'Thermokarst',
+                                                'Wind Speed',
+                                                'PAR',
+                                                '(Intercept)'))) %>%
+  group_by(parameter.no.group) %>%
+  mutate(n = n(),
+         group2 = ifelse(n == 1,
+                        'All Times',
+                        group)) %>%
+  rbind(filter(., n == 1 & group == 'GS Day') %>% # duplicate the parameters which don't vary by group to plot in all 3 facets
+          mutate(group = 'GS Night Respiration')) %>%
+  rbind(filter(., n == 1 & group == 'GS Day') %>%
+          mutate(group = 'NGS Respiration'))
+# write.csv(nee.effect.size,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_effect_size.csv',
+#           row.names = FALSE)
+
+nee.effect.size.plot <- ggplot(nee.effect.size,
+       aes(x = Std_Coefficient, y = parameter.no.group, color = group2)) +
+  geom_vline(xintercept = 0) +
+  geom_point() +
+  geom_errorbar(aes(xmin = CI_low, xmax = CI_high), width = 0.1) +
+  scale_y_discrete(name = 'Parameter') +
+  scale_x_continuous(name = 'Standardized Coefficient') +
+  scale_color_manual(breaks = c('All Times', 'GS Day', 'GS Night Respiration', 'NGS Respiration'),
+                     values = c('black', '#99CC33', '#CC3300', '#003399')) +
+  facet_grid(group ~ ., scales = 'free_y') +
+  theme_bw() +
+  theme(legend.title = element_blank())
+nee.effect.size.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_effect_size.jpg',
+#        nee.effect.size.plot,
+#        height = 8,
+#        width = 8)
+
+# GPP
+# smallest <- GEP ~ 1
+# biggest <- GEP ~ percent.thermokarst.ffp*PAR2*WS*month
+# start <- lm(GEP ~ percent.thermokarst.ffp*PAR2*month + WS*month, data = co2.model.data)
+# 
+# stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+gpp.model <- lm(GEP ~ percent.thermokarst.ffp + PAR2 + month + WS + 
+                  PAR2:month + PAR2:WS + percent.thermokarst.ffp:PAR2 + percent.thermokarst.ffp:WS + 
+                  percent.thermokarst.ffp:month + month:WS + percent.thermokarst.ffp:PAR2:WS + 
+                  percent.thermokarst.ffp:PAR2:month + PAR2:month:WS,
+                data = co2.model.data)
+gpp.effect.size <- effectsize::effectsize(gpp.model) %>%
+  mutate(parameter.neat = Parameter,
+         parameter.neat = str_replace(parameter.neat, 'PAR2', 'PAR'),
+         parameter.neat = str_replace(parameter.neat, 'WS', 'Wind Speed'),
+         parameter.neat = str_replace(parameter.neat, 'percent.thermokarst.ffp', 'Thermokarst'),
+         parameter.neat = str_replace(parameter.neat, 'month', 'Month'),
+         parameter.neat = factor(parameter.neat,
+                                     levels = c('PAR:Month:Wind Speed',
+                                                'Thermokarst:PAR:Wind Speed',
+                                                'Thermokarst:PAR:Month',
+                                                'Month:Wind Speed',
+                                                'Thermokarst:PAR',
+                                                'Thermokarst:Wind Speed',
+                                                'Thermokarst:Month',
+                                                'PAR:Wind Speed',
+                                                'PAR:Month',
+                                                'Thermokarst',
+                                                'Wind Speed',
+                                                'Month',
+                                                'PAR',
+                                                '(Intercept)')))
+# write.csv(gpp.effect.size,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_effect_size.csv',
+#           row.names = FALSE)
+
+gpp.effect.size.plot <- ggplot(gpp.effect.size,
+                               aes(x = Std_Coefficient, y = parameter.neat)) +
+  geom_vline(xintercept = 0) +
+  geom_point() +
+  geom_errorbar(aes(xmin = CI_low, xmax = CI_high), width = 0.1) +
+  scale_y_discrete(name = 'Parameter') +
+  scale_x_continuous(name = 'Standardized Coefficient') +
+  theme_bw() +
+  theme(legend.title = element_blank())
+gpp.effect.size.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/gpp_effect_size.jpg',
+#        gpp.effect.size.plot,
+#        height = 6,
+#        width = 6)
+
+# Reco
+# smallest <- Reco ~ 1
+# biggest <- Reco ~ tair + tair2*percent.thermokarst.ffp*WS*group
+# start <- lm(Reco ~ tair + tair2*percent.thermokarst.ffp*group + WS*group, data = co2.model.data)
+# 
+# stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+reco.model <- lm(Reco ~ tair + tair2 + percent.thermokarst.ffp + 
+                   group + WS + tair2:percent.thermokarst.ffp + tair2:group + 
+                   percent.thermokarst.ffp:group + group:WS + percent.thermokarst.ffp:WS + 
+                   tair2:percent.thermokarst.ffp:group + percent.thermokarst.ffp:group:WS,
+                 data = co2.model.data)
+reco.effect.size <- effectsize::effectsize(reco.model) %>%
+  mutate(group = ifelse(str_detect(Parameter, 'groupGS Night Respiration'),
+                        'GS Night Respiration',
+                        ifelse(str_detect(Parameter, 'groupNGS Respiration'),
+                               'NGS Respiration',
+                               'GS Day')),
+         parameter.no.group = ifelse(group == 'GS Day',
+                                     Parameter,
+                                     ifelse(group == 'GS Night Respiration',
+                                            str_replace(Parameter,
+                                                        ':groupGS Night Respiration|groupGS Night Respiration:',
+                                                        ''),
+                                            str_replace(Parameter,
+                                                        ':groupNGS Respiration|groupNGS Respiration:',
+                                                        ''))),
+         parameter.no.group = ifelse(str_detect(parameter.no.group,
+                                                'groupGS Night Respiration|groupNGS Respiration'),
+                                     '(Intercept)',
+                                     parameter.no.group),
+         parameter.no.group = str_replace(parameter.no.group, 'tair', 'Air Temp'),
+         parameter.no.group = str_replace(parameter.no.group, 'Air Temp2', 'Air Temp^2'),
+         parameter.no.group = str_replace(parameter.no.group, 'WS', 'Wind Speed'),
+         parameter.no.group = str_replace(parameter.no.group, 'percent.thermokarst.ffp', 'Thermokarst'),
+         parameter.no.group = factor(parameter.no.group,
+                                     levels = c('Thermokarst:Wind Speed',
+                                                'Air Temp^2:Thermokarst',
+                                                'Thermokarst',
+                                                'Wind Speed',
+                                                'Air Temp^2',
+                                                'Air Temp',
+                                                '(Intercept)'))) %>%
+  group_by(parameter.no.group) %>%
+  mutate(n = n(),
+         group2 = ifelse(n == 1,
+                         'All Times',
+                         group)) %>%
+  rbind(filter(., n == 1 & group == 'GS Day') %>% # duplicate the parameters which don't vary by group to plot in all 3 facets
+          mutate(group = 'GS Night Respiration')) %>%
+  rbind(filter(., n == 1 & group == 'GS Day') %>%
+          mutate(group = 'NGS Respiration'))
+# write.csv(reco.effect.size,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_effect_size.csv',
+#           row.names = FALSE)
+
+reco.effect.size.plot <- ggplot(reco.effect.size,
+                               aes(x = Std_Coefficient, y = parameter.no.group, color = group2)) +
+  geom_vline(xintercept = 0) +
+  geom_point() +
+  geom_errorbar(aes(xmin = CI_low, xmax = CI_high), width = 0.1) +
+  scale_y_discrete(name = 'Parameter') +
+  scale_x_continuous(name = 'Standardized Coefficient') +
+  scale_color_manual(breaks = c('All Times', 'GS Day', 'GS Night Respiration', 'NGS Respiration'),
+                     values = c('black', '#99CC33', '#CC3300', '#003399')) +
+  facet_grid(group ~ ., scales = 'free_y') +
+  theme_bw() +
+  theme(legend.title = element_blank())
+reco.effect.size.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/reco_effect_size.jpg',
+#        reco.effect.size.plot,
+#        height = 8,
+#        width = 8)
+
 ########################################################################################################################
 
 ### CH4 Analysis #######################################################################################################
