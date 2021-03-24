@@ -2772,19 +2772,49 @@ co2.model.data <- co2.model.data %>%
 #             data = co2.model.data)
 # 
 # stats::step(start, scope = list(lower = smallest, upper = biggest))
+# 
+# nee.model <- lm(NEP ~ percent.thermokarst.ffp + PAR2 + group + WS + 
+#                   percent.thermokarst.ffp:PAR2 + percent.thermokarst.ffp:group + 
+#                   PAR2:group + group:WS + percent.thermokarst.ffp:WS + PAR2:WS + 
+#                   percent.thermokarst.ffp:PAR2:group + percent.thermokarst.ffp:group:WS + 
+#                   PAR2:group:WS + percent.thermokarst.ffp:PAR2:WS,
+#                 data = co2.model.data)
+# saveRDS(nee.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_model.rds')
+nee.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_model.rds')
+summary(nee.model)
+# this calculates the semi- partial coefficients, but only gets main effects, so may not be useful
+nee.spcor <- ppcor::spcor(nee.model$model %>%
+                       filter(group == 'GS Day') %>%
+                       select(-group))
 
-nee.model <- lm(NEP ~ percent.thermokarst.ffp + PAR2 + group + WS + 
-                  percent.thermokarst.ffp:PAR2 + percent.thermokarst.ffp:group + 
-                  PAR2:group + group:WS + percent.thermokarst.ffp:WS + PAR2:WS + 
-                  percent.thermokarst.ffp:PAR2:group + percent.thermokarst.ffp:group:WS + 
-                  PAR2:group:WS + percent.thermokarst.ffp:PAR2:WS,
-                data = co2.model.data)
+nee.spcor.neat <- data.frame(Parameter)
+# this is the correct one and corresponds to the first row of the matrices returned
+# with spcor
+test1 <- ppcor::spcor.test(x = nee.model$model %>%
+                             filter(group == 'GS Day') %>%
+                             select(NEP),
+                           y = nee.model$model %>%
+                             filter(group == 'GS Day') %>%
+                             select(PAR2),
+                           z = nee.model$model %>%
+                             filter(group == 'GS Day') %>%
+                             select(-c(NEP, PAR2, group)))
+
 nee.effect.size <- effectsize::effectsize(nee.model) %>%
   mutate(group = ifelse(str_detect(Parameter, 'groupGS Night Respiration'),
                         'GS Night Respiration',
                         ifelse(str_detect(Parameter, 'groupNGS Respiration'),
                                'NGS Respiration',
                                'GS Day')),
+         parameter.neat = seq(1, 22, 1),
+         # parameter.neat = factor(parameter.neat,
+         #                         levels = c('Group - GS Day (Intercept)',
+         #                                    'Group - GS Night Respiration (Intercept)',
+         #                                    'Group - NGS Respiration (Intercept)',
+         #                                    'sqrt(PAR):Group - GS Day',
+         #                                    'WS',
+         #                                    'TK',
+         #                                    )),
          parameter.no.group = ifelse(group == 'GS Day',
                                      Parameter,
                                      ifelse(group == 'GS Night Respiration',
@@ -2818,10 +2848,19 @@ nee.effect.size <- effectsize::effectsize(nee.model) %>%
   rbind(filter(., n == 1 & group == 'GS Day') %>% # duplicate the parameters which don't vary by group to plot in all 3 facets
           mutate(group = 'GS Night Respiration')) %>%
   rbind(filter(., n == 1 & group == 'GS Day') %>%
-          mutate(group = 'NGS Respiration'))
+          mutate(group = 'NGS Respiration')) %>%
+  arrange(group)
 # write.csv(nee.effect.size,
 #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_effect_size.csv',
 #           row.names = FALSE)
+
+nee.model.table <- data.frame(Response = c('NEE', rep('', 21)),
+                              `Full Model` = c('TK*sqrt(PAR)*WS*Group', rep('', 21)),
+                              `Final Variables` = names(nee.model[['coefficients']]),
+                              Coefficient = nee.model[['coefficients']],
+                              `Min CI` = ,
+                              `Max CI` = ,
+                              R2 = )
 
 nee.effect.size.plot <- ggplot(nee.effect.size,
        aes(x = Std_Coefficient, y = parameter.no.group, color = group2)) +
@@ -2853,6 +2892,9 @@ gpp.model <- lm(GEP ~ percent.thermokarst.ffp + PAR2 + month + WS +
                   percent.thermokarst.ffp:month + month:WS + percent.thermokarst.ffp:PAR2:WS + 
                   percent.thermokarst.ffp:PAR2:month + PAR2:month:WS,
                 data = co2.model.data)
+# saveRDS(gpp.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_model.rds')
+gpp.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_model.rds')
+
 gpp.effect.size <- effectsize::effectsize(gpp.model) %>%
   mutate(parameter.neat = Parameter,
          parameter.neat = str_replace(parameter.neat, 'PAR2', 'PAR'),
@@ -2905,6 +2947,9 @@ reco.model <- lm(Reco ~ tair + tair2 + percent.thermokarst.ffp +
                    percent.thermokarst.ffp:group + group:WS + percent.thermokarst.ffp:WS + 
                    tair2:percent.thermokarst.ffp:group + percent.thermokarst.ffp:group:WS,
                  data = co2.model.data)
+# saveRDS(reco.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_model.rds')
+reco.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_model.rds')
+
 reco.effect.size <- effectsize::effectsize(reco.model) %>%
   mutate(group = ifelse(str_detect(Parameter, 'groupGS Night Respiration'),
                         'GS Night Respiration',
@@ -3036,14 +3081,6 @@ ggplot(ch4.model.data, aes(x = WD, y = FCH4)) +
   geom_point()
 
 
-# wind direction doesn't look like it's lining up with thermokarst as expected
-test <- ch4.model.data %>%
-  select(ts, WD.fluxnet = WD, percent.thermokarst.ffp) %>%
-  left_join(select(co2.model.data, ts, WD, percent.thermokarst.ffp), by = c('ts', 'percent.thermokarst.ffp'))
-
-ggplot(test, aes(x = WD, y = WD.fluxnet)) +
-  geom_point()
-  
 # Run some models
 ch4.model.data  %>%
   mutate(sqrt.PAR = PAR^(1/2),
@@ -3051,16 +3088,18 @@ ch4.model.data  %>%
   select(FCH4, WS, tair, TS_2, PAR, sqrt.PAR, sqrt.VPD, VPD, percent.thermokarst.ffp, mtopo15.sd.ffp) %>%
   GGally::ggpairs(upper=list(continuous='points'), lower=list(continuous='cor'))
 
-# Linear model
-smallest <- FCH4 ~ 1
-biggest <- FCH4 ~ WS*tair*percent.thermokarst.ffp*month
-start <- lm(FCH4 ~ WS + month*tair + month*percent.thermokarst.ffp, data = ch4.model.data)
-
-stats::step(start, scope = list(lower = smallest, upper = biggest))
+# # Linear model
+# smallest <- FCH4 ~ 1
+# biggest <- FCH4 ~ WS*tair*percent.thermokarst.ffp*month
+# start <- lm(FCH4 ~ WS + month*tair + month*percent.thermokarst.ffp, data = ch4.model.data)
+# 
+# stats::step(start, scope = list(lower = smallest, upper = biggest))
 
 ch4.model <- lm(formula = FCH4 ~ WS + month + tair + percent.thermokarst.ffp + 
                   month:tair + month:percent.thermokarst.ffp + WS:tair + WS:month + 
                   WS:month:tair, data = ch4.model.data)
+# saveRDS(ch4.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model.rds')
+ch4.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model.rds')
 
 ch4.effect.size <- effectsize::effectsize(ch4.model) %>%
   mutate(parameter.neat = Parameter,
