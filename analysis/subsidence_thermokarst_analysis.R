@@ -2784,8 +2784,42 @@ stats::step(start, scope = list(lower = smallest, upper = biggest))
 
 nee.model <- lm(NEP ~ percent.thermokarst.ffp*group,
                 data = co2.model.data[filled == 0])
-summary(nee.model)
 # saveRDS(nee.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_model_simple.rds')
+nee.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_model_simple.rds')
+summary(nee.model)
+
+# this is a gross way to summarize and make everything look nice - better options?
+nee.model.table <- data.frame(variables = names(nee.model[['coefficients']]),
+                              coefficient = nee.model[['coefficients']],
+                              min.ci = as.numeric(confint(nee.model)[,1]),
+                              max.ci = as.numeric(confint(nee.model)[,2]),
+                              row.names = NULL) %>%
+  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+         `Final Variables` = str_replace(`Final Variables`, 'group', 'Group - '),
+         `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Group - GS Day (Intercept)'),
+         `Final Variables` = str_replace(`Final Variables`, '^Group - GS Night Respiration$', 'Group - GS Night Respiration (Intercept)'),
+         `Final Variables` = str_replace(`Final Variables`, '^Group - NGS Respiration$', 'Group - NGS Respiration (Intercept)'),
+         `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Group - GS Day'),
+         order = c(1, 4, 2, 3, 5, 6),
+         radius = coefficient - min.ci,
+         coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+                                   'intercept',
+                                   'slope')) %>%
+  group_by(coefficient.type) %>%
+  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
+                              round(coefficient, 5),
+                              round(first(coefficient) + coefficient, 5)),
+         total.radius = ifelse(coefficient - first(coefficient) == 0,
+                               radius,
+                               sqrt(radius^2 + first(radius)^2)),
+         `Min CI` = Coefficient - total.radius,
+         `Max CI` = Coefficient + total.radius) %>%
+  ungroup() %>%
+  mutate(Response = c('NEE', rep('', 5)),
+         `Full Model` = c('TK*Group', rep('', 5)),
+         R2 = c(round(summary(nee.model)$r.squared, 3), rep('', 5))) %>%
+  arrange(order) %>%
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
 
 # complicated model
 # smallest <- NEP ~ 1
@@ -2913,8 +2947,44 @@ stats::step(start, scope = list(lower = smallest, upper = biggest))
 
 gpp.model <- lm(GEP ~ percent.thermokarst.ffp*month.factor,
                  data = co2.model.data[filled == 0])
-summary(gpp.model)
 # saveRDS(gpp.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_model_simple.rds')
+gpp.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_model_simple.rds')
+summary(gpp.model)
+
+# this is a gross way to summarize and make everything look nice - better options?
+gpp.model.table <- data.frame(variables = names(gpp.model[['coefficients']]),
+                              coefficient = gpp.model[['coefficients']],
+                              min.ci = as.numeric(confint(gpp.model)[,1]),
+                              max.ci = as.numeric(confint(gpp.model)[,2]),
+                              row.names = NULL) %>%
+  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+         `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+         `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
+         `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'), 
+                                    str_c(`Final Variables`, ' (Intercept)'),
+                                    `Final Variables`),
+         `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
+         order = c(1, 13, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24),
+         radius = coefficient - min.ci,
+         coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+                                   'intercept',
+                                   'slope')) %>%
+  group_by(coefficient.type) %>%
+  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
+                              round(coefficient, 5),
+                              round(first(coefficient) + coefficient, 5)),
+         total.radius = ifelse(coefficient - first(coefficient) == 0,
+                               radius,
+                               sqrt(radius^2 + first(radius)^2)),
+         `Min CI` = Coefficient - total.radius,
+         `Max CI` = Coefficient + total.radius) %>%
+  ungroup() %>%
+  mutate(Response = c('GPP', rep('', 23)),
+         `Full Model` = c('TK*Month', rep('', 23)),
+         R2 = c(round(summary(gpp.model)$r.squared, 3), rep('', 23))) %>%
+  arrange(order) %>%
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+
 
 # complicated model
 # smallest <- GEP ~ 1
