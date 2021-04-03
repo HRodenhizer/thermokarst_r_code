@@ -393,7 +393,6 @@ reclass_matrix_5cm <- matrix(c(-Inf,-0.05,1, -0.05,Inf,0), ncol = 3, byrow = TRU
 # map(karst15_5, ~ plot(.x))
 ########################################################################################################################
 
-# Skip this section as of 7/23/20 becausse it may make more sense to fill smoothr::fill_holes
 ### Fill in Holes in the Various Thermokarst Classification Rasters ####################################################
 # this function fills in holes by dilating (classifying cells next to thermokarst as thermokarst)
 # and then eroding (removing one layer of thermokarst cells from the outside of each thermokarst feature)
