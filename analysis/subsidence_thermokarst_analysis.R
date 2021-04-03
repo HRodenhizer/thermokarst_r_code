@@ -2595,6 +2595,10 @@ nee.karst.plot <- ggplot(co2.model.data[filled == 0],
   theme_bw() +
   theme(legend.title = element_blank())
 nee.karst.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_karst_plot.jpg',
+#        nee.karst.plot,
+#        height = 8,
+#        width = 8)
 
 # # thermokarst - slices
 # ggplot(co2.model.data,
@@ -2625,16 +2629,6 @@ nee.karst.plot
 #   theme(legend.title = element_blank()) +
 #   scale_color_viridis()
 # 
-co2.model.data  %>%
-  st_drop_geometry() %>%
-  mutate(tair2 = tair^2,
-         PAR2 = PAR^(1/2)) %>%
-  select(NEP, GEP, Reco, WS, tair, tair2, tsoil, PAR2, VPD, percent.thermokarst.ffp, mtopo15.sd.ffp) %>%
-  GGally::ggpairs(upper=list(continuous='points'), lower=list(continuous='cor'))
-
-co2.model.data <- co2.model.data %>%
-  mutate(tair2 = tair^2,
-         PAR2 = PAR^(1/2))
 
 # NEE
 # simple model
@@ -2720,6 +2714,10 @@ gpp.karst.plot <- ggplot(filter(co2.model.data, group == 'GS Day' & filled == 0)
   theme_bw() +
   theme(legend.title = element_blank())
 gpp.karst.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/gpp_karst_plot.jpg',
+#        gpp.karst.plot,
+#        height = 8,
+#        width = 8)
 
 # simple model
 smallest <- GEP ~ 1
@@ -2792,6 +2790,10 @@ reco.karst.plot <- ggplot(co2.model.data[filled == 0],
   theme_bw() +
   theme(legend.title = element_blank())
 reco.karst.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/reco_karst_plot.jpg',
+#        reco.karst.plot,
+#        height = 8,
+#        width = 8)
 
 # simple model
 smallest <- Reco ~ 1
@@ -2864,6 +2866,10 @@ nee.roughness.plot <- ggplot(co2.model.data[filled == 0],
   theme_bw() +
   theme(legend.title = element_blank())
 nee.roughness.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_roughness_plot.jpg',
+#        nee.roughness.plot,
+#        height = 8,
+#        width = 8)
 
 # # roughness - slices
 # ggplot(co2.model.data,
@@ -2975,6 +2981,10 @@ gpp.roughness.plot <- ggplot(filter(co2.model.data, group == 'GS Day' & filled =
   theme_bw() +
   theme(legend.title = element_blank())
 gpp.roughness.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/gpp_roughness_plot.jpg',
+#        gpp.roughness.plot,
+#        height = 8,
+#        width = 8)
 
 # simple model
 smallest <- GEP ~ 1
@@ -3028,7 +3038,7 @@ gpp.roughness.model.table <- data.frame(variables = names(gpp.roughness.model[['
 #           row.names = FALSE)
 
 # Reco
-reco.karst.plot <- ggplot(co2.model.data[filled == 0],
+reco.roughness.plot <- ggplot(co2.model.data[filled == 0],
                           aes(x = mtopo15.sd.ffp,
                               y = Reco,
                               color = group,
@@ -3045,7 +3055,11 @@ reco.karst.plot <- ggplot(co2.model.data[filled == 0],
                     values = c('#99CC33', '#CC3300', '#000066')) +
   theme_bw() +
   theme(legend.title = element_blank())
-reco.karst.plot
+reco.roughness.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/reco_roughness_plot.jpg',
+#        reco.roughness.plot,
+#        height = 8,
+#        width = 8)
 
 # simple model
 smallest <- Reco ~ 1
