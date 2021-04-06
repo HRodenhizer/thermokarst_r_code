@@ -427,10 +427,10 @@ karst_size <- karst_1_stats_sf %>%
   select(-c(ID, FID)) %>%
   st_drop_geometry() %>%
   group_by(size.cat, size.cat.exp) %>%
-  summarise(extent = sum(size, na.rm = TRUE),
+  summarise(extent = sum(size, na.rm = TRUE)/3, # divide by 3 to get average of the 3 years
             mean.size = mean(size, na.rm = TRUE),
-            total.volume = sum(volume, na.rm = TRUE),
-            n = n(),
+            total.volume = sum(volume, na.rm = TRUE)/3,
+            n = round(n()/3),
             across(starts_with('min'), min, na.rm = TRUE),
             across(starts_with('mean'), mean, na.rm = TRUE),
             across(starts_with('max'), max, na.rm = TRUE),
@@ -470,8 +470,8 @@ size_cover_plot <- ggplot(karst_size, aes(x = size.cat, y = percent.cover)) +
   scale_x_continuous(breaks = karst_size$size.cat,
                      trans = 'log10') +
   scale_y_continuous(name = 'Percent Cover',
-                     limits = c(0, 0.15),
-                     breaks = seq(0, 0.15, by = 0.05),
+                     limits = c(0, 0.05),
+                     breaks = seq(0, 0.05, by = 0.01),
                      labels = scales::number_format(accuracy = 0.01)) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
@@ -543,7 +543,7 @@ karst_1_stats_sf <- read_sf('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared
          sd.depth.clean = sd_d_c,
          se.depth.clean= se_d_c)
 
-# remove the cleaned values here, because the summarizing will take care of extreme values
+# remove the cleaned values column here, because the summarizing will take care of extreme values
 karst_morph <- karst_1_stats_sf %>%
   select(-ends_with('clean')) %>%
   mutate(shape = as.numeric(4*pi*st_area(karst_1_stats_sf)/st_perimeter(karst_1_stats_sf)^2),
@@ -568,8 +568,8 @@ slope_extract <- raster::extract(slope,
 
 karst_morph_slope <- cbind.data.frame(karst_morph, select(slope_extract, -ID)) %>%
   rename(mean.slope = layer)
-st_write(karst_morph_slope,
-         '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp')
+# st_write(karst_morph_slope,
+#          '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp')
 karst_morph_slope <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp') %>%
   rename(min.depth = min_dpth,
          mean.depth = men_dpth,
@@ -586,10 +586,10 @@ karst_morph_sum <- karst_morph_slope %>%
   select(-c(ID, FID)) %>%
   st_drop_geometry() %>%
   group_by(shape.cat.10) %>%
-  summarise(extent = sum(size, na.rm = TRUE),
+  summarise(extent = sum(size, na.rm = TRUE)/3, # divide by three to get average of 3 years
             mean.size = mean(size, na.rm = TRUE),
-            total.volume = sum(volume, na.rm = TRUE),
-            n = n(),
+            total.volume = sum(volume, na.rm = TRUE)/3,
+            n = round(n()/3),
             across(starts_with('min'), min, na.rm = TRUE),
             across(starts_with('mean'), mean, na.rm = TRUE),
             across(starts_with('max'), max, na.rm = TRUE),
@@ -640,8 +640,8 @@ shape_cover_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = percent.co
   geom_line() +
   scale_x_continuous(breaks = seq(1:8)) +
   scale_y_continuous(#name = 'Percent Cover'
-    limits = c(0, 0.15),
-    breaks = seq(0, 0.15, by = 0.05),
+    limits = c(0, 0.05),
+    breaks = seq(0, 0.05, by = 0.01),
     labels = scales::number_format(accuracy = 0.01)) +
   theme_bw() +
   theme(axis.title = element_blank(),
@@ -698,6 +698,15 @@ morphology_plot <- ggarrange(shape_prevalence_plot,
                              ncol = 1,
                              nrow = 4)
 morphology_plot
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/morphology.jpg',
+#        morphology_plot,
+#        height = 10,
+#        width = 6)
+# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/morphology.pdf',
+#        morphology_plot,
+#        height = 10,
+#        width = 6)
+
 
 size_morph_plot <- ggarrange(size_prevalence_plot,
                              shape_prevalence_plot,
@@ -2332,6 +2341,11 @@ ec_karst_mtopo_class <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = 
   geom_point(aes(color = color.group.2)) +
   theme_bw()
 ec_karst_mtopo_class
+
+tk_roughness_model <- gam(mtopo15.sd ~ percent.thermokarst,data = karst_mtopo_sf)
+# saveRDS(tk_roughness_model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/tk_roughness.rds')
+tk_roughness_model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/tk_roughness.rds')
+summary(tk_roughness_model)
 
 ec_karst_mtopo_cont <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = mtopo15.sd)) +
   geom_point(aes(color = direction)) +
