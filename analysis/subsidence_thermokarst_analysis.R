@@ -22,6 +22,7 @@ library(mapview)
 library(ggthemes)
 library(ggpubr)
 library(gridExtra)
+library(spatialEco)
 library(data.table)
 library(tidyverse)
 ########################################################################################################################
@@ -812,6 +813,28 @@ plot(karst_edges[[3]])
 # writeRaster(karst_edges[[3]], '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_3.tif')
 ########################################################################################################################
 
+### Landform Classification ############################################################################################
+mean.elev <- calc(elev, fun = mean)
+plot(mean.elev)
+
+source('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_r_code/analysis/landfClass.R')
+
+# test with coarse resolution
+test.elev <- aggregate(mean.elev, fact = 5)
+test.elev <- aggregate(mean.elev, fact = 10)
+
+plot(test.elev)
+
+# takes a few minutes to run
+landforms <- landfClass(test.elev,
+                        sn = 55,
+                        ln = 125,
+                        n.classes = 'ten')
+# 6 classes seems to work better
+landforms <- landfClass(test.elev,
+                        scale = 125,
+                        n.classes = 'six')
+########################################################################################################################
 
 ### Subsidence Mixed-Effects Model
 ######################## DEFINE FUNCTIONS TO EXTRACT AND GRAPH CI #########################
