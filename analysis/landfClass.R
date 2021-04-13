@@ -1,3 +1,5 @@
+### landfClass updated by HR 4/2021 from GmAMisc version 1.1.0
+
 #' R function for landform classification on the basis od Topographic Position Index
 #'
 #' The function allows to perform landform classification on the basis of the Topographic Position Index calculated from an input Digital Terrain Model (RasterLayer class).
@@ -51,29 +53,50 @@ landfClass <- function (x, scale = 3, sn=3, ln=7, n.classes="six", add.tpi=FALSE
   #calculate the slope from the input DTM, to be used for either the six or ten class slope position
   slp <- raster::terrain(x, opt="slope", unit="degrees", neighbors=8)
   
-  #calculate the tpi using spatialEco::tpi function
-  tp <- spatialEco::tpi(x, scale=scale, win=win, normalize=TRUE)
-  
   if (n.classes == "six") {
+    
+    #calculate the tpi using spatialEco::tpi function
+    tp <- spatialEco::tpi(x, scale=scale, win=win, normalize=TRUE)
+    six.class <- tp
     
     #define the six classes on the basis of thresholds of tp and slope
     valley <- (tp <= -1)
+    six.class[six.class <= -1] <- 1
     #valley[na.omit(valley)] <- 1
     
     lower.slp <- (tp > -1 & tp <= -0.5)
+    six.class[tp > -1 & tp <= -0.5] <- 2
     #lower.slp[na.omit(lower.slp)] <- 2
     
     flat.slp <- (tp > -0.5 & tp < 0.5) & (slp <= 5)
+    six.class[(tp > -0.5 & tp < 0.5) & (slp <= 5)] <- 3
     #flat.slp[na.omit(flat.slp)] <- 3
     
     middle.slp <- (tp > -0.5 & tp < 0.5) & (slp > 5)
+    six.class[(tp > -0.5 & tp < 0.5) & (slp > 5)] <- 4
     #middle.slp[na.omit(middle.slp)] <- 4
     
     upper.slp <- (tp > 0.5 & tp <= 1)
+    six.class[tp > 0.5 & tp <= 1] <- 5
     #upper.slp[na.omit(upper.slp)] <- 5
     
     ridge <- (tp > 1)
+    six.class[tp > 1] <- 6
     #ridge[na.omit(ridge)] <- 6
+    
+    # combine output
+    names(six.class) <- 'classification'
+    six.class <- ratify(six.class)
+    rat <- data.frame(ID = seq(1, 6),
+                      landclass = c('Valley',
+                                    'Lower Slope',
+                                    'Flat Slope',
+                                    'Mid Slope',
+                                    'Upper Slope',
+                                    'Ridge'))
+    rat <- rat[which(rat$ID %in% levels(six.class)[[1]][,1]),]
+    levels(six.class) <- rat
+    output <- list(tp, six.class)
     
     plot(valley, main="Valley", sub="TPI <= -1", cex.main=0.9, cex.sub=0.7, legend=FALSE)
     plot(lower.slp, main="Lower Slope", sub="-1 < TPI <= -0.5", cex.main=0.9, cex.sub=0.7, legend=FALSE)
@@ -87,36 +110,49 @@ landfClass <- function (x, scale = 3, sn=3, ln=7, n.classes="six", add.tpi=FALSE
     #calculate two standardized tpi, one with small neighbour, one with large neighbour
     sn <- spatialEco::tpi(x, scale=sn, win=win, normalize=TRUE)
     ln <- spatialEco::tpi(x, scale=ln, win=win, normalize=TRUE)
+    tp <- brick(sn, ln)
+    names(tp) <- c('sn', 'ln')
+    ten.class <- ln
     
     #define the ten classes on the basis of thresholds of sn, sl, and slope
     canyons <- (sn <= -1) & (ln <= -1)
+    ten.class[(sn <= -1) & (ln <= -1)] <- 1
     #canyons[na.omit(canyons)] <- 1
     
     midslope.dr <- (sn <= -1) & (ln > -1 & ln < 1)
+    ten.class[(sn <= -1) & (ln > -1 & ln < 1)] <- 2
     #midslope.dr[na.omit(midslope.dr)] <- 2
     
     upland.dr <-  (sn <= -1) & (ln >= 1)
+    ten.class[(sn <= -1) & (ln >= 1)] <- 3
     #upland.dr[na.omit(upland.dr)] <- 3
     
     us.valley <-  (sn > -1 & sn < 1) & (ln <=-1)
+    ten.class[(sn > -1 & sn < 1) & (ln <=-1)] <- 4
     #us.valley[na.omit(us.valley)] <- 4
     
     plains <- (sn > -1 & sn < 1) & (ln > -1 & ln < 1) & (slp <= 5)
+    ten.class[(sn > -1 & sn < 1) & (ln > -1 & ln < 1) & (slp <= 5)] <- 5
     #plains[na.omit(plains)] <- 5
     
     open.slp <-  (sn > -1 & sn < 1) & (ln > -1 & ln < 1) & (slp > 5)
+    ten.class[(sn > -1 & sn < 1) & (ln > -1 & ln < 1) & (slp > 5)] <- 6
     #open.slp[na.omit(open.slp)] <- 6
     
     upper.slp <- (sn > -1 & sn < 1) & (ln >= 1)
+    ten.class[(sn > -1 & sn < 1) & (ln >= 1)] <- 7
     #upper.slp[na.omit(upper.slp)] <- 7
     
     local.rdg <- (sn >= 1) & (ln <= -1)
+    ten.class[(sn >= 1) & (ln <= -1)] <- 8
     #local.rdg[na.omit(local.rdg)] <- 8
     
     midslp.rdg <- (sn >= 1) & (ln > -1 & ln < 1)
+    ten.class[(sn >= 1) & (ln > -1 & ln < 1)] <- 9
     #midslp.rdg[na.omit(midslp.rdg)] <- 9
     
     mount.top <- (sn >= 1) & (ln >=1)
+    ten.class[(sn >= 1) & (ln >=1)] <- 10
     #mount.top[na.omit(mount.top)] <- 10
     
     plot(canyons, main="Canyons\nDeeply Incised Streams", sub="SN: TPI <= -1\nLN: TPI <= -1", cex.main=0.9, cex.sub=0.7, legend=FALSE)
@@ -129,6 +165,25 @@ landfClass <- function (x, scale = 3, sn=3, ln=7, n.classes="six", add.tpi=FALSE
     plot(local.rdg, main="Local Ridges\nHills in Valleys", sub="SN: TPI >= 1\nLN: TPI <=  -1", cex.main=0.9, cex.sub=0.7, legend=FALSE)
     plot(midslp.rdg, main="Midslopes Ridges\nSmall Hills in Plains", sub="SN: TPI >= 1\nLN: -1 < TPI < -1", cex.main=0.9, cex.sub=0.7, legend=FALSE)
     plot(mount.top, main="Mountain Tops\nHigh Ridges", sub="SN: TPI >= 1\nLN: TPI >= 1", cex.main=0.9, cex.sub=0.7, legend=FALSE)
+    
+    # combine output
+    names(ten.class) <- 'classification'
+    ten.class <- ratify(ten.class)
+    rat <- data.frame(ID = seq(1, 10),
+                      landclass = c('Canyons',
+                                    'Shallow Valleys',
+                                    'Headwaters',
+                                    'U-Shaped Valleys',
+                                    'Plains',
+                                    'Open Slopes',
+                                    'Upper Slopes',
+                                    'Local Ridges',
+                                    'Midslope Ridges',
+                                    'Mountain Tops'))
+    rat <- rat[which(rat$ID %in% levels(ten.class)[[1]][,1]),]
+    levels(ten.class) <- rat
+    output <- list(tp, ten.class)
+    
   }
   
   if (add.tpi == TRUE) {
@@ -139,5 +194,5 @@ landfClass <- function (x, scale = 3, sn=3, ln=7, n.classes="six", add.tpi=FALSE
     }
     plot(tp, main=paste0(ifelse(stand.tpi==TRUE, "Standardized", "Unstandardized"), " Topographic Position Index"), cex.main=0.8)
   }
-  return(tp)
+  return(output)
 }

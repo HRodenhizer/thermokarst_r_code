@@ -814,10 +814,17 @@ plot(karst_edges[[3]])
 ########################################################################################################################
 
 ### Landform Classification ############################################################################################
-mean.elev <- calc(elev, fun = mean)
+filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All',
+                        full.names = TRUE,
+                        pattern = '.tif$')
+crop_extent <- extent(matrix(c(385600, 396800, 7080000, 7091000), nrow = 2, byrow = TRUE))
+elev <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]), crop_extent),
+              crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), crop_extent),
+              crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), crop_extent))
+mean.elev <- calc(elev, fun = mean, na.rm = TRUE)
 plot(mean.elev)
 
-source('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_r_code/analysis/landfClass.R')
+source('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_r_code/analysis/landfClass_eml.R')
 
 # test with coarse resolution
 test.elev <- aggregate(mean.elev, fact = 5)
@@ -825,15 +832,21 @@ test.elev <- aggregate(mean.elev, fact = 10)
 
 plot(test.elev)
 
-# takes a few minutes to run
-landforms <- landfClass(test.elev,
-                        sn = 55,
-                        ln = 125,
-                        n.classes = 'ten')
-# 6 classes seems to work better
-landforms <- landfClass(test.elev,
-                        scale = 125,
-                        n.classes = 'six')
+# takes ~2 minutes to run with 10 m data and scale = 125
+start <- Sys.time()
+landforms <- landfClass(test.elev, scale = 125)
+end <- Sys.time()
+difftime(end, start)
+
+# ~2 min*100 = 3-4 hours 
+landforms <- landfClass(mean.elev,
+                        scale = 1251)
+writeRaster(landforms[[1]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/tpi.tif')
+writeRaster(landforms[[2]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/landforms.tif')
+
+# convert landform classes to vector
+landclasses <- rasterToPolygons(landforms[[2]])
+st_write(landclasses, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/landforms.shp')
 ########################################################################################################################
 
 ### Subsidence Mixed-Effects Model
@@ -1972,7 +1985,17 @@ mtopo_08 <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS foot
 mtopo_08_df <- as.data.frame(mtopo_08, xy = TRUE) %>%
   rename(mtopo = 3)
 
-transects <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS footprint/GIS footprint/360 degree transects/degree_trans.shp')
+# # test my theory of how Fay made microtopography map
+# # looks like I got it right!
+# # She started with ok_raster (1.45 m), subtracted min elevation to get scale_zero1 (1.45 m),
+# # aggregated the scaled raster to sz_30 (30 m), resampled to sz_30_1_raster or sz_30_1 (1.45 m),
+# # and subtracted sz_30_1_raster from scale_zero1 to get DE_raster (microtopography, 1.45 m)
+# scale_zero1 <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS footprint/GIS footprint/Dev_ele/scale_zero1.img')
+# sz_30_1_raster <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS footprint/GIS footprint/Dev_ele/sz_30_1_raster.img')
+# DE_raster_remake <- scale_zero1 - sz_30_1_raster
+# plot(DE_raster_remake)
+
+# transects <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS footprint/GIS footprint/360 degree transects/degree_trans.shp')
 
 # re-calculate microtopography using mean rather than median to compare with Fay's
 filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All',
@@ -1986,16 +2009,30 @@ ec_elev_buf <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif
               crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), extend(extent(wedges_sf), c(25, 25, 25, 25))),
               crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), extend(extent(wedges_sf), c(25, 25, 25, 25))))
 
-weights <- focalWeight(ec_elev[[1]], 15, type = 'circle')
+# # Fay didn't use a moving window, but rather subtracted the elevation from a
+# # 30 m aggregated elevation raster
+# weights <- focalWeight(ec_elev[[1]], 15, type = 'rectangle')
+# 
+# ec_mean <- list()
+# ec_mtopo_mean <- list()
+# for (i in 1:3) {
+#   
+#   ec_mean[[i]] <- focal(ec_elev_buf[[i]], weights)
+#   ec_mean[[i]] <- mask(crop(ec_mean[[i]], wedges_sf), wedges_sf)
+#   ec_mtopo_mean[[i]] <- ec_elev[[i]] - ec_mean[[i]]
+# }
 
+# # redo following Fay's methods
 ec_mean <- list()
 ec_mtopo_mean <- list()
 for (i in 1:3) {
-  
-  ec_mean[[i]] <- focal(ec_elev_buf[[i]], weights)
-  ec_mean[[i]] <- mask(crop(ec_mean[[i]], wedges_sf), wedges_sf)
-  ec_mtopo_mean[[i]] <- ec_elev[[i]] - ec_mean[[i]]
+  ec_mean[[i]] <- aggregate(ec_elev_buf[[i]], fact = 30)
+  ec_mean[[i]] <- resample(ec_mean[[i]], raster(extent(ec_mean[[i]]), resolution = 1.5, crs = crs(ec_mean[[i]])))
+  ec_mtopo_mean[[i]] <- resample(ec_elev_buf[[i]], ec_mean[[i]]) - ec_mean[[i]]
 }
+plot(ec_elev_buf[[1]])
+plot(ec_mean[[1]])
+plot(ec_mtopo_mean[[1]])
 
 ec_mtopo_mean <- brick(ec_mtopo_mean[[1]],
                        ec_mtopo_mean[[2]],
@@ -2003,9 +2040,35 @@ ec_mtopo_mean <- brick(ec_mtopo_mean[[1]],
 mtopo_17_19 <- calc(ec_mtopo_mean, mean, na.rm = FALSE)
 mtopo_17_19_df <- as.data.frame(mtopo_17_19, xy = TRUE) %>%
   rename(mtopo = 3)
+mtopo_plot_fays_method <- ggplot(mtopo_17_19_df, aes(x = x, y = y)) +
+  geom_raster(aes(fill = mtopo)) +
+  # geom_sf(data = transects, aes(geometry = geometry), inherit.aes = FALSE) +
+  scale_fill_viridis(name = 'Microtopography',
+                     na.value = 'transparent') +
+  theme_bw() +
+  coord_fixed() +
+  theme(axis.title = element_blank())
+mtopo_plot_fays_method
+
+# Difference in methods
+mtopo_method_diff <- mtopo_17_19 - resample(mean_mtopo, mtopo_17_19)
+mtopo_method_df <- as.data.frame(mtopo_method_diff, xy = TRUE) %>%
+  rename(mtopo.diff = 3)
+mtopo_method_diff_plot <- ggplot(mtopo_method_df, aes(x = x, y = y)) +
+  geom_raster(aes(fill = mtopo.diff)) +
+  # geom_sf(data = transects, aes(geometry = geometry), inherit.aes = FALSE) +
+  scale_fill_viridis(name = 'Microtopography Difference',
+                     na.value = 'transparent') +
+  theme_bw() +
+  coord_fixed() +
+  theme(axis.title = element_blank())
+mtopo_method_diff_plot
+t.test(mtopo_method_df$mtopo.diff)
 
 # Change in mtopo (using mean elevation in 15 m )
-mtopo_change <- mtopo_17_19 - mtopo_08
+mtopo_change <- mtopo_17_19 - resample(mtopo_08, mtopo_17_19)
+# mtopo_change <- mask(crop(mtopo_change, as(wedges_sf, 'Spatial')), as(wedges_sf, 'Spatial'))
+
 mtopo_change_df <- as.data.frame(mtopo_change, xy = TRUE) %>%
   rename(mtopo_change = 3)
 
@@ -2018,6 +2081,29 @@ change_plot <- ggplot(mtopo_change_df, aes(x = x, y = y)) +
   coord_fixed() +
   theme(axis.title = element_blank())
 change_plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopography_change_08_19.jpg',
+#        change_plot,
+#        height = 4,
+#        width = 6)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopography_change_08_19.pdf',
+#        change_plot,
+#        height = 4,
+#        width = 6)
+
+ggplot(mtopo_change_df, aes(y = mtopo_change)) +
+  geom_boxplot() +
+  scale_y_continuous(name = expression(Delta ~ 'Microtopography')) +
+  theme_bw() +
+  theme(axis.text.x = element_blank())
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopography_change_08_19_boxplot.jpg',
+#        height = 4,
+#        width = 2)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopography_change_08_19_boxplot.pdf',
+#        height = 4,
+#        width = 2)
+summary(mtopo_change_df$mtopo_change)
+change.test <- t.test(mtopo_change_df$mtopo_change)
+change.test # they are different!(?) But probably only because of huge sample size.
 
 mtopo_08_plot <- ggplot(mtopo_08_df, aes(x = x, y = y)) +
   geom_raster(aes(fill = mtopo)) +
@@ -2634,8 +2720,13 @@ nee.karst.plot <- ggplot(co2.model.data[filled == 0],
 nee.karst.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_karst_plot.jpg',
 #        nee.karst.plot,
-#        height = 8,
-#        width = 8)
+#        height = 6,
+#        width = 6)
+# 
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_karst_plot.pdf',
+#        nee.karst.plot,
+#        height = 6,
+#        width = 6)
 
 # # thermokarst - slices
 # ggplot(co2.model.data,
@@ -2681,6 +2772,8 @@ nee.karst.model <- lm(NEP ~ percent.thermokarst.ffp*group,
 # saveRDS(nee.karst.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple.rds')
 nee.karst.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple.rds')
 summary(nee.karst.model)
+nee.contrast <- emmeans(nee.karst.model, specs = pairwise~group)
+nee.contrast
 
 # this is a gross way to summarize and make everything look nice - better options?
 nee.karst.model.table <- data.frame(variables = names(nee.karst.model[['coefficients']]),
@@ -2753,8 +2846,13 @@ gpp.karst.plot <- ggplot(filter(co2.model.data, group == 'GS Day' & filled == 0)
 gpp.karst.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/gpp_karst_plot.jpg',
 #        gpp.karst.plot,
-#        height = 8,
-#        width = 8)
+#        height = 6,
+#        width = 6)
+# 
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/gpp_karst_plot.pdf',
+#        gpp.karst.plot,
+#        height = 6,
+#        width = 6)
 
 # simple model
 smallest <- GEP ~ 1
@@ -2769,6 +2867,8 @@ gpp.karst.model <- lm(GEP ~ percent.thermokarst.ffp*month.factor,
 # saveRDS(gpp.karst.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_simple.rds')
 gpp.karst.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_simple.rds')
 summary(gpp.karst.model)
+gpp.contrast <- emmeans(gpp.karst.model, specs = pairwise~month.factor)
+gpp.contrast
 
 # this is a gross way to summarize and make everything look nice - better options?
 gpp.karst.model.table <- data.frame(variables = names(gpp.karst.model[['coefficients']]),
@@ -2829,8 +2929,13 @@ reco.karst.plot <- ggplot(co2.model.data[filled == 0],
 reco.karst.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/reco_karst_plot.jpg',
 #        reco.karst.plot,
-#        height = 8,
-#        width = 8)
+#        height = 6,
+#        width = 6)
+# 
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/reco_karst_plot.pdf',
+#        reco.karst.plot,
+#        height = 6,
+#        width = 6)
 
 # simple model
 smallest <- Reco ~ 1
@@ -2845,6 +2950,8 @@ reco.karst.model <- lm(Reco ~ percent.thermokarst.ffp*group,
 # saveRDS(reco.karst.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_simple.rds')
 reco.karst.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_simple.rds')
 summary(reco.karst.model)
+reco.contrast <- emmeans(reco.karst.model, specs = pairwise~group)
+reco.contrast
 
 # this is a gross way to summarize and make everything look nice - better options?
 reco.karst.model.table <- data.frame(variables = names(reco.karst.model[['coefficients']]),
@@ -2905,8 +3012,13 @@ nee.roughness.plot <- ggplot(co2.model.data[filled == 0],
 nee.roughness.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_roughness_plot.jpg',
 #        nee.roughness.plot,
-#        height = 8,
-#        width = 8)
+#        height = 6,
+#        width = 6)
+# 
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_roughness_plot.pdf',
+#        nee.roughness.plot,
+#        height = 6,
+#        width = 6)
 
 # # roughness - slices
 # ggplot(co2.model.data,
@@ -3020,8 +3132,12 @@ gpp.roughness.plot <- ggplot(filter(co2.model.data, group == 'GS Day' & filled =
 gpp.roughness.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/gpp_roughness_plot.jpg',
 #        gpp.roughness.plot,
-#        height = 8,
-#        width = 8)
+#        height = 6,
+#        width = 6)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/gpp_roughness_plot.pdf',
+#        gpp.roughness.plot,
+#        height = 6,
+#        width = 6)
 
 # simple model
 smallest <- GEP ~ 1
@@ -3095,8 +3211,13 @@ reco.roughness.plot <- ggplot(co2.model.data[filled == 0],
 reco.roughness.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/reco_roughness_plot.jpg',
 #        reco.roughness.plot,
-#        height = 8,
-#        width = 8)
+#        height = 6,
+#        width = 6)
+# 
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/reco_roughness_plot.pdf',
+#        reco.roughness.plot,
+#        height = 6,
+#        width = 6)
 
 # simple model
 smallest <- Reco ~ 1
@@ -3203,15 +3324,18 @@ karst.models <- rbind.data.frame(nee.karst.model.table %>%
                                       'Group - NGS Respiration (Intercept)',
                                       'Group - GS Day',
                                       'Group - GS Night Respiration',
-                                      'Group - NGS Respiration')))
+                                      'Group - NGS Respiration'))) %>%
+  group_by(Response, Predictor) %>%
+  mutate(R2 = first(R2),
+         label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', R2))
 
-labels <- data.frame(label1 = c('greater sink/\nsmaller source', NA, NA),
-                     label2 = c('greater source/smaller sink', NA, NA),
+labels <- data.frame(label1 = c('greater\nsink/\nsmaller\nsource', NA, NA),
+                     label2 = c('greater source/\nsmaller sink', NA, NA),
                      Response = c('Reco', 'NEE', 'GPP'),
                      Predictor = c('Thermokarst', 'Thermokarst', 'Thermokarst'))
-arrow <- data.frame(x = 0,
+arrow <- data.frame(x = 0.05,
                     y = 0.55,
-                    xend = 0.05,
+                    xend = 0.4,
                     yend = 0.55,
                     Response = 'Reco',
                     Predictor = 'Thermokarst')
@@ -3220,20 +3344,27 @@ effect.size.plot <- ggplot(karst.models,
   geom_vline(xintercept = 0) +
   geom_point(aes(x = Coefficient)) +
   geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`), width = 0.1) +
-  geom_text(data = labels, aes(x = -0.06, y = 0.5, label = label1),
+  geom_text(aes(x = 0.75, y = Inf, label = label),
+            parse = TRUE,
             inherit.aes = FALSE,
-            size = 2,
+            size = 3,
+            vjust = 'inward',
+            hjust = 'inward') +
+  geom_text(data = labels, aes(x = -0.3, y = 0.5, label = label1),
+            inherit.aes = FALSE,
+            size = 3,
             vjust = "inward",
             hjust = "inward") +
-  geom_text(data = labels, aes(x = 0.16, y = 0.5, label = label2),
+  geom_text(data = labels, aes(x = 0.75, y = 0.5, label = label2),
             inherit.aes = FALSE,
-            size = 2,
+            size = 3,
             vjust = "inward",
             hjust = "inward") +
-  geom_segment(data = arrow, aes(x = x, y = y, xend = xend, yend = yend),
-               inherit.aes = FALSE,
-               arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
+  # geom_segment(data = arrow, aes(x = x, y = y, xend = xend, yend = yend),
+  #              inherit.aes = FALSE,
+  #              arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
   scale_y_discrete(limits = rev) +
+  scale_x_continuous(limits = c(-0.3, 0.75)) +
   scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
                      values = c('#99CC33', '#CC3300', '#000066')) +
   facet_grid(Response ~ Predictor, scales = 'free') +
@@ -3243,8 +3374,13 @@ effect.size.plot <- ggplot(karst.models,
 effect.size.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.jpg',
 #        effect.size.plot,
-#        height = 8,
-#        width = 8)
+#        height = 6,
+#        width = 6)
+# 
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.pdf',
+#        effect.size.plot,
+#        height = 6,
+#        width = 6)
 ########################################################################################################################
 
 ### CH4 Analysis #######################################################################################################
