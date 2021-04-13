@@ -341,10 +341,111 @@ graph <- create_graph(nodes_df = nodes,
 graph %>% render_graph()
 
 # # save file
-graph %>% export_graph(file_name = '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r_simple.pdf',
-                       file_type = "pdf")
+# graph %>% export_graph(file_name = '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r_simple.pdf',
+#                        file_type = "pdf")
+# graph %>% export_graph(file_name = '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r_simple.png',
+#                        file_type = "png")
 ##########################################################################################################
 
+### Focal Function Diagram ###############################################################################
+elev.example <- raster(matrix(rnorm(2500, mean = 670), ncol = 50))
+extent(elev.example) <- extent(0, 50, 0, 50)
+elev.example.df <- as.data.frame(elev.example, xy = TRUE)
+
+# create a circlular neighborhood simple feature
+x <- seq(15.5, by = 1, length.out = 6)
+y <- rep(15.5, 6)
+color <- c(alpha('#000000', 0.1),
+           alpha('#000000', 0.2),
+           alpha('#000000', 0.4),
+           alpha('#000000', 0.6),
+           alpha('#000000', 0.8),
+           alpha('#000000', 1))
+points <- data.frame(x = x,
+                     y = y,
+                     color = I(color))
+points <- st_as_sf(points, coords = c('x', 'y'))
+circles <- st_buffer(points, dist = 15.5)
+center.x <- c(15, 15, 16, 16, 15)
+center.y <- c(15, 16, 16, 15, 15)
+centers <- data.frame()
+for (i in 1:6) {
+  center.x.new <- center.x + (i - 1)
+  centers <- rbind.data.frame(centers,
+                              st_sf(geometry = st_sfc(st_polygon(list(matrix(c(center.x.new, center.y),
+                                                                             ncol = 2,
+                                                                             byrow = FALSE))))))
+}
+centers <- centers %>%
+  mutate(color = I(color)) %>%
+  st_as_sf()
+arrows <- data.frame(x = seq(15, 19),
+                     xend = seq(16, 20),
+                     y = rep(15.5, 5),
+                     yend = rep(15.5, 5),
+                     color = I(color[1:5]))
+
+ggplot(data = elev.example.df, aes(x = x, y = y, fill = layer)) +
+  geom_raster(alpha = 0.4) +
+  geom_sf(data = circles, aes(color = color), inherit.aes = FALSE, fill = NA) +
+  geom_sf(data = centers, aes(color = color), inherit.aes = FALSE, fill = NA) +
+  geom_segment(data = arrows, aes(x = x, y = y, xend = xend, yend = yend, color = color),
+               inherit.aes = FALSE,
+               arrow = arrow(length = unit(0.01, "npc"))) +
+  coord_sf(expand = FALSE) +
+  scale_fill_viridis(name = 'Elevation') +
+  theme_few() +
+  theme(axis.title = element_blank(),
+        axis.text = element_blank())
+
+plot1 <- ggplot(data = elev.example.df, aes(x = x, y = y, fill = layer)) +
+  geom_raster(alpha = 0.4) +
+  geom_sf(data = circles[1,], color = 'black', inherit.aes = FALSE, fill = NA) +
+  geom_sf(data = centers[1,], color = 'black', inherit.aes = FALSE, fill = NA) +
+  coord_sf(expand = FALSE) +
+  scale_fill_viridis(name = 'Elevation') +
+  theme_few() +
+  theme(axis.title = element_blank(),
+        axis.text = element_blank())
+plot1
+# This could be useful to make a gif, if I can install magick
+# # start by plotting in 3D
+# subsidence.3D <- list()
+# for (i in 1:length(Subsidence.matrix)){
+#   img <- image_graph(1000, 1000, res = 96)
+#   nlong <- (dim(Subsidence.matrix[[i]][[1]])[2]-1)*2
+#   nlat <- (dim(Subsidence.matrix[[i]][[1]])[1]-1)*2
+#   x <- matrix(rep(seq(0, nlong, by = 2), (nlat/2)+1), ncol = (nlong/2)+1, byrow = TRUE)
+#   y <- matrix(rep(seq(nlat, 0, by = -2), (nlong/2)+1), ncol = (nlong/2)+1)
+#   for(k in 1:length(Subsidence.matrix[[i]])){
+#     surf3D(x = x, 
+#            y = y, 
+#            z = Subsidence.matrix[[i]][[k]], 
+#            colvar = Subsidence.matrix[[i]][[k]], 
+#            col = viridis(1024, begin = 0, end = 1), 
+#            phi = 60, 
+#            theta = -70, 
+#            clim = c(-1, 0.5), 
+#            zlim = c(-1, 0.5), 
+#            colkey = FALSE)
+#   }
+#   dev.off()
+#   subsidence.3D[[i]] <- image_animate(img, fps = 2)
+# }
+# 
+# print(subsidence.3D[[1]])
+# print(subsidence.3D[[2]])
+# print(subsidence.3D[[3]])
+
+
+
+ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/neighborhood_diagram.jpg',
+       height = 4,
+       width = 4.5)
+ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/neighborhood_diagram.pdf',
+       height = 4,
+       width = 4.5)
+##########################################################################################################
 
 #### Old Code ############
 
