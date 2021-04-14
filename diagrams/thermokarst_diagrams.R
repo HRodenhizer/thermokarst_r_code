@@ -4,9 +4,20 @@
 ########################################################################################################################
 
 ### Load Libraries #####################################################################################################
+# for flow chart
 library(DiagrammeR)
 library(DiagrammeRsvg)
 library(rsvg)
+# for neighborhood gif
+library(magick)
+library(raster)
+library(sf)
+library(viridis)
+library(ggthemes)
+library(ggnewscale)
+library(gg3D)
+# library(rasterVis)
+library(tidyverse)
 ########################################################################################################################
 
 ### Create Flow Chart of Thermokarst Model #############################################################################
@@ -352,20 +363,59 @@ elev.example <- raster(matrix(rnorm(2500, mean = 670), ncol = 50))
 extent(elev.example) <- extent(0, 50, 0, 50)
 elev.example.df <- as.data.frame(elev.example, xy = TRUE)
 
-# create a circlular neighborhood simple feature
-x <- seq(15.5, by = 1, length.out = 6)
-y <- rep(15.5, 6)
-color <- c(alpha('#000000', 0.1),
+# create color columns
+color1 <- c(alpha('#000000', 1),
+            rep(NA, 5))
+color2 <- c(alpha('#000000', 0.8),
+            alpha('#000000', 1),
+            rep(NA, 4))
+color3 <- c(alpha('#000000', 0.6),
+            alpha('#000000', 0.8),
+            alpha('#000000', 1),
+            rep(NA, 3))
+color4 <- c(alpha('#000000', 0.4),
+            alpha('#000000', 0.6),
+            alpha('#000000', 0.8),
+            alpha('#000000', 1),
+            rep(NA, 2))
+color5 <- c(alpha('#000000', 0.2),
+            alpha('#000000', 0.4),
+            alpha('#000000', 0.6),
+            alpha('#000000', 0.8),
+            alpha('#000000', 1),
+            NA)
+color6 <- c(alpha('#000000', 0.1),
            alpha('#000000', 0.2),
            alpha('#000000', 0.4),
            alpha('#000000', 0.6),
            alpha('#000000', 0.8),
            alpha('#000000', 1))
+colors <- data.frame(I(color1),
+                     I(color2),
+                     I(color3),
+                     I(color4),
+                     I(color5),
+                     I(color6))
+# create fill columns
+fills <- data.frame(fill1 = I(c('white', rep(NA, 5))),
+                    fill2 = I(c(NA, 'white', rep(NA, 4))),
+                    fill3 = I(c(rep(NA, 2), 'white', rep(NA, 3))),
+                    fill4 = I(c(rep(NA, 3), 'white', rep(NA, 2))),
+                    fill5 = I(c(rep(NA, 4), 'white', NA)),
+                    fill6 = I(c(rep(NA, 5), 'white')))
+
+# create circular neighborhoods
+x <- seq(15.5, by = 1, length.out = 6)
+y <- rep(15.5, 6)
 points <- data.frame(x = x,
-                     y = y,
-                     color = I(color))
+                     y = y) %>%
+  cbind.data.frame(colors) %>%
+  cbind.data.frame(fills)
+
 points <- st_as_sf(points, coords = c('x', 'y'))
 circles <- st_buffer(points, dist = 15.5)
+
+# create neighborhood center cells
 center.x <- c(15, 15, 16, 16, 15)
 center.y <- c(15, 16, 16, 15, 15)
 centers <- data.frame()
@@ -377,74 +427,209 @@ for (i in 1:6) {
                                                                              byrow = FALSE))))))
 }
 centers <- centers %>%
-  mutate(color = I(color)) %>%
+  cbind.data.frame(colors) %>%
+  cbind.data.frame(fills) %>%
   st_as_sf()
-arrows <- data.frame(x = seq(15, 19),
-                     xend = seq(16, 20),
-                     y = rep(15.5, 5),
-                     yend = rep(15.5, 5),
-                     color = I(color[1:5]))
+
+# create arrows
+xstart <- seq(15.5, 20.5)
+xend <- xstart
+ystart <- rep(18, 6)
+yend <- rep(16.5, 6)
+arrows <- data.frame(xstart = xstart,
+                     xend = xend,
+                     ystart = ystart,
+                     yend = yend)
+
+plots <- list()
+for (i in 1:nrow(centers)) {
+  # indices to assign plots to
+  idx1 <- 3*i - 2
+  idx2 <- 3*i - 1
+  idx3 <- 3*i
+  color.col <- paste0('color', i)
+  fill.col <- paste0('fill', i)
+  circles.sub <- circles %>%
+    select(color = color.col, fill = fill.col)
+  centers.sub <- centers %>%
+    select(color = color.col, fill = fill.col)
+  
+  if (i == 1) {
+    plots[[idx1]] <- ggplot(data = elev.example.df, aes(x = x, y = y, fill = layer)) +
+      geom_raster() +
+      coord_sf(expand = FALSE) +
+      scale_fill_viridis(name = 'Elevation') +
+      theme_few() +
+      theme(axis.title = element_blank(),
+            axis.text = element_blank())
+  } else {
+    
+    # plot 1
+    plots[[idx1]] <- ggplot(data = elev.example.df, aes(x = x, y = y, fill = layer)) +
+      geom_raster() +
+      scale_fill_viridis(name = 'Elevation') +
+      new_scale('fill') +
+      geom_sf(data = circles.sub[1:i,], aes(color = color, fill = fill), inherit.aes = FALSE, alpha = 0.6) +
+      geom_sf(data = centers.sub[1:i, ], aes(color = color), inherit.aes = FALSE, fill = NA) +
+      geom_text(data = arrows[i,], aes(x = xstart, y = 19),
+                inherit.aes = FALSE,
+                label = 'Move to the Next Cell') +
+      geom_segment(data = arrows[i,], aes(x = xstart, y = ystart, xend = xend, yend = yend),
+                   inherit.aes = FALSE,
+                   color = 'black',
+                   arrow = arrow(length = unit(0.01, "npc"))) +
+      coord_sf(expand = FALSE) +
+      theme_few() +
+      theme(axis.title = element_blank(),
+            axis.text = element_blank())
+  }
+  # plot 2
+  plots[[idx2]] <- ggplot(data = elev.example.df, aes(x = x, y = y, fill = layer)) +
+    geom_raster() +
+    scale_fill_viridis(name = 'Elevation') +
+    new_scale('fill') +
+    geom_sf(data = circles.sub[1:i,], aes(color = color, fill = fill), inherit.aes = FALSE, alpha = 0.6) +
+    geom_sf(data = centers.sub[1:i, ], aes(color = color), inherit.aes = FALSE, fill = NA) +
+    geom_segment(data = arrows[i,], aes(x = xstart, y = ystart, xend = xend, yend = yend),
+                 inherit.aes = FALSE,
+                 color = 'black',
+                 arrow = arrow(length = unit(0.01, "npc"))) +
+    geom_text(data = arrows[i,], aes(x = xstart, y = 19),
+              inherit.aes = FALSE,
+              label = 'Circular Neighborhood with Radius=15m Around Center Cell') +
+    coord_sf(expand = FALSE) +
+    theme_few() +
+    theme(axis.title = element_blank(),
+          axis.text = element_blank())
+  
+  # plot 3
+  plots[[idx3]] <- ggplot(data = elev.example.df, aes(x = x, y = y, fill = layer)) +
+    geom_raster() +
+    scale_fill_viridis(name = 'Elevation') +
+    new_scale('fill') +
+    geom_sf(data = circles.sub[1:i,], aes(color = color, fill = fill), inherit.aes = FALSE, alpha = 0.6) +
+    geom_sf(data = centers.sub[1:i, ], aes(color = color), inherit.aes = FALSE, fill = NA) +
+    geom_segment(data = arrows[i,], aes(x = xstart, y = ystart, xend = xend, yend = yend),
+                 inherit.aes = FALSE,
+                 color = 'black',
+                 arrow = arrow(length = unit(0.01, "npc"))) +
+    geom_text(data = arrows[i,], aes(x = xstart, y = 19),
+              inherit.aes = FALSE,
+              label = 'Neighborhood Median is Assigned to Center Cell') +
+    coord_sf(expand = FALSE) +
+    theme_few() +
+    theme(axis.title = element_blank(),
+          axis.text = element_blank())
+  
+  
+}
+
+# map(plots,
+#     ~ print(.x))
+
+img <- image_graph(1000, 1000, res = 96)
+map(plots,
+    ~ print(.x))
+dev.off()
+neighborhood.gif <- image_animate(img, delay = 200, loop = 1)
+
+# save gif
+image_write(image = neighborhood.gif,
+            path = '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/neighborhood_slow.gif')
 
 ggplot(data = elev.example.df, aes(x = x, y = y, fill = layer)) +
-  geom_raster(alpha = 0.4) +
-  geom_sf(data = circles, aes(color = color), inherit.aes = FALSE, fill = NA) +
-  geom_sf(data = centers, aes(color = color), inherit.aes = FALSE, fill = NA) +
-  geom_segment(data = arrows, aes(x = x, y = y, xend = xend, yend = yend, color = color),
-               inherit.aes = FALSE,
-               arrow = arrow(length = unit(0.01, "npc"))) +
+  geom_raster() +
+  geom_sf(data = circles, aes(color = color6), inherit.aes = FALSE, fill = NA) +
+  geom_sf(data = centers, aes(color = color6), inherit.aes = FALSE, fill = NA) +
   coord_sf(expand = FALSE) +
   scale_fill_viridis(name = 'Elevation') +
   theme_few() +
   theme(axis.title = element_blank(),
         axis.text = element_blank())
 
-plot1 <- ggplot(data = elev.example.df, aes(x = x, y = y, fill = layer)) +
-  geom_raster(alpha = 0.4) +
-  geom_sf(data = circles[1,], color = 'black', inherit.aes = FALSE, fill = NA) +
-  geom_sf(data = centers[1,], color = 'black', inherit.aes = FALSE, fill = NA) +
-  coord_sf(expand = FALSE) +
-  scale_fill_viridis(name = 'Elevation') +
-  theme_few() +
-  theme(axis.title = element_blank(),
-        axis.text = element_blank())
-plot1
-# This could be useful to make a gif, if I can install magick
-# # start by plotting in 3D
-# subsidence.3D <- list()
-# for (i in 1:length(Subsidence.matrix)){
-#   img <- image_graph(1000, 1000, res = 96)
-#   nlong <- (dim(Subsidence.matrix[[i]][[1]])[2]-1)*2
-#   nlat <- (dim(Subsidence.matrix[[i]][[1]])[1]-1)*2
-#   x <- matrix(rep(seq(0, nlong, by = 2), (nlat/2)+1), ncol = (nlong/2)+1, byrow = TRUE)
-#   y <- matrix(rep(seq(nlat, 0, by = -2), (nlong/2)+1), ncol = (nlong/2)+1)
-#   for(k in 1:length(Subsidence.matrix[[i]])){
-#     surf3D(x = x, 
-#            y = y, 
-#            z = Subsidence.matrix[[i]][[k]], 
-#            colvar = Subsidence.matrix[[i]][[k]], 
-#            col = viridis(1024, begin = 0, end = 1), 
-#            phi = 60, 
-#            theta = -70, 
-#            clim = c(-1, 0.5), 
-#            zlim = c(-1, 0.5), 
-#            colkey = FALSE)
-#   }
-#   dev.off()
-#   subsidence.3D[[i]] <- image_animate(img, fps = 2)
-# }
-# 
-# print(subsidence.3D[[1]])
-# print(subsidence.3D[[2]])
-# print(subsidence.3D[[3]])
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/neighborhood_diagram.jpg',
+#        height = 4,
+#        width = 4.5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/neighborhood_diagram.pdf',
+#        height = 4,
+#        width = 4.5)
+##########################################################################################################
 
+### Microtopography Diagram ##############################################################################
+# crop_extent <- extent(matrix(c(389050, 389150, 7085400, 7085500), nrow = 2, byrow = TRUE))
+crop_extent <- extent(matrix(c(389000, 389200, 7085300, 7085500), nrow = 2, byrow = TRUE))
+elev <- crop(raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/DTM_All/NEON_DTM_2017.tif'), crop_extent)
+median <- crop(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/median15_9km_1.tif'), crop_extent)
+mtopo <- crop(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/mtopo15_9km_1.tif'), crop_extent)
 
+elev.df <- elev %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(value = 3) %>%
+  mutate(z = 3,
+         value = (value - mean(value))/(sd(value)*3),
+         z2 = value + z,
+         layer = 'elev')
+median.df <- median %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(value = 3) %>%
+  mutate(z = 2,
+         value = (value - mean(value))/(sd(value)*3),
+         z2 = value + z,
+         layer = 'med.elev')
+mtopo.df <- mtopo %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(value = 3) %>%
+  mutate(z = 1,
+         z2 = value + z,
+         layer = 'mtopo')
+dummy1 <- elev.df %>%
+  mutate(z = 0,
+         z2 = 0,
+         value = NA)
+dummy2 <- dummy1 %>%
+  mutate(z = 4,
+         z2 = 4)
 
-ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/neighborhood_diagram.jpg',
-       height = 4,
-       width = 4.5)
-ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/neighborhood_diagram.pdf',
-       height = 4,
-       width = 4.5)
+data <- dummy1 %>%
+  rbind.data.frame(mtopo.df) %>%
+  rbind.data.frame(median.df) %>%
+  rbind.data.frame(elev.df) %>%
+  rbind.data.frame(dummy2)
+
+# labels <- data.frame(x = rep(elev@extent@xmax, 3),
+#                      y = rep(elev@extent@ymin, 3),
+#                      z = c(3, 2, 1),
+#                      label = c('Elevation', 'Median Elevation', 'Microtopography'))
+
+# does work with points...
+ggplot(data = data, aes(x = x, y = y, z = z, color = value)) +
+  theme_void() +
+  stat_3D(theta = 135, phi = 20) +
+  # stat_3D(theta = 135, phi = 20,
+  #         inherit.aes = FALSE,
+  #         data = labels,
+  #         aes(x = x, y = y, z = z, label = label),
+  #         geom= 'text',
+  #         angle = -30) +
+  scale_color_viridis(na.value = 'transparent') +
+  theme(legend.position = 'none')
+
+ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopography_diagram.jpg')
+# doesn't work with tiles
+ggplot(data = data, aes(x = x, y = y, z = z, fill = value)) +
+  theme_void() +
+  stat_3D(geom = 'tile', theta = 45, phi = 30) +
+  scale_color_viridis(na.value = 'transparent')
+# try as wireframe - data needs to be in molten matrix, and I
+# don't think this will give the aesthetic I want anyway
+ggplot(data = data, aes(x = x, y = y, z = z2, color = value)) +
+  theme_void() +
+  stat_wireframe(theta = 45, phi = 20) +
+  stat_3D() +
+  scale_color_viridis(na.value = 'transparent')
+
+# try with plot3D - doesn't plot anything, no error
+plot3D(elev)
 ##########################################################################################################
 
 #### Old Code ############
