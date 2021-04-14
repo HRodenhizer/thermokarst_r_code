@@ -35,6 +35,7 @@ ec_sf <- st_sf(geometry = ec, crs = 32606)
 circle <- st_buffer(ec, dist = 225)
 circle_sf <- st_sf(geometry = circle)
 eml_wtrshd <- st_read("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/eml_bnd/boundry_poly3.shp")
+thermokarst <- raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_final.tif')
 ##############################################################################################################
 
 ### Possible to plot RGB data with ggplot? ###################################################################
@@ -114,7 +115,7 @@ emlhillshd.df <- emlhillshade.stretch %>%
 #   theme(legend.position = "none",
 #         axis.title = element_blank()) # don't try to run without this line, it will destroy everything (i.e. take forever and probably crash RStudio)
 
-ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
+site.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_raster() +
   scale_fill_gradient(low = '#000000', high = '#FFFFFF') +
   new_scale('fill') +
@@ -128,10 +129,53 @@ ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   theme_bw() +
   theme(legend.position = "none",
         axis.title = element_blank()) # don't try to run without this line, it will destroy everything (i.e. take forever and probably crash RStudio)
+site.map
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/site_map.jpg',
+#        site.map,
 #        height = 6,
 #        width = 7)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/site_map.pdf',
+#        site.map,
+#        height = 6,
+#        width = 7)
+##############################################################################################################
+
+### Add in Thermokarst Classification ########################################################################
+thermokarst5 <- aggregate(thermokarst, fact = 5)
+thermokarst.df <- thermokarst5 %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(tk = 3) %>%
+  mutate(tk = factor(ifelse(is.nan(tk),
+                     NA,
+                     tk)))
+
+tk.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
+  geom_raster() +
+  scale_fill_gradient(low = '#000000', high = '#FFFFFF') +
+  new_scale('fill') +
+  geom_raster(data = emlrgb18.df, aes(x = x, y = y, fill = color.hex), inherit.aes = FALSE, alpha = 0.8) +
+  scale_fill_manual(values = levels(emlrgb18.df$color.hex)) +
+  new_scale('fill') +
+  geom_raster(data = thermokarst.df,
+              aes(x = x, y = y, fill = tk),
+              inherit.aes = FALSE) +
+  scale_fill_manual(values = c('black'),
+                    na.value = NA) +
+  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'gray') +
+  geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'gray') +
+  geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'gray') +
+  coord_sf(datum = st_crs(ec_sf),
+           expand = FALSE) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title = element_blank())
+tk.map
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_map.jpg',
+#        tk.map,
+#        height = 6,
+#        width = 7)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_map.pdf',
+#        tk.map,
 #        height = 6,
 #        width = 7)
 ##############################################################################################################
