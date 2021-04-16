@@ -10,9 +10,9 @@ library(tidyverse)
 ########################################################################################################################
 
 ### Load Data ##########################################################################################################
-karst_extract <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/thermokarst_extract_18.shp") %>%
+karst_extract <- st_read("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/thermokarst_extract_18.shp") %>%
   st_set_crs(32606)
-validated_samples <- st_read("Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/samples_stratified_100_scrambled.shp") %>%
+validated_samples <- st_read("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/samples_stratified_100_scrambled.shp") %>%
   st_set_crs(32606) %>%
   mutate(validation = as.numeric(as.character(validation)),
          confidence = as.numeric(as.character(confidence)))
@@ -52,6 +52,7 @@ tk_comb_3_accuracy
 tk_comb_4_accuracy
 
 # create confusion matrices
+# validation class is rows, and classification class is columns
 # tk_comb_1 has slightly higher correct classification as thermokarst (is less conservative)
 # tk_comb_3 has slightly higher correct classification as non-thermokarst (is more conservative)
 tk_15_performance <- table(validation_df$validation, validation_df$tk_15)
@@ -71,6 +72,40 @@ tk_comb_1_performance
 tk_comb_2_performance
 tk_comb_3_performance
 tk_comb_4_performance
+
+# tk_comb_1 metrics
+# create a neat confusion matrix
+tk_comb_1_performance <- table(validation_df$validation, validation_df$tk_comb_1)
+tk_confusion_matrix <- as.data.frame(tk_comb_1_performance) %>%
+  mutate(Observed = ifelse(Var1 == 0,
+                           'Non-Thermokarst',
+                           'Thermokarst'),
+         Simulated = ifelse(Var2 == 0,
+                            'Non-Thermokarst',
+                            'Thermokarst')) %>%
+  select(-c(Var1, Var2)) %>%
+  pivot_wider(names_from = Observed,
+              values_from = Freq) %>%
+  mutate(Total = `Non-Thermokarst` + Thermokarst)
+tk_confusion_matrix <- tk_confusion_matrix %>%  
+  rbind.data.frame(data.frame(Simulated = 'Total',
+                              `Non-Thermokarst` = sum(tk_confusion_matrix$`Non-Thermokarst`),
+                              Thermokarst = sum(tk_confusion_matrix$Thermokarst),
+                              Total = sum(tk_confusion_matrix$`Non-Thermokarst`, tk_confusion_matrix$Thermokarst)) %>%
+                     rename(`Non-Thermokarst` = Non.Thermokarst))
+# write.csv(tk_confusion_matrix,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/confusion_matrix.csv',
+#           row.names = FALSE)
+# % of simulated non-thermokarst which were correctly identified
+user.acc.non.tk <- tk_confusion_matrix$`Non-Thermokarst`[1]/tk_confusion_matrix$Total[1]
+# % of simulated thermokarst which were correctly identified
+user.acc.tk <- tk_confusion_matrix$Thermokarst[2]/tk_confusion_matrix$Total[2]
+# % of observed non-thermokarst which were correctly identified
+prod.acc.non.tk <- tk_confusion_matrix$`Non-Thermokarst`[1]/tk_confusion_matrix$`Non-Thermokarst`[3]
+# % of observed thermokarst which were correctly identified
+prod.acc.tk <- tk_confusion_matrix$Thermokarst[2]/tk_confusion_matrix$Thermokarst[3]
+# overall accurracy
+overall.acc <- (tk_confusion_matrix$`Non-Thermokarst`[1] + tk_confusion_matrix$Thermokarst[2])/tk_confusion_matrix$Total[3] 
 
 # check out difference in number of false classifications by validation certainty
 # my confidence in the thermokarst validation from imagery does impact how accurate each class was
