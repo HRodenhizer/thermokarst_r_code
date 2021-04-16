@@ -3391,10 +3391,18 @@ ch4 <- read.table('/home/heidi/Documents/School/NAU/Schuur Lab/Eddy Covariance/m
                   na.strings = "-9999")
 
 # Select correct times from Fluxnet
+# ch4 <- ch4 %>%
+#   mutate(ts = parse_date_time(TIMESTAMP_END, orders = c('Y!m!*d!H!M!'))) %>%
+#   filter(ts >= parse_date_time('2017-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')) &
+#            ts < parse_date_time('2018-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')))
+
+# test with all data, to see if 2017-2018 looks different
 ch4 <- ch4 %>%
-  mutate(ts = parse_date_time(TIMESTAMP_END, orders = c('Y!m!*d!H!M!'))) %>%
-  filter(ts >= parse_date_time('2017-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')) &
-           ts < parse_date_time('2018-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')))
+  mutate(ts = parse_date_time(TIMESTAMP_END, orders = c('Y!m!*d!H!M!')),
+         month = month(ts),
+         year = ifelse(month <= 10,
+                       year(ts),
+                       year(ts) + 1))
 
 ggplot(ch4, aes(x = ts)) +
   geom_point(aes(y = TS_1, color = 'TS_1')) +
@@ -3416,12 +3424,13 @@ ch4.small <- ch4 %>%
          day = ifelse(PPFD_IN_F >= 10,
                       'day',
                       'night'),
-         year = ifelse(month >= 5,
-                       year(ts),
-                       ifelse(month < 5,
-                              year(ts) - 1,
-                              NA)),
+         # year = ifelse(month >= 5,
+         #               year(ts),
+         #               ifelse(month < 5,
+         #                      year(ts) - 1,
+         #                      NA)),
          month.factor = factor(month),
+         direction = round(WD),
          FCH4 = FCH4 * (12.0107 * 1800)/1000000,  # convert to mg/half hour from nanomol/s
          FCH4_F = FCH4_F * (12.0107 * 1800)/1000000,
          # FCH4 = FCH4/1000, # convert from nanomol/s to micromol/s
@@ -3440,7 +3449,11 @@ ch4.small <- ch4.small %>%
   left_join(karst_roughness, by = 'ts') %>%
   rename(percent.thermokarst.ffp = karst.pc, mtopo15.sd.ffp = sd.mtopo) %>%
   as.data.table()
-
+# test all years methane data to check if 2017-2018 is bad using slices (don't have flux footprint for previous years)
+ch4.small <- ch4.small %>%
+  filter(!is.na(direction)) %>%
+  left_join(karst_mtopo_sf, by = 'direction')
+  
 ch4.small <- ch4.small[order(ts)]
 
 # did the join get the right timestamps?
@@ -3479,7 +3492,8 @@ ch4.model.data <- ch4.small %>%
   mutate(ch4_flux_filter = ch4_flux_filter * (12.0107 * 1800)/1000,  # convert to mg/half hour from micromol/s
          ch4_no_strg = ch4_flux_filter - ch4_strg,
          FCH4_F_S = FCH4_F + ch4_strg,
-         diff = FCH4_F_S - ch4_flux_filter)
+         diff = FCH4_F_S - ch4_flux_filter,
+         year.factor = factor(year(ts)))
 rm(ch4.small)
 
 # some large fluxes in our data were cleaned out of fluxnet data, leading to a couple of discrepancies
@@ -3524,6 +3538,27 @@ ch4.model.data  %>%
          sqrt.VPD = VPD^(1/2)) %>%
   select(FCH4, WS, tair, TS_2, PAR, sqrt.PAR, sqrt.VPD, VPD, percent.thermokarst.ffp, mtopo15.sd.ffp) %>%
   GGally::ggpairs(upper=list(continuous='points'), lower=list(continuous='cor'))
+
+# # Test how relationship differs by year (is 2017-2018 bad?)
+ggplot(ch4.model.data[filled == 0],
+       aes(x = percent.thermokarst.slice, y = FCH4, color = year.factor, group = year.factor)) +
+  geom_point(alpha = 0.4,
+             size = 1) +
+  geom_smooth(method = 'lm',
+              aes(fill = year.factor)) +
+  scale_x_continuous(name = 'Thermokarst Cover (%)') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1))) +
+  theme_bw() +
+  theme(legend.title = element_blank())
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_by_year.jpg')
+smallest <- FCH4 ~ 1
+biggest <- FCH4 ~ percent.thermokarst.slice*year.factor
+start <- lm(FCH4 ~ percent.thermokarst.slice+year.factor,
+                data = ch4.model.data[filled == 0])
+stats::step(start, scope = list(lower = smallest, upper = biggest))
+# using an aic improvement cutoff of 5 to add terms, we select FCH4 ~ 
+# percent.thermokarst.slice + year.factor. So the slopes are the same between 2018
+# and other years, but the intercept (flux magnitude) is different
 
 # # Linear model
 # simple
