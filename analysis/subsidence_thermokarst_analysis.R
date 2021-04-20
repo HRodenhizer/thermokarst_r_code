@@ -1462,6 +1462,45 @@ ggplot(karst_eml_df, aes(x = x, y = y, fill = thermokarst)) +
 #           row.names = FALSE)
 karst_eml_cover <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_thermokarst_cover.csv')
 
+# Test whether resolution changes the observed thermokarst percent cover
+karst_eml_mean_3m <- aggregate(karst_eml_mean, fact = 3, fun = 'median')
+karst_eml_mean_3m[karst_eml_mean_3m == 0.5] <- 1
+# karst_eml_mean_3m[karst_eml_mean_3m < 0.5] <- 0
+# karst_eml_mean_3m[karst_eml_mean_3m >= 0.5] <- 1
+karst_eml_mean_3m[is.nan(karst_eml_mean_3m) | is.na(karst_eml_mean_3m)] <- NA
+
+karst_eml_df_3m <- karst_eml_mean_3m %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(thermokarst = 3) %>%
+  mutate(thermokarst = factor(thermokarst))
+
+karst_eml_cover_3m <- karst_eml_df_3m %>%
+  filter(!is.na(thermokarst)) %>%
+  mutate(thermokarst = ifelse(thermokarst == 0,
+                              'undisturbed',
+                              'thermokarst')) %>%
+  group_by(thermokarst) %>%
+  summarise(n.cells = n()) %>%
+  pivot_wider(names_from = 'thermokarst', values_from = 'n.cells') %>%
+  mutate(percent.thermokarst = thermokarst/(thermokarst + undisturbed))
+
+ggplot(karst_eml_df_3m, aes(x = x, y = y, fill = thermokarst)) +
+  geom_raster() +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  # scale_fill_manual(breaks = c(0, 1),
+  #                   values = c('#FFFFFF', '#000000'),
+  #                   labels = c('Undisturbed', 'Thermokarst'),
+  #                   na.value = 'transparent') +
+  scale_fill_viridis(labels = c('Undisturbed', 'Thermokarst'),
+                     begin = 0,
+                     end = 1,
+                     discrete = TRUE,
+                     direction = -1) +
+  coord_fixed() +
+  theme_bw() +
+  theme(legend.title = element_blank())
+
 ### The rest of this section is not currently in use
 # # This section could be useful if I end up using neon data to get multiple years of subsidence
 # karst_eml_df <- karst_eml %>%
