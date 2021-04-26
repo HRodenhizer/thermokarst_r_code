@@ -9,14 +9,15 @@
 ### Libraries
 library(raster)
 library(doParallel)
+library(tidyverse)
 
 ### Data
 dtm <- crop(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/DTM/NEON_DTM_2017.tif'),
-            y = extent(matrix(c(390600, 390850, 7085600, 7085850), ncol = 2, byrow = TRUE)))
+            y = extent(matrix(c(389000, 389200, 7085400, 7085600), ncol = 2, byrow = TRUE)))
 dtm2 <- brick(crop(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/DTM/NEON_DTM_2017.tif'),
-             y = extent(matrix(c(390600, 390850, 7085600, 7085850), ncol = 2, byrow = TRUE))),
+             y = extent(matrix(c(389000, 389200, 7085400, 7085600), ncol = 2, byrow = TRUE))),
              crop(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/DTM/NEON_DTM_2018.tif'),
-                  y = extent(matrix(c(390600, 390850, 7085600, 7085850), ncol = 2, byrow = TRUE))))
+                  y = extent(matrix(c(389000, 389200, 7085400, 7085600), ncol = 2, byrow = TRUE))))
 plot(dtm)
 
 ### load function
