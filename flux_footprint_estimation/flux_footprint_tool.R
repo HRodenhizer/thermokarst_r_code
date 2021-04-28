@@ -19,19 +19,22 @@ library(tidyverse)
 # ameriflux <- fread('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/Ameriflux/AMF_US-EML_BASE_HH_3-5.csv')
 
 # Get most wind data from processed files
+load('~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_CO2&CH4_30Apr2019.Rdata')
 load('~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
 load('~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
 Tower18.19[, `:=` (u_var = NULL,  v_var = NULL, w_var = NULL)]
 load('~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
 
-flux <- rbind(Tower17.18[ts >= as_date('2017-05-01') & ts < as_date('2018-05-01')],
+flux <- rbind(Tower16.17[ts >= as_date('2016-05-01') & ts < as_date('2017-05-01')],
+              Tower17.18[ts >= as_date('2017-05-01') & ts < as_date('2018-05-01')],
               Tower18.19[ts >= as_date('2018-05-01') & ts < as_date('2019-05-01')],
               Tower19.20[ts >= as_date('2019-05-01') & ts < as_date('2020-05-01')])
 test <- flux[, .N, by = 'ts']
 # View(test[N > 1])
 
 # Get sigma_v and L (Obukhov Length) from unprocessed eddypro output
-filenames <- c(list.files(path='~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/EC', full.names = TRUE),
+filenames <- c(list.files(path='~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/EC', full.names = TRUE),
+               list.files(path='~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/EC', full.names = TRUE),
                list.files(path='~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/EC', full.names = TRUE),
                list.files(path='~/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/EC', full.names = TRUE)) 
 eddy <- map_dfr(filenames,
@@ -48,7 +51,7 @@ test <- eddy[, .N, by = 'ts']
 duplicates <- eddy[eddy$ts %in% test[N > 1]$ts,]
 # View(duplicates[order(ts)])
 eddy <- eddy[, lapply(.SD, max, na.rm = TRUE) , by = 'ts']
-eddy <- eddy[ts >= as_date('2017-05-01') & ts < as_date('2020-05-01')]
+eddy <- eddy[ts >= as_date('2016-05-01') & ts < as_date('2020-05-01')]
 eddy[is.na(L), L := -999]
 eddy[ L == -Inf, L := -999]
 eddy[is.na(sigma_v), sigma_v := -999]
@@ -59,7 +62,7 @@ eddy[ sigma_v == -Inf, sigma_v := -999]
 # Select desired timeframe and variables
 # Get all of the needed variables from the ameriflux file except V_SIGMA, which we
 # haven't been uploading to Ameriflux
-subset <- flux[ts >= as_date('2017-05-01') & ts < as_date('2020-05-01'),
+subset <- flux[ts >= as_date('2016-05-01') & ts < as_date('2020-05-01'),
                    .(ts, wind_speed_filter, `u*`, wind_dir)]
 setnames(subset,
          old = c('ts', 'wind_speed_filter', 'u*', 'wind_dir'),
@@ -136,11 +139,15 @@ final <- flux.format[,
                      .(yyyy, mm, day, HH, MM, zm, d, z0, u_mean, L, sigma_v,
                        u_star, wind_dir)]
 
+final.16 <- final[yyyy == 2016 & mm >= 5 | yyyy == 2017 & mm < 5]
 final.17 <- final[yyyy == 2017 & mm >= 5 | yyyy == 2018 & mm < 5]
 final.18 <- final[yyyy == 2018 & mm >= 5 | yyyy == 2019 & mm < 5]
 final.19 <- final[yyyy == 2019 & mm >= 5 | yyyy == 2020 & mm < 5]
 
 ### Save output
+# write.csv(final.16,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_ready_2016.csv',
+#           row.names = FALSE)
 # write.csv(final.17,
 #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/flux_tower_footprint/ffp_ready_2017.csv',
 #           row.names = FALSE)
