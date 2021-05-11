@@ -3091,12 +3091,12 @@ nee.roughness.plot
 # simple model
 smallest <- NEP ~ 1
 biggest <- NEP ~ mtopo15.sd.ffp*group
-start <- lm(Reco ~ mtopo15.sd.ffp*group,
+start <- lm(NEP ~ mtopo15.sd.ffp*group,
             data = co2.model.data[filled == 0])
 
 stats::step(start, scope = list(lower = smallest, upper = biggest))
 
-nee.roughness.model <- lm(Reco ~ mtopo15.sd.ffp*group,
+nee.roughness.model <- lm(NEP ~ mtopo15.sd.ffp*group,
                           data = co2.model.data[filled == 0])
 # saveRDS(nee.roughness.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_roughness_model_simple.rds')
 nee.roughness.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_roughness_model_simple.rds')
@@ -3751,6 +3751,10 @@ ch4.plot
 #        ch4.plot,
 #        width = 6,
 #        height = 6)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_tk.pdf',
+#        ch4.plot,
+#        width = 6,
+#        height = 6)
 
 ggplot(ch4.model.data,
        aes(x = percent.thermokarst.ffp,
@@ -3840,8 +3844,11 @@ ch4.ws.plot <- ggplot(ch4.model.data,
   theme_bw() +
   theme(legend.title = element_blank())
 ch4.ws.plot
-
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_ws.jpg',
+#        ch4.ws.plot,
+#        width = 6,
+#        height = 6)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_ws.pdf',
 #        ch4.ws.plot,
 #        width = 6,
 #        height = 6)
@@ -3898,17 +3905,19 @@ ch4.model.simple <- lm(formula = ch4_flux_filter ~ percent.thermokarst.ffp*month
                      data = ch4.model.data)
 # saveRDS(ch4.model.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_all_years.rds')
 # saveRDS(ch4.model.simple, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_simple_all_years.rds')
+ch4.model.complex <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_all_years.rds')
 ch4.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_simple_all_years.rds')
 summary(ch4.model)
 
 # this is a gross way to summarize and make everything look nice - better options?
 # complex model
-ch4.model.table <- data.frame(variables = names(ch4.model[['coefficients']]),
-                              coefficient = ch4.model[['coefficients']],
-                              min.ci = as.numeric(confint(ch4.model)[,1]),
-                              max.ci = as.numeric(confint(ch4.model)[,2]),
+ch4.model.table.complex <- data.frame(variables = names(ch4.model.complex[['coefficients']]),
+                              coefficient = ch4.model.complex[['coefficients']],
+                              min.ci = as.numeric(confint(ch4.model.complex)[,1]),
+                              max.ci = as.numeric(confint(ch4.model.complex)[,2]),
                               row.names = NULL) %>%
   mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+         `Final Variables` = str_replace(`Final Variables`, 'wind_speed_filter', 'WS'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'), 
@@ -3940,13 +3949,13 @@ ch4.model.table <- data.frame(variables = names(ch4.model[['coefficients']]),
   ungroup() %>%
   mutate(Response = c('CH4', rep('', 47)),
          `Full Model` = c('TK*WS*Month', rep('', 47)),
-         R2 = c(round(summary(ch4.model)$r.squared, 3), rep('', 47))) %>%
+         R2 = c(round(summary(ch4.model.complex)$r.squared, 3), rep('', 47))) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
 
-# write.csv(ch4.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_model_table_2016.csv',
+# write.csv(ch4.model.table.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_all_years.csv',
 #           row.names = FALSE)
 
-# simle model
+# simple model
 ch4.model.table <- data.frame(variables = names(ch4.model[['coefficients']]),
                               coefficient = ch4.model[['coefficients']],
                               min.ci = as.numeric(confint(ch4.model)[,1]),
@@ -3981,10 +3990,14 @@ ch4.model.table <- data.frame(variables = names(ch4.model[['coefficients']]),
          R2 = c(round(summary(ch4.model)$r.squared, 3), rep('', 23))) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
 
-# write.csv(ch4.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_model_table_2016.csv',
+# write.csv(ch4.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_simple_all_years.csv',
 #           row.names = FALSE)
 
 ch4.slopes <- slice(ch4.model.table, 13:24) %>%
+  select(3:6) %>%
+  mutate(month = seq(1:12))
+
+ch4.slopes.complex <- slice(ch4.model.table.complex, 13:24) %>%
   select(3:6) %>%
   mutate(month = seq(1:12))
 
@@ -3996,10 +4009,25 @@ ggplot(ch4.slopes, aes(x = month, y = Coefficient)) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_simple_all_years.jpg',
 #        height = 4,
 #        width = 4)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_simple_all_years.pdf',
+#        height = 4,
+#        width = 4)
+
+ggplot(ch4.slopes.complex, aes(x = month, y = Coefficient)) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(1, 12),
+                     labels = month.name[seq(1, 12)],
+                     minor_breaks = NULL) +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.jpg',
+#        height = 4,
+#        width = 4)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.pdf',
 #        height = 4,
 #        width = 4)
 
