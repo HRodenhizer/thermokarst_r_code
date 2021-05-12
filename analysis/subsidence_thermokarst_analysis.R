@@ -2677,7 +2677,7 @@ karst_roughness[, N := NULL]
 karst_roughness[, wind_dir_round := NULL]
 karst_roughness[, karst.pc_round := NULL]
 karst_roughness[, sd.mtopo_round := NULL]
-rm(duplicates)
+rm(test, duplicates)
 
 # Join co2 and karst/roughness data
 co2.model.data <- co2.small %>%
@@ -2696,6 +2696,9 @@ rm(test)
 # remove duplicate wind rows
 co2.model.data[, wind_dir := NULL]
 co2.model.data[, offset := NULL]
+
+# subset GS Day
+co2.gs.day <- co2.model.data[group == 'GS Day']
 
 ### Should compare thermokarst cover and roughness using slices vs. ffp ###
 ### microtopography by thermokarst
@@ -2798,7 +2801,7 @@ nee.karst.plot
 # 
 
 # NEE
-# simple model
+# simple model - all seasons
 smallest <- NEP ~ 1
 biggest <- NEP ~ percent.thermokarst.ffp*group
 start <- lm(NEP ~ percent.thermokarst.ffp*group,
@@ -2845,9 +2848,62 @@ nee.karst.model.table <- data.frame(variables = names(nee.karst.model[['coeffici
          `Full Model` = c('TK*Group', rep('', 5)),
          R2 = c(round(summary(nee.karst.model)$r.squared, 3), rep('', 5))) %>%
   arrange(order) %>%
-  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
 
 # write.csv(nee.karst.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_table.csv',
+#           row.names = FALSE)
+
+# simple model - GS Day
+smallest <- NEP ~ 1
+biggest <- NEP ~ percent.thermokarst.ffp*month.factor
+start <- lm(NEP ~ percent.thermokarst.ffp*month.factor,
+            data = co2.gs.day[ filled == 0])
+
+stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+nee.karst.model.gs <- lm(NEP ~ percent.thermokarst.ffp*month.factor,
+                      data = co2.gs.day[filled == 0])
+# saveRDS(nee.karst.model.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple_gs.rds')
+nee.karst.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple_gs.rds')
+summary(nee.karst.model.gs)
+nee.contrast <- emmeans(nee.karst.model.gs, specs = pairwise~month.factor)
+nee.contrast
+
+# this is a gross way to summarize and make everything look nice - better options?
+nee.karst.model.gs.table <- data.frame(variables = names(nee.karst.model.gs[['coefficients']]),
+                                    coefficient = nee.karst.model.gs[['coefficients']],
+                                    min.ci = as.numeric(confint(nee.karst.model.gs)[,1]),
+                                    max.ci = as.numeric(confint(nee.karst.model.gs)[,2]),
+                                    row.names = NULL) %>%
+  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+         `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+         `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 5'),
+         `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
+         `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]'),
+                                    paste(`Final Variables`, '(Intercept)'),
+                                    `Final Variables`),
+         `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 5'),
+         radius = coefficient - min.ci,
+         coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+                                   'intercept',
+                                   'slope')) %>%
+  group_by(coefficient.type) %>%
+  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
+                              round(coefficient, 5),
+                              round(first(coefficient) + coefficient, 5)),
+         total.radius = ifelse(coefficient - first(coefficient) == 0,
+                               radius,
+                               sqrt(radius^2 + first(radius)^2)),
+         `Min CI` = Coefficient - total.radius,
+         `Max CI` = Coefficient + total.radius) %>%
+  ungroup() %>%
+  mutate(Response = c('NEE', rep('', 9)),
+         `Full Model` = c('TK*Month', rep('', 9)),
+         R2 = c(round(summary(nee.karst.model.gs)$r.squared, 3), rep('', 9))) %>%
+  arrange(`Final Variables`) %>%
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+
+# write.csv(nee.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_table_gs.csv',
 #           row.names = FALSE)
 
 
@@ -2901,16 +2957,16 @@ start <- lm(GEP ~ percent.thermokarst.ffp*month.factor,
 
 stats::step(start, scope = list(lower = smallest, upper = biggest))
 
-gpp.karst.model <- lm(GEP ~ percent.thermokarst.ffp*month.factor,
+gpp.karst.model.gs <- lm(GEP ~ percent.thermokarst.ffp*month.factor,
                  data = co2.model.data[filled == 0 & group == 'GS Day'])
-# saveRDS(gpp.karst.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_simple.rds')
-gpp.karst.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_simple.rds')
+# saveRDS(gpp.karst.model.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_simple_gs.rds')
+gpp.karst.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_simple_gs.rds')
 summary(gpp.karst.model)
 gpp.contrast <- emmeans(gpp.karst.model, specs = pairwise~month.factor)
 gpp.contrast
 
 # this is a gross way to summarize and make everything look nice - better options?
-gpp.karst.model.table <- data.frame(variables = names(gpp.karst.model[['coefficients']]),
+gpp.karst.model.gs.table <- data.frame(variables = names(gpp.karst.model.gs[['coefficients']]),
                               coefficient = gpp.karst.model[['coefficients']],
                               min.ci = as.numeric(confint(gpp.karst.model)[,1]),
                               max.ci = as.numeric(confint(gpp.karst.model)[,2]),
@@ -2941,9 +2997,9 @@ gpp.karst.model.table <- data.frame(variables = names(gpp.karst.model[['coeffici
          `Full Model` = c('TK*Month', rep('', 9)),
          R2 = c(round(summary(gpp.karst.model)$r.squared, 3), rep('', 9))) %>%
   arrange(order) %>%
-  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
 
-# write.csv(gpp.karst.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_table.csv',
+# write.csv(gpp.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_table_gs.csv',
 #           row.names = FALSE)
 
 # Reco
@@ -3023,11 +3079,63 @@ reco.karst.model.table <- data.frame(variables = names(reco.karst.model[['coeffi
          `Full Model` = c('TK*Group', rep('', 5)),
          R2 = c(round(summary(reco.karst.model)$r.squared, 3), rep('', 5))) %>%
   arrange(order) %>%
-  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
 
 # write.csv(reco.karst.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table.csv',
 #           row.names = FALSE)
 
+# simple model - GS Day
+smallest <- Reco ~ 1
+biggest <- Reco ~ percent.thermokarst.ffp*month.factor
+start <- lm(Reco ~ percent.thermokarst.ffp*month.factor,
+            data = co2.gs.day[ filled == 0])
+
+stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+reco.karst.model.gs <- lm(Reco ~ percent.thermokarst.ffp*month.factor,
+                         data = co2.gs.day[filled == 0])
+# saveRDS(reco.karst.model.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_simple_gs.rds')
+reco.karst.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_simple_gs.rds')
+summary(reco.karst.model.gs)
+reco.contrast <- emmeans(reco.karst.model.gs, specs = pairwise~month.factor)
+reco.contrast
+
+# this is a gross way to summarize and make everything look nice - better options?
+reco.karst.model.gs.table <- data.frame(variables = names(reco.karst.model.gs[['coefficients']]),
+                                          coefficient = reco.karst.model.gs[['coefficients']],
+                                          min.ci = as.numeric(confint(reco.karst.model.gs)[,1]),
+                                          max.ci = as.numeric(confint(reco.karst.model.gs)[,2]),
+                                          row.names = NULL) %>%
+  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+         `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+         `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 5'),
+         `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
+         `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]'),
+                                    paste(`Final Variables`, '(Intercept)'),
+                                    `Final Variables`),
+         `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 5'),
+         radius = coefficient - min.ci,
+         coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+                                   'intercept',
+                                   'slope')) %>%
+  group_by(coefficient.type) %>%
+  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
+                              round(coefficient, 5),
+                              round(first(coefficient) + coefficient, 5)),
+         total.radius = ifelse(coefficient - first(coefficient) == 0,
+                               radius,
+                               sqrt(radius^2 + first(radius)^2)),
+         `Min CI` = Coefficient - total.radius,
+         `Max CI` = Coefficient + total.radius) %>%
+  ungroup() %>%
+  mutate(Response = c('Reco', rep('', 9)),
+         `Full Model` = c('TK*Month', rep('', 9)),
+         R2 = c(round(summary(reco.karst.model.gs)$r.squared, 3), rep('', 9))) %>%
+  arrange(`Final Variables`) %>%
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+
+# write.csv(reco.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table_gs.csv',
+#           row.names = FALSE)
 
 ### Model C Fluxes with Roughness
 # roughness - ffp
@@ -3133,9 +3241,62 @@ nee.roughness.model.table <- data.frame(variables = names(nee.roughness.model[['
          `Full Model` = c('Roughness*Group', rep('', 5)),
          R2 = c(round(summary(nee.roughness.model)$r.squared, 3), rep('', 5))) %>%
   arrange(order) %>%
-  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
 
 # write.csv(nee.roughness.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_roughness_model_table.csv',
+#           row.names = FALSE)
+
+# simple model - GS Day
+smallest <- NEP ~ 1
+biggest <- NEP ~ mtopo15.sd.ffp*month.factor
+start <- lm(NEP ~ mtopo15.sd.ffp*month.factor,
+            data = co2.gs.day[ filled == 0])
+
+stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+nee.roughness.model.gs <- lm(NEP ~ mtopo15.sd.ffp*month.factor,
+                         data = co2.gs.day[filled == 0])
+# saveRDS(nee.roughness.model.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_roughness_model_simple_gs.rds')
+nee.roughness.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_roughness_model_simple_gs.rds')
+summary(nee.roughness.model.gs)
+nee.contrast <- emmeans(nee.roughness.model.gs, specs = pairwise~month.factor)
+nee.contrast
+
+# this is a gross way to summarize and make everything look nice - better options?
+nee.roughness.model.gs.table <- data.frame(variables = names(nee.roughness.model.gs[['coefficients']]),
+                                       coefficient = nee.roughness.model.gs[['coefficients']],
+                                       min.ci = as.numeric(confint(nee.roughness.model.gs)[,1]),
+                                       max.ci = as.numeric(confint(nee.roughness.model.gs)[,2]),
+                                       row.names = NULL) %>%
+  mutate(`Final Variables` = str_replace(variables, 'mtopo15.sd.ffp', 'Roughness'),
+         `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+         `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 5'),
+         `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
+         `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]'),
+                                    paste(`Final Variables`, '(Intercept)'),
+                                    `Final Variables`),
+         `Final Variables` = str_replace(`Final Variables`, '^Roughness$', 'Roughness:Month - 5'),
+         radius = coefficient - min.ci,
+         coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+                                   'intercept',
+                                   'slope')) %>%
+  group_by(coefficient.type) %>%
+  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
+                              round(coefficient, 5),
+                              round(first(coefficient) + coefficient, 5)),
+         total.radius = ifelse(coefficient - first(coefficient) == 0,
+                               radius,
+                               sqrt(radius^2 + first(radius)^2)),
+         `Min CI` = Coefficient - total.radius,
+         `Max CI` = Coefficient + total.radius) %>%
+  ungroup() %>%
+  mutate(Response = c('NEE', rep('', 9)),
+         `Full Model` = c('Roughness*Month', rep('', 9)),
+         R2 = c(round(summary(nee.roughness.model.gs)$r.squared, 3), rep('', 9))) %>%
+  arrange(`Final Variables`) %>%
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+
+# write.csv(nee.roughness.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_roughness_model_table_gs.csv',
 #           row.names = FALSE)
 
 # GEP growing season daytime only
@@ -3186,17 +3347,17 @@ start <- lm(GEP ~ mtopo15.sd.ffp*month.factor,
 
 stats::step(start, scope = list(lower = smallest, upper = biggest))
 
-gpp.roughness.model <- lm(GEP ~ mtopo15.sd.ffp*month.factor,
+gpp.roughness.model.gs <- lm(GEP ~ mtopo15.sd.ffp*month.factor,
                       data = co2.model.data[filled == 0 & group == 'GS Day'])
-# saveRDS(gpp.roughness.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_roughness_model_simple.rds')
-gpp.roughness.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_roughness_model_simple.rds')
-summary(gpp.roughness.model)
+# saveRDS(gpp.roughness.model.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_roughness_model_simple_gs.rds')
+gpp.roughness.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_roughness_model_simple_gs.rds')
+summary(gpp.roughness.model.gs)
 
 # this is a gross way to summarize and make everything look nice - better options?
-gpp.roughness.model.table <- data.frame(variables = names(gpp.roughness.model[['coefficients']]),
-                                    coefficient = gpp.roughness.model[['coefficients']],
-                                    min.ci = as.numeric(confint(gpp.roughness.model)[,1]),
-                                    max.ci = as.numeric(confint(gpp.roughness.model)[,2]),
+gpp.roughness.model.gs.table <- data.frame(variables = names(gpp.roughness.model.gs[['coefficients']]),
+                                    coefficient = gpp.roughness.model.gs[['coefficients']],
+                                    min.ci = as.numeric(confint(gpp.roughness.model.gs)[,1]),
+                                    max.ci = as.numeric(confint(gpp.roughness.model.gs)[,2]),
                                     row.names = NULL) %>%
   mutate(`Final Variables` = str_replace(variables, 'mtopo15.sd.ffp', 'Roughness'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
@@ -3224,9 +3385,9 @@ gpp.roughness.model.table <- data.frame(variables = names(gpp.roughness.model[['
          `Full Model` = c('Roughness*Month', rep('', 9)),
          R2 = c(round(summary(gpp.roughness.model)$r.squared, 3), rep('', 9))) %>%
   arrange(order) %>%
-  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
 
-# write.csv(gpp.roughness.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_roughness_model_table.csv',
+# write.csv(gpp.roughness.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_roughness_model_table_gs.csv',
 #           row.names = FALSE)
 
 # Reco
@@ -3303,9 +3464,62 @@ reco.roughness.model.table <- data.frame(variables = names(reco.roughness.model[
          `Full Model` = c('Roughness*Group', rep('', 5)),
          R2 = c(round(summary(reco.roughness.model)$r.squared, 3), rep('', 5))) %>%
   arrange(order) %>%
-  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
 
 # write.csv(reco.roughness.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_table.csv',
+#           row.names = FALSE)
+
+# simple model - GS Day
+smallest <- Reco ~ 1
+biggest <- Reco ~ mtopo15.sd.ffp*month.factor
+start <- lm(Reco ~ mtopo15.sd.ffp*month.factor,
+            data = co2.gs.day[ filled == 0])
+
+stats::step(start, scope = list(lower = smallest, upper = biggest))
+
+reco.roughness.model.gs <- lm(Reco ~ mtopo15.sd.ffp*month.factor,
+                             data = co2.gs.day[filled == 0])
+# saveRDS(reco.roughness.model.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_simple_gs.rds')
+reco.roughness.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_simple_gs.rds')
+summary(reco.roughness.model.gs)
+reco.contrast <- emmeans(reco.roughness.model.gs, specs = pairwise~month.factor)
+reco.contrast
+
+# this is a gross way to summarize and make everything look nice - better options?
+reco.roughness.model.gs.table <- data.frame(variables = names(reco.roughness.model.gs[['coefficients']]),
+                                           coefficient = reco.roughness.model.gs[['coefficients']],
+                                           min.ci = as.numeric(confint(reco.roughness.model.gs)[,1]),
+                                           max.ci = as.numeric(confint(reco.roughness.model.gs)[,2]),
+                                           row.names = NULL) %>%
+  mutate(`Final Variables` = str_replace(variables, 'mtopo15.sd.ffp', 'Roughness'),
+         `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+         `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 5'),
+         `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
+         `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]'),
+                                    paste(`Final Variables`, '(Intercept)'),
+                                    `Final Variables`),
+         `Final Variables` = str_replace(`Final Variables`, '^Roughness$', 'Roughness:Month - 5'),
+         radius = coefficient - min.ci,
+         coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+                                   'intercept',
+                                   'slope')) %>%
+  group_by(coefficient.type) %>%
+  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
+                              round(coefficient, 5),
+                              round(first(coefficient) + coefficient, 5)),
+         total.radius = ifelse(coefficient - first(coefficient) == 0,
+                               radius,
+                               sqrt(radius^2 + first(radius)^2)),
+         `Min CI` = Coefficient - total.radius,
+         `Max CI` = Coefficient + total.radius) %>%
+  ungroup() %>%
+  mutate(Response = c('reco', rep('', 9)),
+         `Full Model` = c('Roughness*Month', rep('', 9)),
+         R2 = c(round(summary(reco.roughness.model.gs)$r.squared, 3), rep('', 9))) %>%
+  arrange(`Final Variables`) %>%
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+
+# write.csv(reco.roughness.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_table_gs.csv',
 #           row.names = FALSE)
 
 # co2.plot <- ggarrange(co2.karst.plot,
@@ -3324,20 +3538,14 @@ reco.roughness.model.table <- data.frame(variables = names(reco.roughness.model[
 #        width = 8)
 
 # Summary of thermokarst models
-karst.models <- rbind.data.frame(nee.karst.model.table %>%
+karst.models.ngs <- rbind.data.frame(nee.karst.model.table %>%
                                    mutate(Response = 'NEE',
-                                          Predictor = 'Thermokarst'),
-                                 gpp.karst.model.table %>%
-                                   mutate(Response = 'GPP',
                                           Predictor = 'Thermokarst'),
                                  reco.karst.model.table %>%
                                    mutate(Response = 'Reco',
                                           Predictor = 'Thermokarst'),
                                  nee.roughness.model.table %>%
                                    mutate(Response = 'NEE',
-                                          Predictor = 'Roughness'),
-                                 gpp.roughness.model.table %>%
-                                   mutate(Response = 'GPP',
                                           Predictor = 'Roughness'),
                                  reco.roughness.model.table %>%
                                    mutate(Response = 'Reco',
@@ -3346,6 +3554,40 @@ karst.models <- rbind.data.frame(nee.karst.model.table %>%
   mutate(Variable = ifelse(str_detect(`Final Variables`, '(Intercept)'),
                               str_c(':', `Final Variables`),
                               `Final Variables`)) %>%
+  separate(Variable, into = c('Stuff', 'Variable'), sep = ':', extra = 'merge') %>%
+  mutate(Variable = factor(Variable,
+                           levels = c('Group - GS Day (Intercept)',
+                                      'Group - GS Night Respiration (Intercept)',
+                                      'Group - NGS Respiration (Intercept)',
+                                      'Group - GS Day',
+                                      'Group - GS Night Respiration',
+                                      'Group - NGS Respiration'))) %>%
+  group_by(Response, Predictor) %>%
+  mutate(R2 = round(first(as.numeric(R2)), 2),
+         label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', round(R2, 2)))
+
+karst.models.gs <- rbind.data.frame(gpp.karst.model.gs.table %>%
+                                      mutate(Response = 'GPP',
+                                             Predictor = 'Thermokarst'),
+                                    nee.karst.model.gs.table %>%
+                                       mutate(Response = 'NEE',
+                                              Predictor = 'Thermokarst'),
+                                     reco.karst.model.gs.table %>%
+                                       mutate(Response = 'Reco',
+                                              Predictor = 'Thermokarst'),
+                                    gpp.karst.model.gs.table %>%
+                                      mutate(Response = 'GPP',
+                                             Predictor = 'Roughness'),
+                                    nee.roughness.model.gs.table %>%
+                                       mutate(Response = 'NEE',
+                                              Predictor = 'Roughness'),
+                                     reco.roughness.model.gs.table %>%
+                                       mutate(Response = 'Reco',
+                                              Predictor = 'Roughness')) %>%
+  select(-`Full Model`) %>%
+  mutate(Variable = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+                           str_c(':', `Final Variables`),
+                           `Final Variables`)) %>%
   separate(Variable, into = c('Stuff', 'Variable'), sep = ':', extra = 'merge') %>%
   mutate(Variable = factor(Variable,
                            levels = c('Month - 5 (Intercept)',
@@ -3357,18 +3599,16 @@ karst.models <- rbind.data.frame(nee.karst.model.table %>%
                                       'Month - 6',
                                       'Month - 7',
                                       'Month - 8',
-                                      'Month - 9',
-                                      'Group - GS Day (Intercept)',
-                                      'Group - GS Night Respiration (Intercept)',
-                                      'Group - NGS Respiration (Intercept)',
-                                      'Group - GS Day',
-                                      'Group - GS Night Respiration',
-                                      'Group - NGS Respiration'))) %>%
+                                      'Month - 9'))) %>%
   group_by(Response, Predictor) %>%
-  mutate(R2 = first(R2),
+  mutate(R2 = round(first(as.numeric(R2)), 2),
          label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', R2))
 
-labels <- data.frame(label1 = c('greater\nsink/\nsmaller\nsource', NA, NA),
+labels.ngs <- data.frame(label1 = c('greater\nsink/\nsmaller\nsource', NA),
+                        label2 = c('greater source/\nsmaller sink', NA),
+                        Response = c('Reco', 'NEE'),
+                        Predictor = c('Thermokarst', 'Thermokarst'))
+labels.gs <- data.frame(label1 = c('greater\nsink/\nsmaller\nsource', NA, NA),
                      label2 = c('greater source/\nsmaller sink', NA, NA),
                      Response = c('Reco', 'NEE', 'GPP'),
                      Predictor = c('Thermokarst', 'Thermokarst', 'Thermokarst'))
@@ -3378,7 +3618,8 @@ arrow <- data.frame(x = 0.05,
                     yend = 0.55,
                     Response = 'Reco',
                     Predictor = 'Thermokarst')
-effect.size.plot <- ggplot(karst.models,
+
+effect.size.plot.ngs <- ggplot(filter(karst.models.ngs, coefficient.type == 'slope'),
                            aes(y = Variable, color = Response, group = Response)) +
   geom_vline(xintercept = 0) +
   geom_point(aes(x = Coefficient)) +
@@ -3389,12 +3630,12 @@ effect.size.plot <- ggplot(karst.models,
             size = 3,
             vjust = 'inward',
             hjust = 'inward') +
-  geom_text(data = labels, aes(x = -0.3, y = 0.5, label = label1),
+  geom_text(data = labels.ngs, aes(x = -0.3, y = 0.5, label = label1),
             inherit.aes = FALSE,
             size = 3,
             vjust = "inward",
             hjust = "inward") +
-  geom_text(data = labels, aes(x = 0.75, y = 0.5, label = label2),
+  geom_text(data = labels.ngs, aes(x = 0.75, y = 0.5, label = label2),
             inherit.aes = FALSE,
             size = 3,
             vjust = "inward",
@@ -3403,14 +3644,49 @@ effect.size.plot <- ggplot(karst.models,
   #              inherit.aes = FALSE,
   #              arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(limits = c(-0.3, 0.75)) +
-  scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
-                     values = c('#99CC33', '#CC3300', '#000066')) +
+  scale_x_continuous(limits = c(-0.5, 0.75)) +
+  scale_color_manual(breaks = c('Reco', 'NEE'),
+                     values = c('#CC3300', '#000066')) +
   facet_grid(Response ~ Predictor, scales = 'free') +
   theme_bw() +
   theme(axis.title.y = element_blank(),
         legend.position = 'none')
-effect.size.plot
+effect.size.plot.ngs
+
+effect.size.plot.gs <- ggplot(filter(karst.models.gs, coefficient.type == 'slope'),
+                              aes(y = Variable, color = Response, group = Response)) +
+  geom_vline(xintercept = 0) +
+  geom_point(aes(x = Coefficient)) +
+  geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`), width = 0.1) +
+  geom_text(aes(x = 0.75, y = Inf, label = label),
+            parse = TRUE,
+            inherit.aes = FALSE,
+            size = 3,
+            vjust = 'inward',
+            hjust = 'inward') +
+  geom_text(data = labels.gs, aes(x = -0.3, y = 0.5, label = label1),
+            inherit.aes = FALSE,
+            size = 3,
+            vjust = "inward",
+            hjust = "inward") +
+  geom_text(data = labels.gs, aes(x = 0.75, y = 0.5, label = label2),
+            inherit.aes = FALSE,
+            size = 3,
+            vjust = "inward",
+            hjust = "inward") +
+  # geom_segment(data = arrow, aes(x = x, y = y, xend = xend, yend = yend),
+  #              inherit.aes = FALSE,
+  #              arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(limits = c(-0.5, 0.75)) +
+  scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
+                     values = c('#99CC33','#CC3300', '#000066')) +
+  facet_grid(Response ~ Predictor, scales = 'free') +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        legend.position = 'none')
+effect.size.plot.gs
+
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.jpg',
 #        effect.size.plot,
 #        height = 6,
