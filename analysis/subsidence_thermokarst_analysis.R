@@ -2529,7 +2529,8 @@ karst_mtopo <- grid.arrange(ec_karst_plot,
 # values_df <- mutate(values_df, diff = elev - median)
 ########################################################################################################################
 
-### CO2 Analysis #######################################################################################################
+### CO2 Analysis
+### Prep Data ##########################################################################################################
 # use data that we have processed and filtered as we want rather than as Ameriflux wants
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
@@ -2657,9 +2658,9 @@ co2.model.data[, offset := NULL]
 # subset GS Day or Non-Growing Season/Night
 co2.gs.day <- co2.model.data[group == 'GS Day' & filled == 0]
 co2.ngs.night <- co2.model.data[group != 'GS Day' & filled == 0]
+########################################################################################################################
 
-
-### Model C Fluxes with Thermokarst
+### Model C Fluxes with Thermokarst ####################################################################################
 ### NEE
 # NGS/Night
 nee.karst.plot.ngs <- ggplot(co2.ngs.night,
@@ -2748,7 +2749,7 @@ nee.karst.model.ngs.table <- data.frame(variables = names(nee.karst.model.ngs[['
 
 ### NEE
 # GS Day
-nee.karst.plot.gs <- ggplot(co2.gs.day[filled == 0],
+nee.karst.plot.gs <- ggplot(co2.gs.day,
                          aes(x = percent.thermokarst.ffp,
                              y = NEP,
                              color = month.factor,
@@ -2787,12 +2788,12 @@ nee.karst.plot.gs
 smallest <- NEP ~ 1
 biggest <- NEP ~ percent.thermokarst.ffp*month.factor
 start <- lm(NEP ~ percent.thermokarst.ffp*month.factor,
-            data = co2.gs.day[ filled == 0])
+            data = co2.gs.day)
 
 stats::step(start, scope = list(lower = smallest, upper = biggest))
 
 nee.karst.model.gs <- lm(NEP ~ percent.thermokarst.ffp*month.factor,
-                      data = co2.gs.day[filled == 0])
+                      data = co2.gs.day)
 # saveRDS(nee.karst.model.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple_gs.rds')
 nee.karst.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple_gs.rds')
 summary(nee.karst.model.gs)
@@ -2838,7 +2839,7 @@ nee.karst.model.gs.table <- data.frame(variables = names(nee.karst.model.gs[['co
 
 
 # GPP
-# NGS Day
+# GS Day
 gpp.karst.plot.gs <- ggplot(co2.gs.day[GEP <= 0],
                    aes(x = percent.thermokarst.ffp,
                        y = GEP,
@@ -3102,8 +3103,9 @@ reco.karst.model.gs.table <- data.frame(variables = names(reco.karst.model.gs[['
 
 # write.csv(reco.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table_gs.csv',
 #           row.names = FALSE)
+########################################################################################################################
 
-### Model C Fluxes with Roughness
+### Model C Fluxes with Roughness ######################################################################################
 ### NEE
 # NGS/Night
 nee.roughness.plot.ngs <- ggplot(co2.ngs.night,
@@ -3542,9 +3544,25 @@ reco.roughness.model.gs.table <- data.frame(variables = names(reco.roughness.mod
 
 # write.csv(reco.roughness.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_table_gs.csv',
 #           row.names = FALSE)
+########################################################################################################################
 
+### Combine and Plot Models ############################################################################################
+### All comparable Roughness and Thermokarst models have the same r2
+### but a few more slopes are significant for thermokarst and thermokarst is the
+### variable primarily of interest
+### will only summarize thermokarst data
+# data needed for plotting
+nee.karst.model.ngs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_table_ngs.csv')
+nee.karst.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_table_gs.csv')
+gpp.karst.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_table_gs.csv')
+reco.karst.model.ngs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table_ngs.csv')
+reco.karst.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table_gs.csv')
+nee.roughness.model.ngs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_roughness_model_table_ngs.csv')
+nee.roughness.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_roughness_model_table_gs.csv')
+gpp.roughness.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_roughness_model_table_gs.csv')
+reco.roughness.model.ngs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_table_ngs.csv')
+reco.roughness.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_table_gs.csv')
 
-### Summary of thermokarst models
 co2.models.ngs <- rbind.data.frame(nee.karst.model.ngs.table %>%
                                        mutate(Response = 'NEE',
                                               Predictor = 'Thermokarst'),
@@ -3557,39 +3575,13 @@ co2.models.ngs <- rbind.data.frame(nee.karst.model.ngs.table %>%
                                      reco.roughness.model.ngs.table %>%
                                        mutate(Response = 'Reco',
                                               Predictor = 'Roughness')) %>%
+  rename(`Full Model` = Full.Model, `Final Variables` = Final.Variables, `Min CI` = Min.CI, `Max CI` = Max.CI) %>%
   select(-`Full Model`) %>%
-  mutate(Variable = ifelse(str_detect(`Final Variables`, '(Intercept)'),
-                           str_c(':', `Final Variables`),
-                              `Final Variables`)) %>%
-  separate(Variable, into = c('Stuff', 'Variable'), sep = ':', extra = 'merge') %>%
-  mutate(Variable = factor(Variable,
-                           levels = c('Month - 1 (Intercept)',
-                                      'Month - 2 (Intercept)',
-                                      'Month - 3 (Intercept)',
-                                      'Month - 4 (Intercept)',
-                                      'Month - 5 (Intercept)',
-                                      'Month - 6 (Intercept)',
-                                      'Month - 7 (Intercept)',
-                                      'Month - 8 (Intercept)',
-                                      'Month - 9 (Intercept)',
-                                      'Month - 10 (Intercept)',
-                                      'Month - 11 (Intercept)',
-                                      'Month - 12 (Intercept)',
-                                      'Month - 1',
-                                      'Month - 2',
-                                      'Month - 3',
-                                      'Month - 4',
-                                      'Month - 5',
-                                      'Month - 6',
-                                      'Month - 7',
-                                      'Month - 8',
-                                      'Month - 9',
-                                      'Month - 10',
-                                      'Month - 11',
-                                      'Month - 12'))) %>%
+  mutate(Month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
   group_by(Response, Predictor) %>%
   mutate(R2 = round(first(as.numeric(R2)), 2),
-         label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', round(R2, 2)))
+         label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', round(R2, 2)),
+         season = 'NGS/Night')
 
 co2.models.gs <- rbind.data.frame(gpp.karst.model.gs.table %>%
                                       mutate(Response = 'GPP',
@@ -3609,59 +3601,125 @@ co2.models.gs <- rbind.data.frame(gpp.karst.model.gs.table %>%
                                      reco.roughness.model.gs.table %>%
                                        mutate(Response = 'Reco',
                                               Predictor = 'Roughness')) %>%
+  rename(`Full Model` = Full.Model, `Final Variables` = Final.Variables, `Min CI` = Min.CI, `Max CI` = Max.CI) %>%
   select(-`Full Model`) %>%
-  mutate(Variable = ifelse(str_detect(`Final Variables`, '(Intercept)'),
-                           str_c(':', `Final Variables`),
-                           `Final Variables`)) %>%
-  separate(Variable, into = c('Stuff', 'Variable'), sep = ':', extra = 'merge') %>%
-  mutate(Variable = factor(Variable,
-                           levels = c('Month - 4 (Intercept)',
-                                      'Month - 5 (Intercept)',
-                                      'Month - 6 (Intercept)',
-                                      'Month - 7 (Intercept)',
-                                      'Month - 8 (Intercept)',
-                                      'Month - 9 (Intercept)',
-                                      'Month - 10 (Intercept)',
-                                      'Month - 4',
-                                      'Month - 5',
-                                      'Month - 6',
-                                      'Month - 7',
-                                      'Month - 8',
-                                      'Month - 9',
-                                      'Month - 10'))) %>%
+  mutate(Month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
   group_by(Response, Predictor) %>%
   mutate(R2 = round(first(as.numeric(R2)), 2),
-         label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', R2))
+         label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', R2),
+         season = 'GS Day')
 
-x <- c(rep(0.2, 2), rep(0.6, 2))
+# all seasons combined
+co2.model.summary <- co2.models.ngs %>%
+  rbind.data.frame(co2.models.gs) %>%
+  ungroup()
+# write.csv(co2.model.summary,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/co2_model_parameters.csv',
+#           row.names = FALSE)
+
+rm(gpp.karst.model.gs.table,
+   gpp.roughness.model.gs.table,
+   nee.karst.model.gs.table,
+   nee.karst.model.ngs.table,
+   nee.roughness.model.gs.table,
+   nee.roughness.model.ngs.table,
+   reco.karst.model.gs.table,
+   reco.karst.model.ngs.table,
+   reco.roughness.model.gs.table,
+   reco.roughness.model.ngs.table)
+
 r2.label.ngs <- co2.models.ngs %>%
-  select(Predictor, Response, label) %>%
+  select(Predictor, Response, label, season) %>%
   distinct() %>%
-  cbind.data.frame(x)
-x <- c(rep(-0.25, 3), rep(-0.8, 3))
+  as.data.frame() %>%
+  mutate(x = c(rep(0.15, 2), rep(0.6, 2)))
 r2.label.gs <- co2.models.gs %>%
-  select(Predictor, Response, label) %>%
+  select(Predictor, Response, label, season) %>%
   distinct() %>%
-  cbind.data.frame(x)
+  as.data.frame() %>%
+  mutate(x = c(rep(-0.25, 3), rep(-0.8, 3)))
+r2.label <- co2.model.summary %>%
+  filter(Predictor == 'Thermokarst') %>%
+  select(Predictor, Response, label, season) %>%
+  distinct() %>%
+  as.data.frame() %>%
+  mutate(x = rep(0.15, 5))
 
-labels.ngs <- data.frame(label1 = c('greater\nsink/\nsmaller\nsource', NA),
-                         label2 = c('greater\nsource/\nsmaller\nsink', NA),
-                         Response = c('Reco', 'NEE'),
-                         Predictor = c('Thermokarst', 'Thermokarst'),
-                         x1 = c(-0.15, NA),
-                         x2 = c(0.2, NA))
-labels.gs <- data.frame(label1 = c('greater sink/\nsmaller source', NA, NA),
-                        label2 = c('greater\nsource/\nsmaller\nsink', NA, NA),
-                        Response = c('Reco', 'NEE', 'GPP'),
-                        Predictor = c('Thermokarst', 'Thermokarst', 'Thermokarst'),
-                        x1 = c(-0.25, NA, NA),
-                        x2 = c(0.2, NA, NA))
+rects <- co2.model.summary %>%
+  select(Predictor, Response) %>%
+  distinct() %>%
+  as.data.frame()
+rects <- rects %>%
+  mutate(xmin = -Inf,
+         xmax = 0,
+         col = letters[1]) %>%
+  rbind.data.frame(rects %>%
+                     mutate(xmin = 0,
+                            xmax = Inf,
+                            col = letters[2]))
 
+### all seasons, thermokarst only
+effect.size.plot <- ggplot(filter(co2.model.summary, coefficient.type == 'slope' & Predictor == 'Thermokarst'),
+                           aes(x = Month, color = Response, group = Response)) +
+  geom_rect(data = filter(rects, Predictor == 'Thermokarst'),
+            aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
+            alpha = 0.2,
+            inherit.aes = FALSE) +
+  geom_hline(yintercept = 0) +
+  geom_point(aes(y = Coefficient),
+             show.legend = FALSE) +
+  geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
+                width = 0.1,
+                show.legend = FALSE) +
+  geom_text(data = filter(r2.label, Predictor == 'Thermokarst'),
+            aes(x = 12.5, y = x, label = label),
+            parse = TRUE,
+            inherit.aes = FALSE,
+            size = 3,
+            vjust = 'inward',
+            hjust = 'inward') +
+  scale_x_continuous(breaks = seq(1:12),
+                     labels = str_sub(month.name[1:12], start = 1, end = 3)) +
+  scale_y_continuous(name = 'Slope') +
+  scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
+                     values = c('#99CC33', '#CC3300', '#000066')) +
+  scale_fill_manual(name = 'As thermokarst\nincreases:',
+                    breaks = c('a', 'b'),
+                    values = c('#99CC33', '#CC3300'),
+                    labels = c('Sink \U02191 or Source \U02193',
+                               'Sink \U02193 or Source \U02191')) +
+  facet_grid(season ~ Response, scales = 'free_y') +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        legend.position = c(0.01, 0.01),
+        legend.justification = c(0, 0))
+effect.size.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.jpg',
+#        effect.size.plot,
+#        height = 4,
+#        width = 7)
+# 
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.pdf',
+#        effect.size.plot,
+#        height = 4,
+#        width = 7)
+
+### Some older plots
+### Plot NGS/Night
+# both thermokarst and roughness
 effect.size.plot.ngs <- ggplot(filter(co2.models.ngs, coefficient.type == 'slope'),
                            aes(y = Variable, color = Response, group = Response)) +
+  geom_rect(data = filter(rects, Response != 'GPP'),
+            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = col),
+            alpha = 0.2,
+            inherit.aes = FALSE) +
   geom_vline(xintercept = 0) +
-  geom_point(aes(x = Coefficient)) +
-  geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`), width = 0.1) +
+  geom_point(aes(x = Coefficient),
+             show.legend = FALSE) +
+  geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`),
+                width = 0.1,
+                show.legend = FALSE) +
   geom_text(data = r2.label.ngs,
             aes(x = x, y = 12.5, label = label),
             parse = TRUE,
@@ -3669,32 +3727,20 @@ effect.size.plot.ngs <- ggplot(filter(co2.models.ngs, coefficient.type == 'slope
             size = 3,
             vjust = 'inward',
             hjust = 'inward') +
-  geom_text(data = labels.ngs,
-            aes(x = x1, y = 0.5, label = label1),
-            inherit.aes = FALSE,
-            size = 3,
-            vjust = "inward",
-            hjust = "inward") +
-  geom_text(data = labels.ngs,
-            aes(x = x2, y = 0.5, label = label2),
-            inherit.aes = FALSE,
-            size = 3,
-            vjust = "inward",
-            hjust = "inward") +
-  # geom_segment(data = arrow, aes(x = x, y = y, xend = xend, yend = yend),
-  #              inherit.aes = FALSE,
-  #              arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
   scale_y_discrete(limits = rev,
                    labels = c('Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul', 'Jun', 'May', 'Apr', 'Mar', 'Feb', 'Jan')) +
   scale_x_continuous(name = 'Slope') +
   scale_color_manual(breaks = c('Reco', 'NEE'),
                      values = c('#CC3300', '#000066')) +
+  scale_fill_manual(breaks = c('a', 'b'),
+                    values = c('#99CC33', '#FF6633'),
+                    labels = c('Greater Sink/\nSmaller Source',
+                               'Greater Source/\nSmaller Sink')) +
   facet_grid(Response ~ Predictor, scales = 'free_x') +
   theme_bw() +
   theme(axis.title.y = element_blank(),
-        legend.position = 'none')
+        legend.title = element_blank())
 effect.size.plot.ngs
-
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_ngs.jpg',
 #        effect.size.plot.ngs,
 #        height = 6,
@@ -3705,8 +3751,13 @@ effect.size.plot.ngs
 #        height = 6,
 #        width = 6)
 
-effect.size.plot.gs <- ggplot(filter(karst.models.gs, coefficient.type == 'slope'),
+### GS Day
+effect.size.plot.gs <- ggplot(filter(co2.models.gs, coefficient.type == 'slope'),
                               aes(y = Variable, color = Response, group = Response)) +
+  geom_rect(data = rects,
+            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = col),
+            alpha = 0.2,
+            inherit.aes = FALSE) +
   geom_vline(xintercept = 0) +
   geom_point(aes(x = Coefficient)) +
   geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`), width = 0.1) +
@@ -3717,26 +3768,15 @@ effect.size.plot.gs <- ggplot(filter(karst.models.gs, coefficient.type == 'slope
             size = 3,
             vjust = 'inward',
             hjust = 'inward') +
-  geom_text(data = labels.gs,
-            aes(x = x1, y = 0.5, label = label1),
-            inherit.aes = FALSE,
-            size = 3,
-            vjust = "inward",
-            hjust = "inward") +
-  geom_text(data = labels.gs,
-            aes(x = x2, y = 0.5, label = label2),
-            inherit.aes = FALSE,
-            size = 3,
-            vjust = "inward",
-            hjust = "inward") +
-  # geom_segment(data = arrow, aes(x = x, y = y, xend = xend, yend = yend),
-  #              inherit.aes = FALSE,
-  #              arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
   scale_y_discrete(limits = rev,
                    labels = c('Oct', 'Sep', 'Aug', 'Jul', 'Jun', 'May', 'Apr')) +
   scale_x_continuous(name = 'Slope') +
   scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
                      values = c('#99CC33','#CC3300', '#000066')) +
+  scale_fill_manual(breaks = c('a', 'b'),
+                    values = c('#99CC33', '#FF6633'),
+                    labels = c('Greater Sink/\nSmaller Source',
+                               'Greater Source/\nSmaller Sink')) +
   facet_grid(Response ~ Predictor, scales = 'free_x') +
   theme_bw() +
   theme(axis.title.y = element_blank(),
@@ -3755,152 +3795,6 @@ effect.size.plot.gs
 ########################################################################################################################
 
 ### CH4 Analysis #######################################################################################################
-# # Fluxnet does not have the entire dataset and I'm not using filled values anyway,
-# # so I am no longer using this section of code
-# # Fluxnet
-# ch4 <- read.table('/home/heidi/Documents/School/NAU/Schuur Lab/Eddy Covariance/methane/FLX_US-EML_FLUXNET-CH4_2015-2018_1-1/FLX_US-EML_FLUXNET-CH4_HH_2015-2018_1-1.csv',
-#                   sep = ',',
-#                   header = TRUE,
-#                   na.strings = "-9999")
-# 
-# # Select correct times from Fluxnet
-# # ch4 <- ch4 %>%
-# #   mutate(ts = parse_date_time(TIMESTAMP_END, orders = c('Y!m!*d!H!M!'))) %>%
-# #   filter(ts >= parse_date_time('2017-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')) &
-# #            ts < parse_date_time('2018-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')))
-# 
-# # Select correct times from Fluxnet
-# ch4 <- ch4 %>%
-#   mutate(ts = parse_date_time(TIMESTAMP_END, orders = c('Y!m!*d!H!M!'))) %>%
-#   filter(ts >= parse_date_time('2016-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')) &
-#            ts < parse_date_time('2017-05-01 00:00', orders = c('Y!-m!*-d! H!:M!')))
-# 
-# # # test with all data, to see if 2017-2018 looks different
-# # ch4 <- ch4 %>%
-# #   mutate(ts = parse_date_time(TIMESTAMP_END, orders = c('Y!m!*d!H!M!')),
-# #          month = month(ts),
-# #          year = ifelse(month <= 10,
-# #                        year(ts),
-# #                        year(ts) + 1),
-# #          week = week(ts))
-# 
-# ggplot(ch4, aes(x = ts)) +
-#   geom_point(aes(y = TS_1, color = 'TS_1')) +
-#   geom_point(aes(y = TS_2, color = 'TS_2')) +
-#   geom_point(aes(y = TS_3, color = 'TS_3')) +
-#   geom_point(aes(y = TS_4, color = 'TS_4'))
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/soil_temps.jpeg',
-# #        height = 8,
-# #        width = 11)
-# # Select needed data for tower analysis
-# # could potentially include short term variables such as VPD, PAR, WS, TA, TS, etc
-# ch4.small <- ch4 %>%
-#   mutate(filled = ifelse(is.na(FCH4),
-#                          1,
-#                          0)) %>%
-#   select(ts, FCH4, FCH4_F, PPFD_IN_F, WS_F, WD, TA_F, TS_1, TS_2, TS_3, TS_4, VPD_F, filled) %>%
-#   mutate(month = month(ts),
-#          season = ifelse(month >= 5 & month <= 9,
-#                          'gs',
-#                          'ngs'),
-#          day = ifelse(PPFD_IN_F >= 10,
-#                       'day',
-#                       'night'),
-#          # year = ifelse(month >= 5,
-#          #               year(ts),
-#          #               ifelse(month < 5,
-#          #                      year(ts) - 1,
-#          #                      NA)),
-#          month.factor = factor(month),
-#          direction = round(WD),
-#          FCH4 = FCH4 * (12.0107 * 1800)/1000000,  # convert to mg/half hour from nanomol/s
-#          FCH4_F = FCH4_F * (12.0107 * 1800)/1000000,
-#          # FCH4 = FCH4/1000, # convert from nanomol/s to micromol/s
-#          # FCH4_F = FCH4_F/1000
-#   ) %>%
-#   rename(PAR = PPFD_IN_F, WS = WS_F, tair = TA_F, VPD = VPD_F)
-# 
-# ggplot(ch4.small, aes(x = season, group = season, fill = season)) +
-#   geom_bar(position = position_dodge())
-# 
-# ggplot(ch4.small, aes(x = day, group = day, fill = day)) +
-#   geom_bar(position = position_dodge())
-# ch4.small <- ch4.small %>%
-#   left_join(karst_roughness, by = 'ts') %>%
-#   rename(percent.thermokarst.ffp = karst.pc, mtopo15.sd.ffp = sd.mtopo) %>%
-#   as.data.table()
-# # test all years methane data to check if 2017-2018 is bad using slices (don't have flux footprint for previous years)
-# ch4.small <- ch4.small %>%
-#   filter(!is.na(direction)) %>%
-#   left_join(karst_mtopo_sf, by = 'direction')
-# # First plot
-# # why more negative fluxes than positive? Were signs flipped?
-# # Fluxnet is not corrected using storage fluxes
-# # sign is correct (the same as eddypro output)
-# load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
-# filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/EC',
-#                         full.names = TRUE)
-# storage <- map_dfr(filenames,
-#                ~ fread(.x, na.strings = c('-9999')) %>%
-#                  select(date, time, ch4_strg))
-# storage[, date := mdy(date)]
-# storage[, ts := ymd_hm(paste(date, time))]
-# storage[, date := NULL]
-# storage[, time := NULL]
-# storage <- storage[ts >= as_date('2017-05-01') & ts < as_date('2018-05-01')]
-# storage[, ch4_strg := ch4_strg * (12.0107 * 1800)/1000]  # convert to mg/half hour from micromol/s
-# storage <- unique(storage)
-# storage <- storage[!is.na(ch4_strg)]
-# 
-# Tower17.18 <- unique(Tower17.18)
-# Tower17.18 <- Tower17.18 %>%
-#   select(-tair) %>%
-#   left_join(storage, by = 'ts')
-# 
-# load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_CO2&CH4_30Apr2019.Rdata')
-# filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/EC',
-#                         full.names = TRUE)
-# storage <- map_dfr(filenames,
-#                    ~ fread(.x, na.strings = c('-9999')) %>%
-#                      select(date, time, ch4_strg))
-# storage[, date := mdy(date)]
-# storage[, ts := ymd_hm(paste(date, time))]
-# storage[, date := NULL]
-# storage[, time := NULL]
-# storage <- storage[ts >= as_date('2016-05-01') & ts < as_date('2017-05-01')]
-# storage[, ch4_strg := ch4_strg * (12.0107 * 1800)/1000]  # convert to mg/half hour from micromol/s
-# storage <- unique(storage)
-# storage <- storage[!is.na(ch4_strg)]
-# 
-# Tower16.17 <- unique(Tower16.17)
-# Tower16.17 <- Tower16.17 %>%
-#   select(-tair) %>%
-#   left_join(storage, by = 'ts')
-# ch4.model.data <- ch4.small %>%
-#   left_join(select(Tower16.17, ts, ch4_flux_filter, ch4_strg), by = 'ts') %>%
-#   mutate(ch4_flux_filter = ch4_flux_filter * (12.0107 * 1800)/1000,  # convert to mg/half hour from micromol/s
-#          ch4_no_strg = ch4_flux_filter - ch4_strg,
-#          FCH4_F_S = FCH4_F + ch4_strg,
-#          FCH4_F_S = ifelse(FCH4_F_S > 5 | FCH4_F_S < -5,
-#                            NA,
-#                            FCH4_F_S),
-#          diff = FCH4_F_S - ch4_flux_filter,
-#          year.factor = factor(year(ts)))
-# rm(ch4.small)
-
-# # some large fluxes in our data were cleaned out of fluxnet data, leading to a couple of discrepancies
-# ggplot(ch4.model.data, aes(x = FCH4_F_S, y = ch4_flux_filter)) +
-#   geom_point() +
-#   scale_x_continuous(limits = c(-2, 2))
-# 
-# # plot over time
-# ggplot(ch4.model.data,
-#        aes(x = ts, y = FCH4_F_S)) +
-#   geom_point()
-
-
-
-
 # load data from our files to get most recent years
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2015-2016/AK15_CO2&CH4_30Apr2019.Rdata')
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_CO2&CH4_30Apr2019.Rdata')
@@ -4045,6 +3939,27 @@ ch4.flux[, week := week(ts)]
 # #        height = 8,
 # #        width = 15)
 
+# load GPP in order to classify groups same as co2
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_Carbon_new_30Apr2019.Rdata')
+carbon.16 <- export
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
+carbon.17 <- export
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
+carbon.18 <- export
+carbon.18[, u_var := NULL]
+carbon.18[, v_var := NULL]
+carbon.18[, w_var := NULL]
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
+carbon.19 <- export
+rm(export)
+
+gpp <- rbind(carbon.16,
+             carbon.17,
+             carbon.18,
+             carbon.19) %>%
+  select(ts, GEP)
+
+
 # Join ch4 and karst/roughness data
 ch4.model.data <- ch4.flux %>%
   left_join(karst_roughness, by = c('ts', 'wind_dir')) %>%
@@ -4055,9 +3970,45 @@ ch4.model.data <- ch4.flux %>%
          ch4_flux_filter = ch4_flux_filter*(12.0107 * 1800)/1000) %>% # convert to mg/half hour from micromol/s
   filter(!(year.factor == 2017 & ts > as_date('2017-12-01') |
              year.factor == 2018 & ts <= as_date('2018-05-12'))) %>%
-  as.data.table()
-  
+  as.data.table() %>%
+  left_join(gpp,
+            by = c('ts')) %>%
+  mutate(doy = yday(ts),
+         doy.sin = sin((2*pi/365.25)*doy + 260*(2*pi/365.25)),
+         group = ifelse(PAR_filter >= 10 & (month >= 5 & month <= 9 | (month == 4 | month == 10) & GEP > 0),
+                        'GS Day',
+                        ifelse(PAR_filter < 10 & month >= 5 & month <= 9,
+                               'GS Night',
+                               ifelse(month <= 4 | month >= 10,
+                                      'NGS',
+                                      NA))))
+# temp - try to figure out if a sin transformation for doy makes sense in order to
+# use a continuous variable for day rather than a factor for month in modeling carbon
+ggplot(ch4.model.data, aes(x = doy.sin, y = tair)) + geom_point()
+test.data <- ch4.model.data %>%
+  select(year, doy, tair)
+output <- data.frame(i = NA,
+                     r2 = NA)
+for (i in seq(1:51)) {
+  data <- test.data %>%
+    mutate(doy.sin = sin((2*pi/365.25)*doy + (i+229)*(2*pi/365.25)))
+  model <- lm(tair ~ doy.sin,
+              data = data)
+  output[i, 1] <- i+229
+  output[i, 2] <- summary(model)$r.squared
+  print(ggplot(data, aes(x = doy.sin, y = tair)) +
+          geom_point() +
+          ggtitle(paste('i =', i+229)))
+}
+output[which(max(output$r2) == output$r2),]
+# end temp
+
+
 ch4.model.data <- ch4.model.data[order(ts)]
+
+# make sure the groups came out correctly
+ggplot(ch4.model.data, aes(x = ts, y = ch4_flux_filter, color = group)) +
+  geom_point()
 
 # plot by thermokarst
 ch4.plot <- ggplot(ch4.model.data,
@@ -4108,51 +4059,83 @@ ggplot(ch4.model.data,
   theme_bw() +
   theme(legend.title = element_blank())
 
+# # by year to look at questionable 2018 data 
+# # REMOVE THE DATE FILTER FOR CH4.MODEL.DATA BEFORE RUNNING THESE PLOTS!!!
+# ch4.plot1 <- ggplot(ch4.model.data,
+#        aes(x = percent.thermokarst.ffp, y = ch4_flux_filter, color = year.factor)) +
+#   geom_point(alpha = 0.2,
+#              size = 1) +
+#   geom_smooth(method = 'lm', fill = 'gray', size = 0.5) +
+#   scale_x_continuous(name = 'Thermokarst Cover (%)') +
+#   scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1)),
+#                      limits = c(-4, 4)) +
+#   scale_color_viridis(discrete = TRUE,
+#                       option = 'B',
+#                       end = 0.9,
+#                       breaks = c(2016, 2017, 2018, 2019)) +
+#   theme_bw() +
+#   theme(legend.position = 'none') +
+#   ggtitle('All Data')
+# ch4.plot1
+# ch4.plot2 <- ggplot(ch4.model.data[!(year.factor == 2017 & ts > as_date('2017-12-01') |
+#                                  year.factor == 2018 & ts <= as_date('2018-05-12'))],
+#                     aes(x = percent.thermokarst.ffp, y = ch4_flux_filter, color = year.factor)) +
+#   geom_point(alpha = 0.2,
+#              size = 1) +
+#   geom_smooth(method = 'lm', fill = 'gray', size = 0.5) +
+#   scale_x_continuous(name = 'Thermokarst Cover (%)') +
+#   scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1)),
+#                      limits = c(-4, 4)) +
+#   scale_color_viridis(discrete = TRUE,
+#                       option = 'B',
+#                       end = 0.9,
+#                       breaks = c(2016, 2017, 2018, 2019)) +
+#   theme_bw() +
+#   theme(legend.title = element_blank()) +
+#   ggtitle('Winter 2017-2018 Removed')
+# ch4.plot2
+# ch4.plot.compare <- ggarrange(ch4.plot1, ch4.plot2, ncol = 2, widths = c(0.83, 1))
+# ch4.plot.compare
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/ch4_tk.jpg',
+# #        ch4.plot.compare,
+# #        width = 10,
+# #        height = 6)
+
 # do big storms (particularly in winter) come from non-thermokarst directions?
 ggplot(ch4.model.data, aes(x = wind_dir, y = wind_speed_filter, color = month.factor)) +
   geom_point()
 
-# by year to look at questionable 2018 data 
-# REMOVE THE DATE FILTER FOR CH4.MODEL.DATA BEFORE RUNNING THESE PLOTS!!!
-ch4.plot1 <- ggplot(ch4.model.data,
-       aes(x = percent.thermokarst.ffp, y = ch4_flux_filter, color = year.factor)) +
-  geom_point(alpha = 0.2,
+ggplot(ch4.model.data,
+       aes(x = wind_dir,
+           y = ch4_flux_filter,
+           color = month.factor)) +
+  geom_point(alpha = 0.4,
              size = 1) +
-  geom_smooth(method = 'lm', fill = 'gray', size = 0.5) +
-  scale_x_continuous(name = 'Thermokarst Cover (%)') +
+  geom_smooth(method = 'lm', fill = 'gray') +
+  scale_x_continuous(name = 'Wind Direction') +
   scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1)),
-                     limits = c(-4, 4)) +
-  scale_color_viridis(discrete = TRUE,
+                     limits = c(-1, 1)) +
+  scale_color_viridis(breaks = factor(seq(1:12)),
+                      labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
+                                 ' Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
+                      discrete = TRUE,
                       option = 'B',
-                      end = 0.9,
-                      breaks = c(2016, 2017, 2018, 2019)) +
+                      end = 0.9) +
   theme_bw() +
-  theme(legend.position = 'none') +
-  ggtitle('All Data')
-ch4.plot1
-ch4.plot2 <- ggplot(ch4.model.data[!(year.factor == 2017 & ts > as_date('2017-12-01') |
-                                 year.factor == 2018 & ts <= as_date('2018-05-12'))],
-                    aes(x = percent.thermokarst.ffp, y = ch4_flux_filter, color = year.factor)) +
-  geom_point(alpha = 0.2,
-             size = 1) +
-  geom_smooth(method = 'lm', fill = 'gray', size = 0.5) +
-  scale_x_continuous(name = 'Thermokarst Cover (%)') +
-  scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1)),
-                     limits = c(-4, 4)) +
-  scale_color_viridis(discrete = TRUE,
-                      option = 'B',
-                      end = 0.9,
-                      breaks = c(2016, 2017, 2018, 2019)) +
-  theme_bw() +
-  theme(legend.title = element_blank()) +
-  ggtitle('Winter 2017-2018 Removed')
-ch4.plot2
-ch4.plot.compare <- ggarrange(ch4.plot1, ch4.plot2, ncol = 2, widths = c(0.83, 1))
-ch4.plot.compare
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/ch4_tk.jpg',
-#        ch4.plot.compare,
-#        width = 10,
-#        height = 6)
+  theme(legend.title = element_blank())
+
+ggplot(ch4.model.data,
+       aes(x = percent.thermokarst.ffp,
+           y = wind_speed_filter,
+           color = month.factor)) +
+  geom_point(alpha = 0.4,
+             size = 1)
+
+ggplot(ch4.model.data,
+       aes(x = month.factor,
+           y = wind_speed_filter,
+           color = month.factor)) +
+  geom_boxplot()
 
 # plot by wind speed
 # in the winter, wind speed seems to be a strong driver of fluxes
@@ -4184,10 +4167,26 @@ ch4.ws.plot
 #        ch4.ws.plot,
 #        width = 6,
 #        height = 6)
-
-ggplot(ch4.model.data, aes(x = WD, y = FCH4)) +
-  geom_point()
-
+ggplot(ch4.model.data,
+       aes(x = wind_speed_filter, y = ch4_flux_filter, color = month.factor)) +
+  geom_point(alpha = 0.4,
+             size = 1) +
+  geom_smooth(method = 'lm', aes(fill = month.factor)) +
+  scale_x_continuous(name = 'Wind Speed (m/s)') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1))) +
+  scale_color_viridis(breaks = seq(1, 12),
+                      labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
+                      discrete = TRUE,
+                      option = 'B',
+                      end = 0.9) +
+  scale_fill_viridis(breaks = seq(1, 12),
+                     labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
+                     discrete = TRUE,
+                     option = 'B',
+                     end = 0.9) +
+  facet_grid(.~group) +
+  theme_bw() +
+  theme(legend.title = element_blank())
 
 ### TO DO 
 # run model with only thermokarst, extract slopes and plot slopes by month
