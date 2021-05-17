@@ -26,7 +26,7 @@ library(tidyverse)
 main_labels <- c('LiDAR',
                  'Digital Terrain Model\n[Floating Point]',
                  'Median Elevation\n[Floating Point]',
-                 'Microtopography\n[0,1]',
+                 'Microtopography\n[Floating Point]',
                  'Local Elevation Minima\n[0,1]',
                  'Filled Elevation Minima\n[0,1]',
                  'Raw Thermokarst Classification\n[0,1]',
@@ -85,7 +85,7 @@ edges_from <- c(nodes$id[which(nodes$label == 'LiDAR')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
                 nodes$id[which(nodes$label == 'Median Elevation\n[Floating Point]')],
-                nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+                nodes$id[which(nodes$label == 'Microtopography\n[Floating Point]')],
                 nodes$id[which(nodes$label == 'Local Elevation Minima\n[0,1]')],
                 nodes$id[which(nodes$label == 'Filled Elevation Minima\n[0,1]')],
                 nodes$id[which(nodes$label == 'Raw Thermokarst Classification\n[0,1]')],
@@ -117,9 +117,9 @@ edges_from <- c(nodes$id[which(nodes$label == 'LiDAR')],
                 nodes$id[which(nodes$label == 'Filter\n[0,1]')])
 
 edges_to <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
-              nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+              nodes$id[which(nodes$label == 'Microtopography\n[Floating Point]')],
               nodes$id[which(nodes$label == 'Median Elevation\n[Floating Point]')],
-              nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+              nodes$id[which(nodes$label == 'Microtopography\n[Floating Point]')],
               nodes$id[which(nodes$label == 'Local Elevation Minima\n[0,1]')],
               nodes$id[which(nodes$label == 'Filled Elevation Minima\n[0,1]')],
               nodes$id[which(nodes$label == 'Raw Thermokarst Classification\n[0,1]')],
@@ -221,7 +221,7 @@ graph <- create_graph(nodes_df = nodes,
 graph %>% render_graph()
 
 # # save file
-graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r.pdf',
+graph %>% export_graph(file_name = '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_flow_chart_r.pdf',
              file_type = "pdf")
 ##########################################################################################################
 
@@ -230,7 +230,7 @@ graph %>% export_graph(file_name = 'C:/Users/Heidi Rodenhizer/Documents/School/N
 # node labels for the main classification flow
 main_labels <- c('Digital Terrain Model\n[Floating Point]',
                  'Median Elevation\n[Floating Point]',
-                 'Microtopography\n[0,1]',
+                 'Microtopography\n[Floating Point]',
                  'Elevation Minima\n[0,1]',
                  'Thermokarst Classification\n[0,1]',
                  'Thermokarst Polygons\n[Vector]')
@@ -270,7 +270,7 @@ nodes <- create_node_df(n = length(node_labels),
 edges_from <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
                 nodes$id[which(nodes$label == 'Median Elevation\n[Floating Point]')],
-                nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+                nodes$id[which(nodes$label == 'Microtopography\n[Floating Point]')],
                 nodes$id[which(nodes$label == 'Elevation Minima\n[0,1]')],
                 nodes$id[which(nodes$label == 'Thermokarst Classification\n[0,1]')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating Point]')],
@@ -281,9 +281,9 @@ edges_from <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n[Floating 
                 nodes$id[which(nodes$label == 'Non-Thermokarst Lakes\n[0,1]')],
                 nodes$id[which(nodes$label == 'Filter\n[0,1]')])
 
-edges_to <- c(nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+edges_to <- c(nodes$id[which(nodes$label == 'Microtopography\n[Floating Point]')],
               nodes$id[which(nodes$label == 'Median Elevation\n[Floating Point]')],
-              nodes$id[which(nodes$label == 'Microtopography\n[0,1]')],
+              nodes$id[which(nodes$label == 'Microtopography\n[Floating Point]')],
               nodes$id[which(nodes$label == 'Elevation Minima\n[0,1]')],
               nodes$id[which(nodes$label == 'Thermokarst Classification\n[0,1]')],
               nodes$id[which(nodes$label == 'Thermokarst Polygons\n[Vector]')],
@@ -792,7 +792,7 @@ plot3D(elev)
 # }"
 # 
 # grViz(graph)
-# setwd('C:/Users/Heidi Rodenhizer/Documents/School/NAU/Schuur Lab/Remote Sensing')
+# setwd('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing')
 # 
 # grViz(graph) %>%
 #   export_svg %>%
