@@ -3975,6 +3975,7 @@ ch4.model.data <- ch4.flux %>%
             by = c('ts')) %>%
   mutate(doy = yday(ts),
          doy.sin = sin((2*pi/365.25)*doy + 260*(2*pi/365.25)),
+         doy.sin.2 = doy.sin^2,
          group = ifelse(PAR_filter >= 10 & (month >= 5 & month <= 9 | (month == 4 | month == 10) & GEP > 0),
                         'GS Day',
                         ifelse(PAR_filter < 10 & month >= 5 & month <= 9,
@@ -4001,6 +4002,25 @@ for (i in seq(1:51)) {
           ggtitle(paste('i =', i+229)))
 }
 output[which(max(output$r2) == output$r2),]
+
+ggplot(ch4.model.data, aes(x = ts, y = doy.sin)) +
+  geom_point()
+
+ggplot(ch4.model.data, aes(x = doy.sin, y = ch4_flux_filter)) +
+  geom_point()
+
+ggplot(ch4.model.data, aes(x = doy.sin^2, y = ch4_flux_filter)) +
+  geom_point()
+
+ggplot(ch4.model.data, aes(x = ts, y = ch4_flux_filter)) +
+  geom_point()
+
+test <- lm(ch4_flux_filter ~ doy.sin + doy.sin.2,
+           data = ch4.model.data)
+summary(test)
+test2 <- lm(ch4_flux_filter ~ month.factor,
+            data = ch4.model.data)
+summary(test2)
 # end temp
 
 
