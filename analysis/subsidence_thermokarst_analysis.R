@@ -3973,56 +3973,13 @@ ch4.model.data <- ch4.flux %>%
   as.data.table() %>%
   left_join(gpp,
             by = c('ts')) %>%
-  mutate(doy = yday(ts),
-         doy.sin = sin((2*pi/365.25)*doy + 260*(2*pi/365.25)),
-         doy.sin.2 = doy.sin^2,
-         group = ifelse(PAR_filter >= 10 & (month >= 5 & month <= 9 | (month == 4 | month == 10) & GEP > 0),
+  mutate(group = ifelse(PAR_filter >= 10 & (month >= 5 & month <= 9 | (month == 4 | month == 10) & GEP > 0),
                         'GS Day',
                         ifelse(PAR_filter < 10 & month >= 5 & month <= 9,
                                'GS Night',
                                ifelse(month <= 4 | month >= 10,
                                       'NGS',
                                       NA))))
-# temp - try to figure out if a sin transformation for doy makes sense in order to
-# use a continuous variable for day rather than a factor for month in modeling carbon
-ggplot(ch4.model.data, aes(x = doy.sin, y = tair)) + geom_point()
-test.data <- ch4.model.data %>%
-  select(year, doy, tair)
-output <- data.frame(i = NA,
-                     r2 = NA)
-for (i in seq(1:51)) {
-  data <- test.data %>%
-    mutate(doy.sin = sin((2*pi/365.25)*doy + (i+229)*(2*pi/365.25)))
-  model <- lm(tair ~ doy.sin,
-              data = data)
-  output[i, 1] <- i+229
-  output[i, 2] <- summary(model)$r.squared
-  print(ggplot(data, aes(x = doy.sin, y = tair)) +
-          geom_point() +
-          ggtitle(paste('i =', i+229)))
-}
-output[which(max(output$r2) == output$r2),]
-
-ggplot(ch4.model.data, aes(x = ts, y = doy.sin)) +
-  geom_point()
-
-ggplot(ch4.model.data, aes(x = doy.sin, y = ch4_flux_filter)) +
-  geom_point()
-
-ggplot(ch4.model.data, aes(x = doy.sin^2, y = ch4_flux_filter)) +
-  geom_point()
-
-ggplot(ch4.model.data, aes(x = ts, y = ch4_flux_filter)) +
-  geom_point()
-
-test <- lm(ch4_flux_filter ~ doy.sin + doy.sin.2,
-           data = ch4.model.data)
-summary(test)
-test2 <- lm(ch4_flux_filter ~ month.factor,
-            data = ch4.model.data)
-summary(test2)
-# end temp
-
 
 ch4.model.data <- ch4.model.data[order(ts)]
 
@@ -4208,18 +4165,6 @@ ggplot(ch4.model.data,
   theme_bw() +
   theme(legend.title = element_blank())
 
-### TO DO 
-# run model with only thermokarst, extract slopes and plot slopes by month
-# worth doing a sine transformation to include day as a continuous variable
-# rather than month as discrete?
-
-# # Run some models
-# ch4.model.data %>%
-#   mutate(tk.2 = percent.thermokarst.ffp^2,
-#          ch4.2 = ch4_flux_filter^(1/2)) %>%
-#   select(ch4_flux_filter, ch4.2, percent.thermokarst.ffp, mtopo15.sd.ffp, tk.2, wind_speed_filter) %>%
-#   GGally::ggpairs(upper=list(continuous='points'), lower=list(continuous='cor'))
-
 # # Test how relationship differs by year (is 2017-2018 bad?)
 # ggplot(ch4.model.data[filled == 0],
 #        aes(x = percent.thermokarst.slice, y = FCH4, color = year.factor, group = year.factor)) +
@@ -4257,6 +4202,7 @@ ch4.model.simple <- lm(formula = ch4_flux_filter ~ percent.thermokarst.ffp*month
 # saveRDS(ch4.model.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_all_years.rds')
 # saveRDS(ch4.model.simple, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_simple_all_years.rds')
 ch4.model.complex <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_all_years.rds')
+summary(ch4.model.complex)
 ch4.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_simple_all_years.rds')
 summary(ch4.model)
 
@@ -4357,6 +4303,7 @@ ggplot(ch4.slopes, aes(x = month, y = Coefficient)) +
   scale_x_continuous(breaks = seq(1, 12),
                      labels = month.name[seq(1, 12)],
                      minor_breaks = NULL) +
+  scale_y_continuous(name = 'Slope') +
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -4372,6 +4319,7 @@ ggplot(ch4.slopes.complex, aes(x = month, y = Coefficient)) +
   scale_x_continuous(breaks = seq(1, 12),
                      labels = month.name[seq(1, 12)],
                      minor_breaks = NULL) +
+  scale_y_continuous(name = 'Slope') +
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -4381,56 +4329,4 @@ ggplot(ch4.slopes.complex, aes(x = month, y = Coefficient)) +
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.pdf',
 #        height = 4,
 #        width = 4)
-
-# complicated - more complicated than 2016 model without air temp and only improves r2 by ~5
-# smallest <- FCH4 ~ 1
-# biggest <- FCH4 ~ WS*tair*percent.thermokarst.ffp*month.factor
-# start <- lm(FCH4 ~ WS + month.factor*tair + month.factor*percent.thermokarst.ffp, data = ch4.model.data)
-# 
-# stats::step(start, scope = list(lower = smallest, upper = biggest))
-# 
-# ch4.model <- lm(formula = FCH4 ~ WS + month.factor + tair + percent.thermokarst.ffp + 
-#                   month.factor:tair + month.factor:percent.thermokarst.ffp + 
-#                   WS:month.factor + WS:percent.thermokarst.ffp + WS:tair + 
-#                   tair:percent.thermokarst.ffp + WS:month.factor:percent.thermokarst.ffp + 
-#                   WS:month.factor:tair + month.factor:tair:percent.thermokarst.ffp + 
-#                   WS:tair:percent.thermokarst.ffp + WS:month.factor:tair:percent.thermokarst.ffp, data = ch4.model.data)
-# # saveRDS(ch4.model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model.rds')
-# ch4.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model.rds')
-# 
-# ch4.effect.size <- effectsize::effectsize(ch4.model) %>%
-#   mutate(parameter.neat = Parameter,
-#          parameter.neat = str_replace(parameter.neat, 'tair', 'Air Temp'),
-#          parameter.neat = str_replace(parameter.neat, 'month', 'Month'),
-#          parameter.neat = str_replace(parameter.neat, 'WS', 'Wind Speed'),
-#          parameter.neat = str_replace(parameter.neat, 'percent.thermokarst.ffp', 'Thermokarst'),
-#          parameter.neat = factor(parameter.neat,
-#                                      levels = c('Wind Speed:Month:Air Temp',
-#                                                 'Month:Thermokarst',
-#                                                 'Wind Speed:Month',
-#                                                 'Month:Air Temp',
-#                                                 'Wind Speed:Air Temp',
-#                                                 'Thermokarst',
-#                                                 'Month',
-#                                                 'Air Temp',
-#                                                 'Wind Speed',
-#                                                 '(Intercept)')))
-# # write.csv(ch4.effect.size,
-# #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_effect_size.csv',
-# #           row.names = FALSE)
-# 
-# ch4.effect.size.plot <- ggplot(ch4.effect.size,
-#                                 aes(x = Std_Coefficient, y = parameter.neat)) +
-#   geom_vline(xintercept = 0) +
-#   geom_point() +
-#   geom_errorbar(aes(xmin = CI_low, xmax = CI_high), width = 0.1) +
-#   scale_y_discrete(name = 'Parameter') +
-#   scale_x_continuous(name = 'Standardized Coefficient') +
-#   theme_bw() +
-#   theme(legend.title = element_blank())
-# ch4.effect.size.plot
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_effect_size.jpg',
-# #        ch4.effect.size.plot,
-# #        height = 6,
-# #        width = 6)
 ########################################################################################################################
