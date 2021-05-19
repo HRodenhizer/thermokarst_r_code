@@ -10,6 +10,7 @@ library(sf)
 library(rgdal)
 library(readxl)
 library(lme4)
+library(lmerTest)
 # library(heavy)
 library(MuMIn)
 library(emmeans)
@@ -24,6 +25,7 @@ library(ggnewscale)
 library(ggpubr)
 library(gridExtra)
 library(spatialEco)
+library(zoo)
 library(data.table)
 library(tidyverse)
 ########################################################################################################################
@@ -2710,6 +2712,21 @@ nee.karst.model.ngs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remo
 summary(nee.karst.model.ngs)
 nee.contrast <- emmeans(nee.karst.model.ngs, specs = pairwise~month.factor)
 nee.contrast
+shapiro.test(sample(rstandard(nee.karst.model.ngs), 5000))
+
+# check model residuals of model2
+# look at residuals
+nee.karst.model.ngs.resid <- resid(nee.karst.model.ngs)
+nee.karst.model.ngs.fitted <- fitted(nee.karst.model.ngs)
+nee.karst.model.ngs.sqrt <- sqrt(abs(resid(nee.karst.model.ngs)))
+
+# graph
+par(mfrow=c(2,2), mar = c(4,4,3,2))
+plot(nee.karst.model.ngs.fitted, nee.karst.model.ngs.resid, main='resid, nee.karst.model.ngs')
+plot(nee.karst.model.ngs.fitted, nee.karst.model.ngs.sqrt, main='sqrt resid, nee.karst.model.ngs')
+qqnorm(nee.karst.model.ngs.resid, main = 'nee.karst.model.ngs')
+qqline(nee.karst.model.ngs.resid)
+par(mfrow=c(1,1))
 
 # this is a gross way to summarize and make everything look nice - better options?
 nee.karst.model.ngs.table <- data.frame(variables = names(nee.karst.model.ngs[['coefficients']]),
@@ -2799,6 +2816,21 @@ nee.karst.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remot
 summary(nee.karst.model.gs)
 nee.contrast <- emmeans(nee.karst.model.gs, specs = pairwise~month.factor)
 nee.contrast
+shapiro.test(sample(rstandard(nee.karst.model.gs), 5000))
+
+# check model residuals of model2
+# look at residuals
+nee.karst.model.gs.resid <- resid(nee.karst.model.gs)
+nee.karst.model.gs.fitted <- fitted(nee.karst.model.gs)
+nee.karst.model.gs.sqrt <- sqrt(abs(resid(nee.karst.model.gs)))
+
+# graph
+par(mfrow=c(2,2), mar = c(4,4,3,2))
+plot(nee.karst.model.gs.fitted, nee.karst.model.gs.resid, main='resid, nee.karst.model.gs')
+plot(nee.karst.model.gs.fitted, nee.karst.model.gs.sqrt, main='sqrt resid, nee.karst.model.gs')
+qqnorm(nee.karst.model.gs.resid, main = 'nee.karst.model.gs')
+qqline(nee.karst.model.gs.resid)
+par(mfrow=c(1,1))
 
 # this is a gross way to summarize and make everything look nice - better options?
 nee.karst.model.gs.table <- data.frame(variables = names(nee.karst.model.gs[['coefficients']]),
@@ -2891,6 +2923,21 @@ gpp.karst.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remot
 summary(gpp.karst.model.gs)
 gpp.contrast <- emmeans(gpp.karst.model.gs, specs = pairwise~month.factor)
 gpp.contrast
+shapiro.test(sample(rstandard(gpp.karst.model.gs), 5000))
+
+# check model residuals of model2
+# look at residuals
+gpp.karst.model.gs.resid <- resid(gpp.karst.model.gs)
+gpp.karst.model.gs.fitted <- fitted(gpp.karst.model.gs)
+gpp.karst.model.gs.sqrt <- sqrt(abs(resid(gpp.karst.model.gs)))
+
+# graph
+par(mfrow=c(2,2), mar = c(4,4,3,2))
+plot(gpp.karst.model.gs.fitted, gpp.karst.model.gs.resid, main='resid, gpp.karst.model.gs')
+plot(gpp.karst.model.gs.fitted, gpp.karst.model.gs.sqrt, main='sqrt resid, gpp.karst.model.gs')
+qqnorm(gpp.karst.model.gs.resid, main = 'gpp.karst.model.gs')
+qqline(gpp.karst.model.gs.resid)
+par(mfrow=c(1,1))
 
 # this is a gross way to summarize and make everything look nice - better options?
 gpp.karst.model.gs.table <- data.frame(variables = names(gpp.karst.model.gs[['coefficients']]),
@@ -2977,6 +3024,21 @@ reco.karst.model.ngs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Rem
 summary(reco.karst.model.ngs)
 reco.contrast <- emmeans(reco.karst.model.ngs, specs = pairwise~month.factor)
 reco.contrast
+shapiro.test(sample(rstandard(nee.karst.model.ngs), 5000))
+
+# check model residuals of model2
+# look at residuals
+reco.karst.model.ngs.resid <- resid(reco.karst.model.ngs)
+reco.karst.model.ngs.fitted <- fitted(reco.karst.model.ngs)
+reco.karst.model.ngs.sqrt <- sqrt(abs(resid(reco.karst.model.ngs)))
+
+# graph
+par(mfrow=c(2,2), mar = c(4,4,3,2))
+plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.resid, main='resid, reco.karst.model.ngs')
+plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.sqrt, main='sqrt resid, reco.karst.model.ngs')
+qqnorm(reco.karst.model.ngs.resid, main = 'reco.karst.model.ngs')
+qqline(reco.karst.model.ngs.resid)
+par(mfrow=c(1,1))
 
 # this is a gross way to summarize and make everything look nice - better options?
 reco.karst.model.ngs.table <- data.frame(variables = names(reco.karst.model.ngs[['coefficients']]),
@@ -3066,6 +3128,21 @@ reco.karst.model.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remo
 summary(reco.karst.model.gs)
 reco.contrast <- emmeans(reco.karst.model.gs, specs = pairwise~month.factor)
 reco.contrast
+shapiro.test(sample(rstandard(reco.karst.model.gs), 5000))
+
+# check model residuals of model2
+# look at residuals
+reco.karst.model.gs.resid <- resid(reco.karst.model.gs)
+reco.karst.model.gs.fitted <- fitted(reco.karst.model.gs)
+reco.karst.model.gs.sqrt <- sqrt(abs(resid(reco.karst.model.gs)))
+
+# graph
+par(mfrow=c(2,2), mar = c(4,4,3,2))
+plot(reco.karst.model.gs.fitted, reco.karst.model.gs.resid, main='resid, reco.karst.model.gs')
+plot(reco.karst.model.gs.fitted, reco.karst.model.gs.sqrt, main='sqrt resid, reco.karst.model.gs')
+qqnorm(reco.karst.model.gs.resid, main = 'reco.karst.model.gs')
+qqline(reco.karst.model.gs.resid)
+par(mfrow=c(1,1))
 
 # this is a gross way to summarize and make everything look nice - better options?
 reco.karst.model.gs.table <- data.frame(variables = names(reco.karst.model.gs[['coefficients']]),
@@ -3967,7 +4044,24 @@ ch4.model.data <- ch4.flux %>%
   filter(!(is.na(ch4_flux_filter) | is.na(percent.thermokarst.ffp))) %>%
   mutate(year.factor = factor(year(ts)),
          month.factor = factor(month),
-         ch4_flux_filter = ch4_flux_filter*(12.0107 * 1800)/1000) %>% # convert to mg/half hour from micromol/s
+         ch4.flux.hh = ch4_flux_filter*(12.0107 * 1800)/1000, # convert to mg/half hour from micromol/s
+         ch4.flux.h = ch4_flux_filter*(12.0107 * 3600)/1000, # convert to mg/half hour from micromol/s
+         ch4.flux.4h = ch4_flux_filter*(12.0107 * 14400)/1000, # convert to mg/half hour from micromol/s
+         ch4.flux.6h = ch4_flux_filter*(12.0107 * 21600)/1000, # convert to mg/half hour from micromol/s
+         ch4.flux.8h = ch4_flux_filter*(12.0107 * 28800)/1000, # convert to mg/half hour from micromol/s
+         ch4.flux.d = ch4_flux_filter*(12.0107 * 86400)/1000, # convert to mg/half hour from micromol/s
+         ch4.hyp.sine = log(ch4.flux.6h + (ch4.flux.6h^2 + 1)^(1/2)), # inverse hyperbolic sine transformation (somewhat like log but works with negative values)
+         ch4.clean = ifelse(ch4.flux.hh > mean(ch4.flux.hh) + 3*sd(ch4.flux.hh) |
+                              ch4.flux.hh < mean(ch4.flux.hh) - 3*sd(ch4.flux.hh), # remove outliers at 3 std dev for calculation of rolling mean
+                            NA,
+                            ch4.flux.hh),
+         ch4.mean.15d = rollapply(ch4.clean, 720, mean, na.rm = TRUE, partial = TRUE),
+         ch4.sd.15d = rollapply(ch4.clean, 720, sd, na.rm = TRUE, partial = TRUE),
+         spike = ifelse(ch4.flux.hh > ch4.mean.15d + 3*ch4.sd.15d,
+                        'release spike',
+                        ifelse(ch4.flux.hh < ch4.mean.15d - 3*ch4.sd.15d,
+                               'uptake spike',
+                               'non-spike'))) %>%
   filter(!(year.factor == 2017 & ts > as_date('2017-12-01') |
              year.factor == 2018 & ts <= as_date('2018-05-12'))) %>%
   as.data.table() %>%
@@ -3979,25 +4073,66 @@ ch4.model.data <- ch4.flux %>%
                                'GS Night',
                                ifelse(month <= 4 | month >= 10,
                                       'NGS',
-                                      NA))))
+                                      NA))),
+         wind.speed.groups = factor(ifelse(wind_speed_filter < 4,
+                                           '<4',
+                                           ifelse(wind_speed_filter < 8,
+                                                  '4-8',
+                                                  ifelse(wind_speed_filter < 12,
+                                                         '8-12',
+                                                         ifelse(wind_speed_filter >= 12,
+                                                                '>12',
+                                                                NA)))),
+                                    levels = c('<4', '4-8', '8-12', '>12')),
+         thermokarst.groups = factor(ifelse(percent.thermokarst.ffp < 0.1,
+                                            '<0.1',
+                                            ifelse(percent.thermokarst.ffp < 0.2,
+                                                   '0.1-0.2',
+                                                   ifelse(percent.thermokarst.ffp < 0.3,
+                                                          '0.2-0.3',
+                                                          ifelse(percent.thermokarst.ffp >= 0.3,
+                                                                 '>0.3',
+                                                                 NA)))),
+                                     levels = c('<0.1', '0.1-0.2', '0.2-0.3', '>0.3')))
 
 ch4.model.data <- ch4.model.data[order(ts)]
 
+hist(ch4.model.data$ch4_flux_filter)
+hist(ch4.model.data$ch4.flux.hh)
+hist(ch4.model.data$ch4.hyp.sine)
+
+
 # make sure the groups came out correctly
-ggplot(ch4.model.data, aes(x = ts, y = ch4_flux_filter, color = group)) +
+ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = group)) +
   geom_point()
 
+ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  scale_y_continuous(limits = c(-8, 8))
+ggplot(ch4.model.data, aes(x = ts, y = ch4.clean, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  scale_y_continuous(limits = c(-8, 8))
+ggplot(ch4.model.data, aes(x = ts, y = ch4.mean.15d, color = percent.thermokarst.ffp)) +
+  geom_point()
+ggplot(ch4.model.data, aes(x = ts, y = ch4.sd.15d, color = percent.thermokarst.ffp)) +
+  geom_point()
+ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = spike)) +
+  geom_point()
+
+hist(filter(ch4.model.data, spike == 'non-spike')$ch4.flux.hh)
+hist(filter(ch4.model.data, spike == 'release spike')$ch4.flux.hh)
+hist(filter(ch4.model.data, spike == 'uptake spike')$ch4.flux.hh)
+
 # plot by thermokarst
-ch4.plot <- ggplot(ch4.model.data,
+ch4.plot <- ggplot(filter(ch4.model.data, spike == 'non-spike'),
                     aes(x = percent.thermokarst.ffp,
-                        y = ch4_flux_filter,
+                        y = ch4.flux.hh,
                         color = month.factor)) +
   geom_point(alpha = 0.4,
              size = 1) +
   geom_smooth(method = 'lm', fill = 'gray') +
   scale_x_continuous(name = 'Thermokarst Cover (%)') +
-  scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1)),
-                     limits = c(-1, 1)) +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1))) +
   scale_color_viridis(breaks = factor(seq(1:12)),
                       labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
                                  ' Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
@@ -4016,21 +4151,14 @@ ch4.plot
 #        width = 6,
 #        height = 6)
 
-ggplot(ch4.model.data,
+ggplot(filter(ch4.model.data, spike == 'non-spike'),
        aes(x = percent.thermokarst.ffp,
            y = ch4_flux_filter)) +
   geom_point(alpha = 0.4,
              size = 1,
-             aes(color = month.factor)) +
+             aes(color = year.factor)) +
   scale_x_continuous(name = 'Thermokarst Cover (%)') +
   scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1))) +
-  scale_color_viridis(breaks = seq(1:12),
-                      labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
-                                 ' Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
-                      discrete = TRUE,
-                      option = 'B',
-                      end = 0.9) +
-  
   geom_smooth(method = 'lm', color = 'black', fill = 'gray') +
   facet_wrap(~ month.factor) +
   theme_bw() +
@@ -4079,12 +4207,37 @@ ggplot(ch4.model.data,
 # #        height = 6)
 
 # do big storms (particularly in winter) come from non-thermokarst directions?
+ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point()
+ggplot(filter(ch4.model.data, spike == 'non-spike'), aes(x = ts, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point()
+
 ggplot(ch4.model.data, aes(x = wind_dir, y = wind_speed_filter, color = month.factor)) +
+  geom_point()
+ggplot(filter(ch4.model.data, spike == 'non-spike'), aes(x = wind_dir, y = wind_speed_filter, color = month.factor)) +
   geom_point()
 
 ggplot(ch4.model.data,
        aes(x = wind_dir,
-           y = ch4_flux_filter,
+           y = ch4.flux.hh,
+           color = month.factor)) +
+  geom_point(alpha = 0.4,
+             size = 1) +
+  geom_smooth(method = 'lm', fill = 'gray') +
+  scale_x_continuous(name = 'Wind Direction') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux' ~ ('mg C' ~ 'm'^-2 ~ 'hh'^-1)),
+                     limits = c(-1, 1)) +
+  scale_color_viridis(breaks = factor(seq(1:12)),
+                      labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
+                                 ' Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
+                      discrete = TRUE,
+                      option = 'B',
+                      end = 0.9) +
+  theme_bw() +
+  theme(legend.title = element_blank())
+ggplot(filter(ch4.model.data, spike == 'non-spike'),
+       aes(x = wind_dir,
+           y = ch4.flux.hh,
            color = month.factor)) +
   geom_point(alpha = 0.4,
              size = 1) +
@@ -4107,8 +4260,19 @@ ggplot(ch4.model.data,
            color = month.factor)) +
   geom_point(alpha = 0.4,
              size = 1)
+ggplot(filter(ch4.model.data, spike == 'non-spike'),
+       aes(x = percent.thermokarst.ffp,
+           y = wind_speed_filter,
+           color = month.factor)) +
+  geom_point(alpha = 0.4,
+             size = 1)
 
 ggplot(ch4.model.data,
+       aes(x = month.factor,
+           y = wind_speed_filter,
+           color = month.factor)) +
+  geom_boxplot()
+ggplot(filter(ch4.model.data, spike == 'non-spike'),
        aes(x = month.factor,
            y = wind_speed_filter,
            color = month.factor)) +
@@ -4116,7 +4280,7 @@ ggplot(ch4.model.data,
 
 # plot by wind speed
 # in the winter, wind speed seems to be a strong driver of fluxes
-ch4.ws.plot <- ggplot(ch4.model.data,
+ch4.ws.plot <- ggplot(filter(ch4.model.data, spike == 'non-spike'),
                    aes(x = wind_speed_filter, y = ch4_flux_filter, color = month.factor)) +
   geom_point(alpha = 0.4,
              size = 1) +
@@ -4144,7 +4308,8 @@ ch4.ws.plot
 #        ch4.ws.plot,
 #        width = 6,
 #        height = 6)
-ggplot(ch4.model.data,
+
+ggplot(filter(ch4.model.data, spike == 'non-spike'),
        aes(x = wind_speed_filter, y = ch4_flux_filter, color = month.factor)) +
   geom_point(alpha = 0.4,
              size = 1) +
@@ -4186,86 +4351,54 @@ ggplot(ch4.model.data,
 # # percent.thermokarst.slice + year.factor. So the slopes are the same between 2018
 # # and other years, but the intercept (flux magnitude) is different
 
-# # Linear model
-# simple
-smallest <- ch4_flux_filter ~ 1
-biggest <- ch4_flux_filter ~ percent.thermokarst.ffp*month.factor*wind_speed_filter
-start <- lm(ch4_flux_filter ~ percent.thermokarst.ffp,
-            data = ch4.model.data)
+# Mixed Effects Model
+# This allows the inclusion of wind speed as a random variable
+# Do I use the untransformed ch4 or the transformed ch4? The transformed one 
+full.model <- lmer(ch4.flux.hh ~ percent.thermokarst.ffp*month.factor +
+                     (wind_speed_filter | month.factor),
+                   data = filter(ch4.model.data, spike == 'non-spike'),
+                   REML = FALSE)
+summary(full.model)
 
-stats::step(start, scope = list(lower = smallest, upper = biggest))
+# check for singularity following: https://rpubs.com/bbolker/lme4trouble1
+# singularity is when the variance of one or more terms is near 0
+# this is not necessarily a bad thing, but need to be careful about over fitting
+# or mis-convergence
+tt <- getME(full.model,"theta")
+ll <- getME(full.model,"lower")
+min(tt[ll==0])
 
-ch4.model.complex <- lm(formula = ch4_flux_filter ~ percent.thermokarst.ffp*wind_speed_filter*month.factor,
-                data = ch4.model.data)
-ch4.model.simple <- lm(formula = ch4_flux_filter ~ percent.thermokarst.ffp*month.factor,
-                     data = ch4.model.data)
-# saveRDS(ch4.model.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_all_years.rds')
-# saveRDS(ch4.model.simple, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_simple_all_years.rds')
-ch4.model.complex <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_all_years.rds')
-summary(ch4.model.complex)
-ch4.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_simple_all_years.rds')
+lmerTest::step(full.model)
+ch4.model <- lmer(ch4.flux.hh ~ percent.thermokarst.ffp*month.factor +
+                    (wind_speed_filter | month.factor),
+                  data = filter(ch4.model.data, spike == 'non-spike'))
 summary(ch4.model)
+plot(ch4.model)
 
-# this is a gross way to summarize and make everything look nice - better options?
-# complex model
-ch4.model.table.complex <- data.frame(variables = names(ch4.model.complex[['coefficients']]),
-                              coefficient = ch4.model.complex[['coefficients']],
-                              min.ci = as.numeric(confint(ch4.model.complex)[,1]),
-                              max.ci = as.numeric(confint(ch4.model.complex)[,2]),
-                              row.names = NULL) %>%
-  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
-         `Final Variables` = str_replace(`Final Variables`, 'wind_speed_filter', 'WS'),
+# check model residuals of model2
+# look at residuals
+ch4.model.resid <- resid(ch4.model)
+ch4.model.fitted <- fitted(ch4.model)
+ch4.model.sqrt <- sqrt(abs(resid(ch4.model)))
+
+# graph
+par(mfrow=c(2,2), mar = c(4,4,3,2))
+plot(ch4.model.fitted, ch4.model.resid, main='resid, ch4.model')
+plot(ch4.model.fitted, ch4.model.sqrt, main='sqrt resid, ch4.model')
+qqnorm(ch4.model.resid, main = 'ch4.model')
+qqline(ch4.model.resid)
+par(mfrow=c(1,1))
+
+ch4.ci <- extract_ci(ch4.model)
+ch4.lme.table <- ch4.ci %>%
+  mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
-         `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'), 
+         `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
                                     str_c(`Final Variables`, ' (Intercept)'),
                                     `Final Variables`),
          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
-         `Final Variables` = str_replace(`Final Variables`, '^WS$', 'WS:Month - 1'),
-         `Final Variables` = str_replace(`Final Variables`, '^TK:WS$', 'TK:WS:Month - 1'),
-         radius = coefficient - min.ci,
-         month = as.numeric(str_extract(`Final Variables`, '[:digit:]+')),
-         coefficient.type = factor(ifelse(str_detect(`Final Variables`, '(Intercept)'),
-                                   'intercept',
-                                   ifelse(str_detect(`Final Variables`, 'TK:WS'),
-                                          'interaction',
-                                          ifelse(str_detect(`Final Variables`, 'TK'),
-                                                 'tk',
-                                                 'ws'))),
-                                   levels = c('intercept', 'tk', 'ws', 'interaction'))) %>%
-  arrange(coefficient.type, month) %>%
-  group_by(coefficient.type) %>%
-  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
-                              round(coefficient, 5),
-                              round(first(coefficient) + coefficient, 5)),
-         total.radius = ifelse(coefficient - first(coefficient) == 0,
-                               radius,
-                               sqrt(radius^2 + first(radius)^2)),
-         `Min CI` = Coefficient - total.radius,
-         `Max CI` = Coefficient + total.radius) %>%
-  ungroup() %>%
-  mutate(Response = c('CH4', rep('', 47)),
-         `Full Model` = c('TK*WS*Month', rep('', 47)),
-         R2 = c(round(summary(ch4.model.complex)$r.squared, 3), rep('', 47))) %>%
-  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
-
-# write.csv(ch4.model.table.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_all_years.csv',
-#           row.names = FALSE)
-
-# simple model
-ch4.model.table <- data.frame(variables = names(ch4.model[['coefficients']]),
-                              coefficient = ch4.model[['coefficients']],
-                              min.ci = as.numeric(confint(ch4.model)[,1]),
-                              max.ci = as.numeric(confint(ch4.model)[,2]),
-                              row.names = NULL) %>%
-  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
-         `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
-         `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
-         `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'), 
-                                    str_c(`Final Variables`, ' (Intercept)'),
-                                    `Final Variables`),
-         `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
-         radius = coefficient - min.ci,
+         radius = coefs - min,
          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+')),
          coefficient.type = factor(ifelse(str_detect(`Final Variables`, '(Intercept)'),
                                           'intercept',
@@ -4273,60 +4406,272 @@ ch4.model.table <- data.frame(variables = names(ch4.model[['coefficients']]),
                                    levels = c('intercept', 'slope'))) %>%
   arrange(coefficient.type, month) %>%
   group_by(coefficient.type) %>%
-  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
-                              round(coefficient, 5),
-                              round(first(coefficient) + coefficient, 5)),
-         total.radius = ifelse(coefficient - first(coefficient) == 0,
+  mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+                              round(coefs, 5),
+                              round(first(coefs) + coefs, 5)),
+         total.radius = ifelse(coefs - first(coefs) == 0,
                                radius,
                                sqrt(radius^2 + first(radius)^2)),
          `Min CI` = Coefficient - total.radius,
          `Max CI` = Coefficient + total.radius) %>%
   ungroup() %>%
   mutate(Response = c('CH4', rep('', 23)),
-         `Full Model` = c('TK*Month', rep('', 23)),
-         R2 = c(round(summary(ch4.model)$r.squared, 3), rep('', 23))) %>%
-  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+         `Full Model` = c('TK*Month + (WS|Month)', rep('', 23)),
+         R2m = c(round(r.squaredGLMM(ch4.model)[1], 3), rep('', 23)),
+         R2c = c(round(r.squaredGLMM(ch4.model)[2], 3), rep('', 23))) %>%
+  select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2m, R2c)
 
-# write.csv(ch4.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_simple_all_years.csv',
+# write.csv(ch4.model.table.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_all_years.csv',
 #           row.names = FALSE)
 
-ch4.slopes <- slice(ch4.model.table, 13:24) %>%
+ch4.slopes <- slice(ch4.lme.table, 13:24) %>%
   select(3:6) %>%
   mutate(month = seq(1:12))
-
-ch4.slopes.complex <- slice(ch4.model.table.complex, 13:24) %>%
-  select(3:6) %>%
-  mutate(month = seq(1:12))
+rects <- data.frame(xmin = c(-Inf, 0),
+                    xmax = c(0, Inf),
+                    col = c('a', 'b'))
+labels <- data.frame(label1 = paste0(as.character(expression('R'^2 ~ 'm = ')),
+                                    ' ~ ',
+                                    ch4.lme.table[1, 'R2m']),
+                     label2 = paste0(as.character(expression('R'^2 ~ 'c = ')),
+                                     ' ~ ',
+                                     ch4.lme.table[1, 'R2c']))
 
 ggplot(ch4.slopes, aes(x = month, y = Coefficient)) +
+  geom_rect(data = rects,
+            aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
+            alpha = 0.2,
+            inherit.aes = FALSE) +
   geom_point() +
+  geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
+                width = 0.1) +
+  geom_text(aes(x = 1, y = 0.4),
+            inherit.aes = FALSE,
+            parse = TRUE,
+            label = labels$label1[1],
+            vjust = 'inward',
+            hjust = 'inward',
+            size = 3) +
+  geom_text(aes(x = 1, y = 0.35),
+            inherit.aes = FALSE,
+            parse = TRUE,
+            label = labels$label2[1],
+            vjust = 'inward',
+            hjust = 'inward',
+            size = 3) +
   scale_x_continuous(breaks = seq(1, 12),
-                     labels = month.name[seq(1, 12)],
+                     labels = str_sub(month.name[seq(1, 12)], 1, 3),
                      minor_breaks = NULL) +
   scale_y_continuous(name = 'Slope') +
+  scale_fill_manual(name = 'As thermokarst\nincreases:',
+                    breaks = c('a', 'b'),
+                    values = c('#99CC33', '#CC3300'),
+                    labels = c('Sink \U02191 or Source \U02193',
+                               'Sink \U02193 or Source \U02191')) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_simple_all_years.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years_lme.jpg',
 #        height = 4,
-#        width = 4)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_simple_all_years.pdf',
+#        width = 5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years_lme.pdf',
 #        height = 4,
-#        width = 4)
+#        width = 5)
 
-ggplot(ch4.slopes.complex, aes(x = month, y = Coefficient)) +
+# # # Linear model
+# # simple
+# smallest <- ch4_flux_filter ~ 1
+# biggest <- ch4_flux_filter ~ percent.thermokarst.ffp*month.factor*wind_speed_filter
+# start <- lm(ch4_flux_filter ~ percent.thermokarst.ffp,
+#             data = filter(ch4.model.data, spike == 'non-spike'))
+# 
+# stats::step(start, scope = list(lower = smallest, upper = biggest))
+# 
+# # ch4.model.complex <- lm(formula = ch4_flux_filter ~ percent.thermokarst.ffp*wind_speed_filter*month.factor,
+# #                 data = filter(ch4.model.data, spike == 'non-spike'))
+# ch4.model.simple <- lm(formula = ch4_flux_filter ~ percent.thermokarst.ffp*month.factor,
+#                      data = filter(ch4.model.data, spike == 'non-spike'))
+# # saveRDS(ch4.model.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_all_years.rds')
+# # saveRDS(ch4.model.simple, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_simple_all_years.rds')
+# # ch4.model.complex <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_all_years.rds')
+# # summary(ch4.model.complex)
+# ch4.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_simple_all_years.rds')
+# summary(ch4.model)
+# 
+# # this is a gross way to summarize and make everything look nice - better options?
+# # complex model
+# ch4.model.table.complex <- data.frame(variables = names(ch4.model.complex[['coefficients']]),
+#                               coefficient = ch4.model.complex[['coefficients']],
+#                               min.ci = as.numeric(confint(ch4.model.complex)[,1]),
+#                               max.ci = as.numeric(confint(ch4.model.complex)[,2]),
+#                               row.names = NULL) %>%
+#   mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+#          `Final Variables` = str_replace(`Final Variables`, 'wind_speed_filter', 'WS'),
+#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
+#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
+#                                     str_c(`Final Variables`, ' (Intercept)'),
+#                                     `Final Variables`),
+#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
+#          `Final Variables` = str_replace(`Final Variables`, '^WS$', 'WS:Month - 1'),
+#          `Final Variables` = str_replace(`Final Variables`, '^TK:WS$', 'TK:WS:Month - 1'),
+#          radius = coefficient - min.ci,
+#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+')),
+#          coefficient.type = factor(ifelse(str_detect(`Final Variables`, '(Intercept)'),
+#                                    'intercept',
+#                                    ifelse(str_detect(`Final Variables`, 'TK:WS'),
+#                                           'interaction',
+#                                           ifelse(str_detect(`Final Variables`, 'TK'),
+#                                                  'tk',
+#                                                  'ws'))),
+#                                    levels = c('intercept', 'tk', 'ws', 'interaction'))) %>%
+#   arrange(coefficient.type, month) %>%
+#   group_by(coefficient.type) %>%
+#   mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
+#                               round(coefficient, 5),
+#                               round(first(coefficient) + coefficient, 5)),
+#          total.radius = ifelse(coefficient - first(coefficient) == 0,
+#                                radius,
+#                                sqrt(radius^2 + first(radius)^2)),
+#          `Min CI` = Coefficient - total.radius,
+#          `Max CI` = Coefficient + total.radius) %>%
+#   ungroup() %>%
+#   mutate(Response = c('CH4', rep('', 47)),
+#          `Full Model` = c('TK*WS*Month', rep('', 47)),
+#          R2 = c(round(summary(ch4.model.complex)$r.squared, 3), rep('', 47))) %>%
+#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+# 
+# # write.csv(ch4.model.table.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_all_years.csv',
+# #           row.names = FALSE)
+# 
+# # simple model
+# ch4.model.table <- data.frame(variables = names(ch4.model[['coefficients']]),
+#                               coefficient = ch4.model[['coefficients']],
+#                               min.ci = as.numeric(confint(ch4.model)[,1]),
+#                               max.ci = as.numeric(confint(ch4.model)[,2]),
+#                               row.names = NULL) %>%
+#   mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
+#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'), 
+#                                     str_c(`Final Variables`, ' (Intercept)'),
+#                                     `Final Variables`),
+#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
+#          radius = coefficient - min.ci,
+#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+')),
+#          coefficient.type = factor(ifelse(str_detect(`Final Variables`, '(Intercept)'),
+#                                           'intercept',
+#                                           'slope'),
+#                                    levels = c('intercept', 'slope'))) %>%
+#   arrange(coefficient.type, month) %>%
+#   group_by(coefficient.type) %>%
+#   mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
+#                               round(coefficient, 5),
+#                               round(first(coefficient) + coefficient, 5)),
+#          total.radius = ifelse(coefficient - first(coefficient) == 0,
+#                                radius,
+#                                sqrt(radius^2 + first(radius)^2)),
+#          `Min CI` = Coefficient - total.radius,
+#          `Max CI` = Coefficient + total.radius) %>%
+#   ungroup() %>%
+#   mutate(Response = c('CH4', rep('', 23)),
+#          `Full Model` = c('TK*Month', rep('', 23)),
+#          R2 = c(round(summary(ch4.model)$r.squared, 3), rep('', 23))) %>%
+#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
+# 
+# # write.csv(ch4.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_simple_all_years.csv',
+# #           row.names = FALSE)
+# 
+# ch4.slopes <- slice(ch4.model.table, 13:24) %>%
+#   select(3:6) %>%
+#   mutate(month = seq(1:12))
+# 
+# ch4.slopes.complex <- slice(ch4.model.table.complex, 13:24) %>%
+#   select(3:6) %>%
+#   mutate(month = seq(1:12))
+# 
+# ggplot(ch4.slopes, aes(x = month, y = Coefficient)) +
+#   geom_point() +
+#   scale_x_continuous(breaks = seq(1, 12),
+#                      labels = month.name[seq(1, 12)],
+#                      minor_breaks = NULL) +
+#   scale_y_continuous(name = 'Slope') +
+#   theme_bw() +
+#   theme(axis.title.x = element_blank(),
+#         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_simple_all_years.jpg',
+# #        height = 4,
+# #        width = 4)
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_simple_all_years.pdf',
+# #        height = 4,
+# #        width = 4)
+# 
+# ggplot(ch4.slopes.complex, aes(x = month, y = Coefficient)) +
+#   geom_point() +
+#   scale_x_continuous(breaks = seq(1, 12),
+#                      labels = month.name[seq(1, 12)],
+#                      minor_breaks = NULL) +
+#   scale_y_continuous(name = 'Slope') +
+#   theme_bw() +
+#   theme(axis.title.x = element_blank(),
+#         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.jpg',
+# #        height = 4,
+# #        width = 4)
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.pdf',
+# #        height = 4,
+# #        width = 4)
+
+### Investigate Pulses
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter)) +
+  geom_point()
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter)) +
   geom_point() +
-  scale_x_continuous(breaks = seq(1, 12),
-                     labels = month.name[seq(1, 12)],
-                     minor_breaks = NULL) +
-  scale_y_continuous(name = 'Slope') +
-  theme_bw() +
-  theme(axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.jpg',
-#        height = 4,
-#        width = 4)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.pdf',
-#        height = 4,
-#        width = 4)
+  facet_grid(wind.speed.groups ~ .) +
+  scale_color_viridis()
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = month.factor)) +
+  geom_point() +
+  facet_grid(wind.speed.groups ~ .) +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B')
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  facet_grid(thermokarst.groups ~ .) +
+  scale_color_viridis()
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = month.factor)) +
+  geom_point() +
+  facet_grid(thermokarst.groups ~ .) +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B')
+
+ggplot(filter(ch4.model.data, spike == 'uptake spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter)) +
+  geom_point()
+ggplot(filter(ch4.model.data, spike == 'uptake spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter)) +
+  geom_point() +
+  facet_grid(wind.speed.groups ~ .) +
+  scale_color_viridis()
+ggplot(filter(ch4.model.data, spike == 'uptake spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = month.factor)) +
+  geom_point() +
+  facet_grid(wind.speed.groups ~ .) +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B')
+ggplot(filter(ch4.model.data, spike == 'uptake spike'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  facet_grid(thermokarst.groups ~ .) +
+  scale_color_viridis()
+ggplot(filter(ch4.model.data, spike == 'uptake spike'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = month.factor)) +
+  geom_point() +
+  facet_grid(thermokarst.groups ~ .) +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B')
 ########################################################################################################################
