@@ -4067,7 +4067,10 @@ ch4.model.data <- ch4.flux %>%
   as.data.table() %>%
   left_join(gpp,
             by = c('ts')) %>%
-  mutate(group = ifelse(PAR_filter >= 10 & (month >= 5 & month <= 9 | (month == 4 | month == 10) & GEP > 0),
+  mutate(season = ifelse(month >= 5 & month <= 9,
+                         'GS',
+                         'NGS'),
+         group = ifelse(PAR_filter >= 10 & (month >= 5 & month <= 9 | (month == 4 | month == 10) & GEP > 0),
                         'GS Day',
                         ifelse(PAR_filter < 10 & month >= 5 & month <= 9,
                                'GS Night',
@@ -4623,6 +4626,7 @@ ggplot(ch4.slopes, aes(x = month, y = Coefficient)) +
 # #        width = 4)
 
 ### Investigate Pulses
+### Pulse Release
 ggplot(filter(ch4.model.data, spike == 'release spike'),
        aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter)) +
   geom_point()
@@ -4648,7 +4652,140 @@ ggplot(filter(ch4.model.data, spike == 'release spike'),
   facet_grid(thermokarst.groups ~ .) +
   scale_color_viridis(discrete = TRUE,
                       option = 'B')
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = season)) +
+  geom_point() +
+  facet_grid(thermokarst.groups ~ .) +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B')
 
+# separated by growing season
+# wind speed important in winter spikes
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  theme_bw()
+ggplot(filter(ch4.model.data, spike == 'release spike' & season == 'NGS'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  geom_smooth(method = "nls", formula = y ~ a + b*exp(c * x),
+              se=F,
+              method.args = list(start = c(a = 10, b = 1, c = 0.5)),
+              color = 'black') +
+  theme_bw()
+# thermokarst somewhat important in summer?
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter, group = season)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  geom_smooth(method = "nls", formula = y ~ alpha * exp(beta1 * x),
+              se=F,
+              method.args = list(start=c(alpha=1,beta1=1)),
+              color = 'black') +
+  theme_bw()
+# air temp doesn't matter for summer
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = tair, y = ch4.flux.hh, color = wind_speed_filter)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  theme_bw()
+# soil temp sensors reminder
+ggplot(ch4.model.data, aes(x = ts)) +
+  geom_line(aes(y = TS_1_1_1, color = '10')) +
+  geom_line(aes(y = TS_2_1_1, color = '20')) +
+  geom_line(aes(y = TS_3_1_1, color = '30')) +
+  geom_line(aes(y = TS_4_1_1, color = '40')) +
+  geom_line(aes(y = TS_5_1_1, color = '10')) +
+  geom_line(aes(y = TS_6_1_1, color = '20')) +
+  geom_line(aes(y = TS_7_1_1, color = '30')) +
+  geom_line(aes(y = TS_8_1_1, color = '40'))
+# soil temp: 10
+# this sensor doesn't show much relationship
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = TS_1_1_1, y = ch4.flux.hh, color = wind_speed_filter)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  theme_bw()
+# this one does show increasing flux with temp, but still extra big spikes at lower temps
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = TS_5_1_1, y = ch4.flux.hh, color = wind_speed_filter)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  theme_bw()
+# deeper temps show less relationship
+
+# soil moisture
+# soil moisture seems to drive pulses
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = SWC_1_1_1, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  theme_bw()
+# this one looks even better
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = SWC_2_1_1, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  theme_bw()
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = SWC_2_1_1, y = ch4.flux.hh, group = season, color = month.factor)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B') +
+  theme_bw()
+ggplot(filter(ch4.model.data, spike == 'release spike' & season == 'GS' & !(month == 5 & ch4.flux.hh > 4)), # remove one outlier that influences models a lot
+       aes(x = SWC_1_1_1, y = ch4.flux.hh, group = season, color = month.factor)) +
+  geom_point() +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B',
+                      begin = 5/12,
+                      end = 3/4) +
+  geom_smooth(method = "nls", formula = y ~ a*exp(b*x + c) + d,
+              se=F,
+              method.args = list(start = c(a = 1, b = 10, c = -7.6, d= 0.4)),
+              color = 'black') +
+  # geom_smooth(method = "nls", formula = y ~ alpha * exp(beta1 * x),
+  #             se=F,
+  #             method.args = list(start=c(alpha=0.2,beta1=1)),
+  #             color = 'black') +
+  theme_bw()
+ggplot(filter(ch4.model.data, spike == 'release spike' & season == 'GS' & !(month == 5 & ch4.flux.hh > 4)), # remove one outlier that influences models a lot
+       aes(x = SWC_2_1_1, y = ch4.flux.hh, group = season, color = month.factor)) +
+  geom_point() +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B',
+                      begin = 5/12,
+                      end = 3/4) +
+  geom_smooth(method = "nls", formula = y ~ alpha * exp(beta1 * x),
+              se=F,
+              method.args = list(start=c(alpha=0.2,beta1=1)),
+              color = 'black') +
+  theme_bw()
+
+# test how non linear models work
+model <- nls(ch4.flux.hh ~ a + b*exp(c*wind_speed_filter),
+             data = filter(ch4.model.data, spike == 'release spike' & season == 'NGS'),
+             start = c(a = 1, b = 1, c = 0.5))
+summary(model)
+
+model <- nls(ch4.flux.hh ~ a + b*exp(c*SWC_1_1_1),
+             data = filter(ch4.model.data, spike == 'release spike' & season == 'GS'),
+             start = c(a = 0.5, b = 0.5, c = 1))
+summary(model)
+
+
+### Pulse uptake
 ggplot(filter(ch4.model.data, spike == 'uptake spike'),
        aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter)) +
   geom_point()
