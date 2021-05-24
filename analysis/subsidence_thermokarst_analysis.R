@@ -4787,16 +4787,18 @@ model.fit <- ch4.model.data %>%
 # try a regression tree (with all data, or just pulses?)
 library(tree)
 ch4.tree.data <- ch4.model.data %>%
-  select(ch4.flux.hh, spike, season, tair, wind_speed_filter,
-         percent.thermokarst.ffp,
-         mtopo15.sd.ffp, mean.swc, mean.ts.10)
+  select(ch4.flux.hh, spike, season, tair, wind.speed = wind_speed_filter,
+         percent.thermokarst = percent.thermokarst.ffp,
+         roughness = mtopo15.sd.ffp, mean.swc, tsoil = mean.ts.10)
 
 set.seed(10112020)
 # non-spike
-ch4.non.spike <- ch4.tree.data %>%
-  filter(spike == 'non-spike')
-train.all <- sample(1:nrow(ch4.non.spike), 9750)
-tree.all.data <- tree(ch4.flux.hh ~ ., data = ch4.non.spike, subset = train.all)
+# ch4.non.spike <- ch4.tree.data %>%
+#   filter(spike == 'non-spike')
+# train.all <- sample(1:nrow(ch4.non.spike), 9750)
+# tree.all.data <- tree(ch4.flux.hh ~ ., data = ch4.non.spike, subset = train.all)
+# saveRDS(tree.all.data, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_no_spikes.rds')
+readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_no_spikes.rds')
 summary(tree.all.data)
 plot(tree.all.data)
 text(tree.all.data, pretty = 0)
@@ -4814,10 +4816,12 @@ plot(cv.tree.all)
 # text(prune.tree.all, pretty=0)
 # summary(prune.tree.all)
 
-# pulse release
+# pulse release - this varies quite a bit from one run to another. Is this a problem?
 ch4.tree.release <- filter(ch4.tree.data, spike == 'release spike')
 train.release <- sample(1:nrow(ch4.tree.release), 186)
 tree.release.spike <- tree(ch4.flux.hh ~ ., data = ch4.tree.release, subset = train.release)
+# saveRDS(tree.release.spike, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_release_spikes.rds')
+readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_release_spikes.rds')
 summary(tree.release.spike)
 plot(tree.release.spike)
 text(tree.release.spike, pretty = 0)
@@ -4830,15 +4834,18 @@ ggplot(tree.release.perf, aes(x = ch4.flux.hh, y = fit)) +
 cv.tree.release <- cv.tree(tree.release.spike, FUN = prune.tree)
 cv.tree.release
 plot(cv.tree.release)
-prune.tree.release <- prune.tree(tree.release.spike, best = 6)
+prune.tree.release <- prune.tree(tree.release.spike, best = 7)
 plot(prune.tree.release)
 text(prune.tree.release, pretty=0)
 summary(prune.tree.release)
 
-# pulse uptake
+# pulse uptake - this one is particularly changeable and I think it's due to the small number of data points which show a lot of uptake
+# don't know if I want to include this
 ch4.tree.uptake <- filter(ch4.tree.data, spike == 'uptake spike')
 train.uptake <- sample(1:nrow(ch4.tree.uptake), 86)
 tree.uptake.spike <- tree(ch4.flux.hh ~ ., data = ch4.tree.uptake, subset = train.uptake)
+# saveRDS(tree.uptake.spike, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_uptake_spikes.rds')
+# readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_uptake_spikes.rds')
 summary(tree.uptake.spike)
 plot(tree.uptake.spike)
 text(tree.uptake.spike, pretty = 0)
@@ -4851,7 +4858,7 @@ ggplot(tree.uptake.perf, aes(x = ch4.flux.hh, y = fit)) +
 cv.tree.uptake <- cv.tree(tree.uptake.spike, FUN = prune.tree)
 cv.tree.uptake
 plot(cv.tree.uptake)
-prune.tree.uptake <- prune.tree(tree.uptake.spike, best = 6)
+prune.tree.uptake <- prune.tree(tree.uptake.spike, best = 5)
 plot(prune.tree.uptake)
 text(prune.tree.uptake, pretty=0)
 
