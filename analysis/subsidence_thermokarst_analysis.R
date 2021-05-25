@@ -38,15 +38,15 @@ crop_extent <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byro
 elev <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]), crop_extent),
              crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), crop_extent),
              crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), crop_extent))
-sub <- raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/lidar_subsidence/gliht_sub_14_18.tif')
-karst_1 <- brick(stack("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_raster_final_1.tif",
-                       "/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_raster_final_2.tif",
-                       "/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_raster_final_3.tif"))
+sub <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/lidar_subsidence/gliht_sub_14_18.tif')
+karst_1 <- brick(stack("/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_1.tif",
+                       "/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_2.tif",
+                       "/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_3.tif"))
 crs(karst_1) <- CRS('+init=epsg:32606')
 
-eml_wtrshd <- st_read("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/eml_bnd/boundry_poly3.shp")
+eml_wtrshd <- st_read("/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/eml_bnd/boundry_poly3.shp")
 
-filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output',
+filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output',
                         full.names = TRUE,
                         pattern = 'shp$')
 
@@ -54,7 +54,7 @@ karst_1_poly <- map(filenames[which(str_detect(filenames, pattern = 'karst_combi
                     ~ st_read(.x))
 names(karst_1_poly) <- c(2017, 2018, 2019)
 
-filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output',
+filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/int_output',
                         full.names = TRUE,
                         pattern = 'mtopo.+9km')
 
@@ -92,13 +92,13 @@ rm(filenames)
 #   filter(!is.na(thermokarst)) %>%
 #   spread(key = 'thermokarst', value = 'n') %>%
 #   mutate(percent.thermokarst = thermokarst/(thermokarst + undisturbed))
-# write.csv(karst_cover, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/thermokarst_area.csv')
+# write.csv(karst_cover, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_area.csv')
 ########################################################################################################################
 
 ### Summary Statistics From Polygons ###################################################################################
 # Depth of thermokarst features is calculated in polygon_summary_statistics.R
 # Read in all of the files from polygon_summary_statistics.R and reformat
-filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/polygon_summary_split/redo_fill',
+filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/polygon_summary_split/redo_fill',
                         full.names = TRUE)
 
 radius <- c(15, 25, 35)
@@ -118,11 +118,11 @@ for (i in 1:3) {
 karst_1_depth_join <- map_df(karst_1_depth,
                           ~ map_df(.x,
                                    ~ .x))
-# write.csv(karst_1_depth_join, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_depth_join.csv', row.names = FALSE)
+# write.csv(karst_1_depth_join, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_depth_join.csv', row.names = FALSE)
 # rm(karst_1_depth)
 # 
 # plot(karst_1_depth_join)
-# karst_1_depth_join <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_depth_join.csv')
+# karst_1_depth_join <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_depth_join.csv')
 
 
 ### Old Note ###
@@ -131,7 +131,7 @@ karst_1_depth_join <- map_df(karst_1_depth,
 
 # I am running reassign_polygon_ids.sh on monsoon directly.
 # load file with correct polygon ids
-# karst_1_depth_join <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/code/analysis/old/karst_1_depth_join_new_ids.csv')
+# karst_1_depth_join <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/code/analysis/old/karst_1_depth_join_new_ids.csv')
 ###
 
 # # filter out depth values that are outside 3 std devs, unless all values are outside of 3 std devs
@@ -159,8 +159,8 @@ karst_1_depth_filter <- karst_1_depth_join %>%
                             NA,
                             radius[which(depth == min(depth, na.rm = TRUE))])) %>%
   arrange(year, ID, cell)
-# write.csv(karst_1_depth_filter, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_depth_clean.csv', row.names = FALSE)
-# karst_1_depth_filter <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_depth_clean.csv')
+# write.csv(karst_1_depth_filter, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_depth_clean.csv', row.names = FALSE)
+# karst_1_depth_filter <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_depth_clean.csv')
 
 # summarize stats by polygon and filter out polygons where all microtopography values are above 1
 # this will remove single celled thermokarst features with positive values that were introduced
@@ -181,8 +181,8 @@ karst_1_stats <-  karst_1_depth_filter %>%
             sd.depth.clean = sd(depth.clean, na.rm = TRUE),
             se.depth.clean = sd(depth.clean, na.rm = TRUE)/sqrt(size)) %>%
   filter(min.depth < 0)
-# write.csv(karst_1_stats, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_stats_by_polygon.csv', row.names = FALSE)
-karst_1_stats <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_stats_by_polygon.csv')
+# write.csv(karst_1_stats, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats_by_polygon.csv', row.names = FALSE)
+karst_1_stats <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats_by_polygon.csv')
 
 # join stats with geometries
 karst_1_geom <- data.frame()
@@ -208,11 +208,11 @@ karst_1_stats_sf <- karst_1_stats %>%
          max.d.c = max.depth.clean,
          sd.d.c = sd.depth.clean,
          se.d.c = se.depth.clean)
-# st_write(karst_1_stats_sf, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_stats.shp')
-# st_write(filter(karst_1_stats_sf, year == 2017), '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_poly_fill_final_1.shp')
-# st_write(filter(karst_1_stats_sf, year == 2018), '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_poly_fill_final_2.shp')
-# st_write(filter(karst_1_stats_sf, year == 2019), '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_poly_fill_final_3.shp')
-karst_1_stats_sf <- read_sf('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_stats.shp') %>%
+# st_write(karst_1_stats_sf, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp')
+# st_write(filter(karst_1_stats_sf, year == 2017), '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_poly_fill_final_1.shp')
+# st_write(filter(karst_1_stats_sf, year == 2018), '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_poly_fill_final_2.shp')
+# st_write(filter(karst_1_stats_sf, year == 2019), '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_poly_fill_final_3.shp')
+karst_1_stats_sf <- read_sf('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp') %>%
   rename(min.depth = min_d,
          mean.depth = mean_d,
          median.depth = med_d,
@@ -246,7 +246,7 @@ karst_1_stats_sf <- read_sf('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared
 #                   max.d.c = max.depth.clean,
 #                   sd.d.c = sd.depth.clean,
 #                   se.d.c = se.depth.clean),
-#          '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_1_final_poly_1.shp')
+#          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_1_final_poly_1.shp')
 # st_write(karst_1_filter_list[[2]] %>%
 #            rename(min.d = min.depth,
 #                   mean.d = mean.depth,
@@ -260,7 +260,7 @@ karst_1_stats_sf <- read_sf('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared
 #                   max.d.c = max.depth.clean,
 #                   sd.d.c = sd.depth.clean,
 #                   se.d.c = se.depth.clean),
-#          '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_1_final_poly_2.shp')
+#          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_1_final_poly_2.shp')
 # st_write(karst_1_filter_list[[3]] %>%
 #            rename(min.d = min.depth,
 #                   mean.d = mean.depth,
@@ -274,19 +274,19 @@ karst_1_stats_sf <- read_sf('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared
 #                   max.d.c = max.depth.clean,
 #                   sd.d.c = sd.depth.clean,
 #                   se.d.c = se.depth.clean),
-#          '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_1_final_poly_3.shp')
-# karst_1_filter_list <- list(st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_poly_fill_final_1.shp'),
-#                             st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_poly_fill_final_2.shp'),
-#                             st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_poly_fill_final_3.shp'))
+#          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_1_final_poly_3.shp')
+# karst_1_filter_list <- list(st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_poly_fill_final_1.shp'),
+#                             st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_poly_fill_final_2.shp'),
+#                             st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_poly_fill_final_3.shp'))
 # karst_1_raster_filter <- brick(map(karst_1_filter_list,
 #                                    ~ rasterize(as(.x, 'Spatial'), karst_1[[1]])))
 # karst_1_raster_reclass <- reclassify(karst_1_raster_filter,
 #                                      rcl = matrix(c(-1,Inf,1),
 #                                                   ncol = 3,
 #                                                   byrow = TRUE))
-# writeRaster(karst_1_raster_filter, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_final_polygon_id.tif')
-# writeRaster(karst_1_raster_reclass, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_final.tif')
-# karst_1_raster_filter <- raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/karst_combined_1_final.tif')
+# writeRaster(karst_1_raster_filter, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_final_polygon_id.tif')
+# writeRaster(karst_1_raster_reclass, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_final.tif')
+# karst_1_raster_filter <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_final.tif')
 
 summary(karst_1_stats_sf)
 
@@ -387,7 +387,7 @@ karst_1_summary_year <- karst_1_stats_sf %>%
             mean.sd.depth = mean(sd.depth, na.rm = TRUE),
             mean.se.depth = mean(se.depth, na.rm = TRUE))
 # write.csv(karst_1_summary_year,
-#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/thermokarst_annual_summary.csv')
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_annual_summary.csv')
 
 ### Thermokarst stats overall
 karst_1_summary <- karst_1_summary_year %>%
@@ -405,7 +405,7 @@ karst_1_summary <- karst_1_summary_year %>%
             mean.se.depth = mean(mean.se.depth, na.rm = TRUE))
 
 # write.csv(karst_1_summary,
-#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/thermokarst_summary.csv')
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_summary.csv')
 
 # create a data frame to explore relationship between size classes and prevalence, percent cover,
 # percent volume, and mean depth
@@ -521,11 +521,11 @@ size_plot <- ggarrange(size_prevalence_plot,
                        ncol = 1,
                        nrow = 4)
 size_plot
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/size.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/size.jpg',
 #        size_plot,
 #        height = 10,
 #        width = 6)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/size.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/size.pdf',
 #        size_plot,
 #        height = 10,
 #        width = 6)
@@ -533,7 +533,7 @@ size_plot
 
 ### Thermokarst Morphology (Polygon Compactness via Polsby-Popper Test) ################################################
 # Load karst_1_stats_sf from previous section
-karst_1_stats_sf <- read_sf('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_1_stats.shp') %>%
+karst_1_stats_sf <- read_sf('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp') %>%
   rename(min.depth = min_d,
          mean.depth = mean_d,
          median.depth = med_d,
@@ -558,9 +558,9 @@ karst_morph <- karst_1_stats_sf %>%
          volume = size*mean.depth)
 
 # extract mean slope for all polygons
-slope <- stack('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/slope_9km_1.tif',
-               '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/slope_9km_2.tif',
-               '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/slope_9km_3.tif')
+slope <- stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/int_output/slope_9km_1.tif',
+               '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/int_output/slope_9km_2.tif',
+               '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/int_output/slope_9km_3.tif')
 slope <- calc(slope, mean, na.rm = TRUE)
 
 slope_extract <- raster::extract(slope,
@@ -573,8 +573,8 @@ slope_extract <- raster::extract(slope,
 karst_morph_slope <- cbind.data.frame(karst_morph, select(slope_extract, -ID)) %>%
   rename(mean.slope = layer)
 # st_write(karst_morph_slope,
-#          '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp')
-karst_morph_slope <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_morphology.shp') %>%
+#          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_morphology.shp')
+karst_morph_slope <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_morphology.shp') %>%
   rename(min.depth = min_dpth,
          mean.depth = men_dpth,
          median.depth = mdn_dpt,
@@ -702,11 +702,11 @@ morphology_plot <- ggarrange(shape_prevalence_plot,
                              ncol = 1,
                              nrow = 4)
 morphology_plot
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/morphology.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/morphology.jpg',
 #        morphology_plot,
 #        height = 10,
 #        width = 6)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/morphology.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/morphology.pdf',
 #        morphology_plot,
 #        height = 10,
 #        width = 6)
@@ -724,11 +724,11 @@ size_morph_plot <- ggarrange(size_prevalence_plot,
                              nrow = 4)
 size_morph_plot
 
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/size_morphology.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/size_morphology.jpg',
 #        size_morph_plot,
 #        height = 8,
 #        width = 7)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/size_morphology.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/size_morphology.pdf',
 #        size_morph_plot,
 #        height = 8,
 #        width = 7)
@@ -811,9 +811,9 @@ plot(karst_edges[[1]])
 plot(karst_edges[[2]])
 plot(karst_edges[[3]])
 
-# writeRaster(karst_edges[[1]], '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_1.tif')
-# writeRaster(karst_edges[[2]], '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_2.tif')
-# writeRaster(karst_edges[[3]], '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_3.tif')
+# writeRaster(karst_edges[[1]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_1.tif')
+# writeRaster(karst_edges[[2]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_2.tif')
+# writeRaster(karst_edges[[3]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_3.tif')
 ########################################################################################################################
 
 ### Landform Classification ############################################################################################
@@ -882,9 +882,9 @@ graph_ci <- function(ci,figtitle,model) {ggplot(ci,aes(x=names,y=coefs))+
 ########################################################################################################################
 
 ### Mixed Effects Model of Subsidence by Thermokarst Class #############################################################
-karst_edges <- brick(stack('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_1.tif',
-                           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_2.tif',
-                           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/karst_edges_3.tif'))
+karst_edges <- brick(stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_1.tif',
+                           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_2.tif',
+                           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_3.tif'))
 # create mask of karst_edges
 karst_edges_mask <- mask(crop(karst_edges, sub), sub)
   
@@ -897,10 +897,10 @@ ggplot(samples, aes(x = x, y = y)) +
   geom_point() +
   coord_fixed()
 
-# st_write(samples, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/subsidence_rate_samples_500.shp')
-# st_write(samples, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/subsidence_rate_samples_1000.shp')
-# st_write(samples, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/subsidence_rate_samples_2000.shp')
-samples <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/subsidence_rate_samples_1000.shp')
+# st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
+# st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_1000.shp')
+# st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_2000.shp')
+samples <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_1000.shp')
 
 # extract values from subsidence brick
 # use a buffer to average out erroneous very high/low reads
@@ -912,8 +912,8 @@ samples <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DA
 #          sub = 3) %>%
 #   arrange(ID)
 # 
-# write.csv(sub_extract, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_extract_gliht_1000.csv')
-sub_extract <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_extract_gliht_1000.csv')
+# write.csv(sub_extract, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_gliht_1000.csv')
+sub_extract <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_gliht_1000.csv')
 
 # elev_extract <- raster::extract(elev, as(samples, 'Spatial'), buffer = 1.5, layer = 1, nl = 3, cellnumbers = TRUE, df = TRUE) %>%
 #   as.data.frame() %>%
@@ -992,68 +992,19 @@ karst_extract <- raster::extract(karst_edges, as(samples, 'Spatial'),
                                   0))) %>%
   arrange(ID)
 
-# This section will be useful if I end up using neon data and have subsidence values for multiple years
-# # join subsidence and thermokarst extract dataframes
-# sub_karst <- karst_extract_buffer %>%
-#   full_join(sub_extract, by = c('ID', 'cell')) %>%
-#   # full_join(elev_extract, by = c('ID', 'cell', 'year')) %>%
-#   full_join(karst_extract, by = c('ID', 'cell', 'year')) %>%
-#   group_by(year, ID) %>%
-#   mutate(sample_cell = ifelse(mean(thermokarst, na.rm = TRUE) == 0,
-#                                      0,
-#                                      ifelse(mean(thermokarst, na.rm = TRUE) >= 1,
-#                                             1)))
-# sub_karst_summary <- sub_karst %>%
-#   filter(karst == sample_cell) %>%
-#   summarise(x = mean(x, na.rm = TRUE),
-#             y = mean(y, na.rm = TRUE),
-#             thermokarst = mean(thermokarst, na.rm = TRUE),
-#             mean.elev = mean(elev),
-#             se.elev = sd(elev)/sqrt(n()),
-#             mean.sub = mean(sub),
-#             se.sub = sd(sub)/sqrt(n())) %>%
-#   mutate(time = year - 2017,
-#          id.factor = as.factor(ID),
-#          thermokarst.presence = as.factor(ifelse(thermokarst == 0,
-#                                                  0,
-#                                                  ifelse(thermokarst >= 1,
-#                                                         1,
-#                                                         NA))),
-#          thermokarst.class = as.factor(thermokarst),
-#          elev.transform = mean.elev^-2) %>%
-#   ungroup()#%>%
-#   # group_by(ID) %>%
-#   # filter((max(se.elev) - min(se.elev)) < 0.1)
-# # write.csv(sub_karst_summary, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_summary_1000.csv', row.names = FALSE)
-# sub_karst_summary <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_summary_1000.csv')
-
-# sub_karst <- karst_extract_buffer %>%
-#   cbind.data.frame(select(sub_extract, sub)) %>%
-#   # full_join(elev_extract, by = c('ID', 'cell', 'year')) %>%
-#   full_join(karst_extract, by = c('ID', 'cell')) %>%
-#   group_by(ID) %>%
-#   mutate(sample.class = sample.cell[which(!is.na(sample.cell))])
-# 
-# sub_karst_summary <- sub_karst %>%
-#   filter(karst == sample.class) %>%
-#   group_by(ID) %>%
-#   summarise(karst = mean(karst),
-#             sub = mean(sub))
-# write.csv(sub_karst_summary, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/output/sub_karst_summary_1000.csv', row.names = FALSE)
-
 
 ### Model subsidence by thermokarst class
-sub_karst_summary <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_summary_500.csv') %>%
+sub_karst_summary <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_summary_500.csv') %>%
   mutate(karst = factor(karst, levels = c(0, 1, 2)))
 
 # model <- lm(sub ~ karst, sub_karst_summary)
-# saveRDS(model, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_anova_500.rds')
-model <- readRDS('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_anova_500.rds')
+# saveRDS(model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500.rds')
+model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500.rds')
 summary(model)
 model.contrast <- emmeans(model, specs= pairwise~karst) %>%
   summary(level=0.90)
 model.contrast
-# write.csv(model.contrast, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_anova_500_contrast.csv')
+# write.csv(model.contrast, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500_contrast.csv')
 
 letters <- data.frame(karst = factor(c(0, 1, 2)),
                       sub = 0.25,
@@ -1070,24 +1021,28 @@ model.table <- model.contrast[[1]] %>%
   rename(Class = karst, Mean = emmean, `Lower CI` = lower.CL, `Upper CI` = upper.CL, Group = letters) %>%
   select(Class, Group, Mean, `Lower CI`, `Upper CI`, SE, df)
 # write.csv(model.table,
-#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_model.csv',
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_model.csv',
 #           row.names = FALSE)
+model.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_model.csv') %>%
+  rename(`Lower CI` = Lower.CI, `Upper CI` = Upper.CI) %>%
+  mutate(Class = factor(Class,
+                        levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center')))
 
 # boxplot looks really messy
 boxplot <- ggplot(sub_karst_summary, aes(x = karst, y = sub, group = karst)) +
   geom_boxplot() +
   geom_text(data = letters, aes(label = letters)) +
   scale_x_discrete(breaks = c(0, 1, 2),
-                   labels = c('Undisturbed', 'Thermokarst Center', 'Thermokarst Edge')) +
+                   labels = c('Non-Thermokarst', 'Thermokarst Center', 'Thermokarst Edge')) +
   scale_y_continuous(name = expression(Delta ~ "Elevation")) +
   theme_bw() +
   theme(axis.title.x = element_blank())
-
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_boxplot.jpg',
+boxplot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_boxplot.jpg',
 #        boxplot,
 #        height = 4,
 #        width = 5)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_boxplot.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_boxplot.pdf',
 #        boxplot,
 #        height = 4,
 #        width = 5)
@@ -1103,20 +1058,19 @@ points_plot <- ggplot(model.table, aes(x = Class, y = Mean)) +
   theme_bw() +
   theme(axis.title.x = element_blank())
 points_plot
-
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_points_se.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_points_se.jpg',
 #        points_plot,
 #        height = 4,
 #        width = 5)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_points_se.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_points_se.pdf',
 #        points_plot,
 #        height = 4,
 #        width = 5)
 
 ### Add in GPS points as comparison
-elev.cip <- list(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/CiPEHR & DryPEHR/GPS survey/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/AElevStack_unfilled_unclipped.tif'),
-                 brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/CiPEHR & DryPEHR/GPS survey/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/BElevStack_unfilled_unclipped.tif'),
-                 brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/CiPEHR & DryPEHR/GPS survey/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/CElevStack_unfilled_unclipped.tif'))
+elev.cip <- list(brick('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/AElevStack_unfilled_unclipped.tif'),
+                 brick('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/BElevStack_unfilled_unclipped.tif'),
+                 brick('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Kriged_Surfaces/Elevation_Variance/ALT_Sub_Ratio_Corrected/Elevation_Stacks/CElevStack_unfilled_unclipped.tif'))
 
 sub.gps <- list()
 for (i in 1:3) {
@@ -1152,11 +1106,11 @@ sub.gps.summary <- gps.sub.extract %>%
   mutate(`Lower CI` = mean.sub - se.sub,
          `Upper CI` = mean.sub + se.sub,
          karst = factor(ifelse(karst == 0,
-                               'Undisturbed',
+                               'Non-Thermokarst',
                                ifelse(karst == 1,
                                       'Thermokarst Center',
                                       'Thermokarst Edge')),
-                        levels = c('Undisturbed', 'Thermokarst Edge', 'Thermokarst Center')))
+                        levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center')))
 
 # plot mean lidar sub with mean gps sub
 points_plot_2 <- ggplot(model.table, aes(x = Class, y = Mean)) +
@@ -1182,222 +1136,16 @@ points_plot_2 <- ggplot(model.table, aes(x = Class, y = Mean)) +
   theme(axis.title.x = element_blank(),
         legend.title = element_blank())
 points_plot_2
-
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_points_w_gps.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_points_w_gps.jpg',
 #        points_plot_2,
 #        height = 4,
 #        width = 5)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/sub_karst_points_w_gps.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_points_w_gps.pdf',
 #        points_plot_2,
 #        height = 4,
 #        width = 5)
 
 
-# points <- list(st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/All_Points/All_Points_2017_SPCSAK4.shp'),
-#                st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/All_Points/All_Points_2018_SPCSAK4.shp'),
-#                st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/All_Points/All_Points_2019_Aug_SPCSAK4.shp'))
-# 
-# gps <- map2_dfr(points,
-#                 c(2017, 2018, 2019),
-#                ~ .x %>%
-#                  select(-starts_with('Type')) %>%
-#                  mutate(year = .y))
-# rm(points)
-# 
-# gps_grid <- gps %>%
-#   mutate(Name = as.character(Name)) %>%
-#   mutate(Name = as.numeric(Name)) %>%
-#   filter(Name != is.na(Name) & Name < 13000) %>%
-#   arrange(Name) %>%
-#   mutate(block = as.factor(ifelse(Name >= 10000 & Name < 11000,
-#                                   'a',
-#                                   ifelse(Name >= 11000 & Name < 12000,
-#                                          'b',
-#                                          ifelse(Name >= 12000 & Name < 13000,
-#                                                 'c',
-#                                                 NA))))) %>%
-#   filter(!is.na(block)) %>%
-#   select(year, block, Name, Easting, Northing, Elevation) %>%
-#   st_as_sf() %>%
-#   st_transform(crs = 32606) %>%
-#   st_zm()
-# 
-# # check that I got the right points
-# ggplot(gps_grid, aes(color = year)) +
-#   geom_sf(aes(geometry = geometry)) +
-#   facet_wrap(~year)
-# 
-# karst_points_extract <- raster::extract(karst_edges, as(gps_grid, 'Spatial'),
-#                                         cellnumbers = TRUE,
-#                                         df = TRUE) %>%
-#   as.data.frame()
-
-
-# mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 0 & sub_karst_summary$year == 2018)])
-# mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 1 & sub_karst_summary$year == 2018)])
-# mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 0 & sub_karst_summary$year == 2019)])
-# mean(sub_karst_summary$mean.sub[which(sub_karst_summary$thermokarst == 1 & sub_karst_summary$year == 2019)])
-# 
-# hist(sub_karst_summary$mean.elev)
-# hist(sub_karst_summary$elev.transform)
-# 
-# I don't know if it makes sense to filter out mean subsidence values with high standard deviations
-# if I'm trying to find a pattern despite noise in the data by getting enough points
-
-# model.full <- lmer(mean.elev ~ time*thermokarst.presence +
-#                 (1+time|id.factor), # random intercept and slope for each sample point
-#               data = sub_karst_summary,
-#               REML = FALSE,
-#               control=lmerControl(check.conv.singular="warning"))
-# summary(model.full)
-# 
-# model.intercept <- lmer(mean.elev ~ time + thermokarst.presence +
-#                      (1+time|id.factor), # random intercept and slope for each sample point
-#                    data = sub_karst_summary,
-#                    REML = FALSE,
-#                    control=lmerControl(check.conv.singular="warning"))
-# summary(model.intercept)
-# 
-# model.simple <- lmer(mean.elev ~ time +
-#                      (1+time|id.factor), # random intercept and slope for each sample point
-#                    data = sub_karst_summary,
-#                    REML = FALSE,
-#                    control=lmerControl(check.conv.singular="warning"))
-# summary(model.simple)
-# 
-# AIC(model.full, model.intercept, model.simple)
-# 
-# # look at residuals
-# model.resid <- resid(model.full)
-# model.fitted <- fitted(model.full)
-# model.sqrt <- sqrt(abs(resid(model.full)))
-# 
-# # graph
-# par(mfrow=c(2,2), mar = c(4,4,3,2))
-# plot(model.fitted, model.resid, main='resid, model')
-# plot(model.fitted, model.sqrt, main='sqrt resid, model')
-# qqnorm(model.resid, main = 'model')
-# qqline(model.resid)
-# hist(model.resid)
-# par(mfrow=c(1,1))
-# 
-# # The errors are REALLY not normal...
-# shapiro.test(sample(model.resid, size = 5000))
-# 
-# # However, that should not impact the model itself, only the determination of statistical significance
-# # of parameters via p-values. Can use bootstrapping instead (which is what we normally do anyway).
-# # See: https://data.library.virginia.edu/normality-assumption/
-# 
-# 
-# 
-# # re-run with reml = TRUE
-# model.full <- lmer(mean.elev ~ time+thermokarst.presence +
-#                      (1+time|id.factor), # random intercept and slope for each sample point
-#                    data = sub_karst_summary,
-#                    control=lmerControl(check.conv.singular="warning"))
-# saveRDS(model.full, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_model_1000.rds')
-model.full <- readRDS('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/sub_karst_model_1000.rds')
-summary(model.full)
-r2 <- r.squaredGLMM(model.full)
-# # this is crashing R - need fewer samples
-# # This doesn't make sense for a model with only different intercepts
-# LetterResults <- emmeans(model.full, ~ thermokarst.presence) 
-# LetterResults2 <- LetterResults %>% cld(Letters=letters)
-# LetterResults
-
-# model_ci <- extract_ci(model.full)
-# write.csv(model_ci, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/model_ci_1000.csv', row.names = FALSE)
-model_ci <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/model_ci.csv')
-
-# # make confidence interval data frame for graphing
-# ConfData <- expand.grid(time = 0:2,
-#                         thermokarst.presence = as.factor(0:1))
-# 
-# myStats <- function(model){
-#   out <- predict( model, newdata=ConfData, re.form=~0 )
-#   return(out)
-# }
-# 
-# bootObj <- bootMer(model.full, FUN=myStats, nsim = 1000)
-# ConfData <- cbind(ConfData, predict(model.full, newdata=ConfData, re.form=~0 )) %>%
-#   cbind(confint( bootObj,  level=0.95 ))
-# colnames(ConfData) <- c('time', 'thermokarst.presence', 'fit', 'lwr', 'upr')
-# # write.csv(ConfData, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/subsidence_thermokarst_fit.csv', row.names = FALSE)
-ConfData <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/subsidence_thermokarst_fit.csv')
-
-subsidence_model_table <- data.frame(Response = c('Elevation', '', '', ''),
-                                     `Full Model` = c('Year*Thermokarst', '', '', ''),
-                                     `Final Variables` = c('Intercept (Non-Thermokarst)', 'Intercept (Thermokarst)', 'Year*Non-thermokarst', 'Year*Thermokarst'),
-                                     Coeficient = c(model_ci$coefs[1], model_ci$coefs[1] + model_ci$coefs[2], model_ci$coefs[3], model_ci$coefs[3] + model_ci$coefs[4]),
-                                     `Min CI` = c(model_ci$coefs[1], model_ci$coefs[1] + model_ci$coefs[2], model_ci$coefs[3], model_ci$coefs[3] + model_ci$coefs[4]),
-                                     `Max CI` = c(model_ci$coefs[1], model_ci$coefs[1] + model_ci$coefs[2], model_ci$coefs[3], model_ci$coefs[3] + model_ci$coefs[4]),
-                                     `R2 Marginal` = c(r2[1], rep('', 3)),
-                                     `R2 Conditional` = c(r2[2], rep('', 3)),
-                                     AIC = c(AIC(subsidence_model), rep('', 3)))
-write.csv(subsidence_model_table, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/subsidence_model_table.csv', row.names = FALSE)
-
-# ### Look at different slopes - not too different
-# sub_karst_summary_2 <- sub_karst_summary %>%
-#   mutate(yhat = predict(model.full, re.form = ~(1+time|id.factor)))
-# fixed.effects <- fixef(model.full)
-# random.effects <- ranef(model.full)[[1]]
-# random.effects <- random.effects %>%
-#   arrange(time) %>%
-#   mutate(order = seq(1:3000),
-#          slope = time + fixed.effects[[2]])
-# ggplot(random.effects, aes(x = order, y = slope)) +
-#   geom_point()
-
-ggplot(sub_karst_summary_2, aes(x = year, y = yhat, color = thermokarst.presence, group = id.factor)) +
-  geom_line()
-# determine boxcox transformation for elevation
-# lambda = -2
-# lmodel <- lm(mean.elev ~ time*thermokarst.presence,
-#              data = sub_karst_summary)
-# MASS::boxcox(lmodel, lambda = seq(-4, 2, 1/10))
-# check model residuals of model
-# model <- heavyLme(elev.transform ~ time + thermokarst.presence,
-#                   random = ~ time,
-#                   groups = ~ id.factor,
-#                   data = sub_karst_summary)
-# 
-# summary(model)
-# 
-# model.sqrt <- sqrt(abs(model$Resid$marginal))
-# 
-# # graph
-# par(mfrow=c(2,2), mar = c(4,4,3,2))
-# plot(model$Fitted$marginal, model$Resid$marginal, main='resid, model')
-# plot(model$Fitted$marginal, model.sqrt, main='sqrt resid, model')
-# qqnorm(model$Resid$marginal, main = 'model')
-# qqline(model$Resid$marginal)
-# par(mfrow=c(1,1))
-
-# the qq plot shows that there are a lot more extreme values than are expected in a normal distribution
-# I want to make sure that is not due to noise in the lidar data
-# extract ids with very large or small subsidence values and see if it is just one cell or many
-ids <- c(filter(sub_karst_summary, sub < -0.3 | sub > 0.3)$ID)
-test_outliers <- sub_karst %>%
-  filter(ID %in% ids & year > 2017) %>%
-  group_by(ID, year) %>%
-  summarise(max.sub = max(sub),
-            min.sub = min(sub),
-            mean.sub = mean(sub),
-            sd = sd(sub))
-
-hist(sub_karst$sub)
-
-ggplot(filter(sub_karst_summary, thermokarst.presence == 0), aes(x = year, y = elev.transform, color = thermokarst.presence)) +
-  geom_point(alpha = 0.25) +
-  geom_line(aes(group = ID), alpha = 0.25)
-
-ggplot(filter(sub_karst_summary, thermokarst.presence == 1), aes(x = year, y = elev.transform, color = thermokarst.presence)) +
-  geom_point(alpha = 0.25) +
-  geom_line(aes(group = ID), alpha = 0.25)
-
-ggplot(sub_karst_summary, aes(x = year, y = elev.transform, color = thermokarst.presence)) +
-  geom_point(alpha = 0.25) +
-  geom_line(aes(group = ID), alpha = 0.25)
 ########################################################################################################################
 
 
@@ -1405,23 +1153,23 @@ ggplot(sub_karst_summary, aes(x = year, y = elev.transform, color = thermokarst.
 ### Calculate Thermokarst Coverage #####################################################################################
 # calculate thermokarst for eml watershed
 # karst_eml <- crop(karst_1, as(eml_wtrshd, 'Spatial'))
-# writeRaster(karst_eml, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_karst.tif')
-karst_eml <- brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_karst.tif')
-# writeRaster(karst_eml[[1]], '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_karst_2017.tif')
-# writeRaster(karst_eml[[2]], '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_karst_2018.tif')
-# writeRaster(karst_eml[[3]], '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_karst_2019.tif')
-# karst_eml <- brick(stack('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_karst_2017.tif',
-#                          '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_karst_2018.tif',
-#                          '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_karst_2019.tif'))
+# writeRaster(karst_eml, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_karst.tif')
+karst_eml <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_karst.tif')
+# writeRaster(karst_eml[[1]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_karst_2017.tif')
+# writeRaster(karst_eml[[2]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_karst_2018.tif')
+# writeRaster(karst_eml[[3]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_karst_2019.tif')
+# karst_eml <- brick(stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_karst_2017.tif',
+#                          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_karst_2018.tif',
+#                          '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_karst_2019.tif'))
 # karst_eml_mean <- calc(karst_eml, function(x)ifelse(any(x == 1, na.rm = TRUE), 1, 0))
 # karst_eml_mean <- mask(karst_eml_mean, as(eml_wtrshd, 'Spatial'))
-# writeRaster(karst_eml_mean, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_mean_karst.tif')
-karst_eml_mean <- raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_wtshd_mean_karst.tif')
+# writeRaster(karst_eml_mean, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_mean_karst.tif')
+karst_eml_mean <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_wtshd_mean_karst.tif')
 karst_eml_mean_na <- karst_eml_mean
 karst_eml_mean_na[karst_eml_mean_na == 0] <- NA
 # karst_eml_mean_sp <- rasterToPolygons(karst_eml_mean_na)
 # writeOGR(karst_eml_mean_sp,
-#          dsn = '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/',
+#          dsn = '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/',
 #          layer = 'eml_wtshd_mean_karst.shp',
 #          driver = 'ESRI Shapefile')
 # 
@@ -1430,7 +1178,7 @@ karst_eml_df <- karst_eml_mean %>%
   rename(thermokarst = 3) %>%
   mutate(thermokarst = factor(thermokarst))
 
-ggplot(karst_eml_df, aes(x = x, y = y, fill = thermokarst)) +
+eml_karst_plot <- ggplot(karst_eml_df, aes(x = x, y = y, fill = thermokarst)) +
   geom_raster() +
   scale_x_continuous(name = 'Longitude (m)') +
   scale_y_continuous(name = 'Latitude (m)') +
@@ -1438,15 +1186,20 @@ ggplot(karst_eml_df, aes(x = x, y = y, fill = thermokarst)) +
   #                   values = c('#FFFFFF', '#000000'),
   #                   labels = c('Undisturbed', 'Thermokarst'),
   #                   na.value = 'transparent') +
-  scale_fill_viridis(labels = c('Undisturbed', 'Thermokarst'),
-                     begin = 0,
-                     end = 1,
+  scale_fill_viridis(labels = c('Non-Thermokarst', 'Thermokarst'),
+                     begin = 0.15,
+                     end = 0.95,
                      discrete = TRUE,
-                     direction = -1) +
+                     direction = -1,
+                     na.translate = FALSE) +
   coord_fixed() +
   theme_bw() +
   theme(legend.title = element_blank())
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/eml_thermokarst_map.jpg',
+eml_karst_plot
+# retrieve thermokarst color: #463480FF
+show_col(viridis_pal(begin = 0.15, end = 0.85)(2))
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/eml_thermokarst_map.jpg',
+#        eml_karst_plot,
 #        height = 10,
 #        width = 8)
  
@@ -1461,9 +1214,9 @@ ggplot(karst_eml_df, aes(x = x, y = y, fill = thermokarst)) +
 #   mutate(percent.thermokarst = thermokarst/(thermokarst + undisturbed))
 # 
 # write.csv(karst_eml_cover,
-#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_thermokarst_cover.csv',
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_thermokarst_cover.csv',
 #           row.names = FALSE)
-karst_eml_cover <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/eml_thermokarst_cover.csv')
+karst_eml_cover <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/eml_thermokarst_cover.csv')
 
 # Test whether resolution changes the observed thermokarst percent cover
 karst_eml_mean_3m <- aggregate(karst_eml_mean, fact = 3, fun = 'median')
@@ -1503,35 +1256,17 @@ ggplot(karst_eml_df_3m, aes(x = x, y = y, fill = thermokarst)) +
   coord_fixed() +
   theme_bw() +
   theme(legend.title = element_blank())
-
-### The rest of this section is not currently in use
-# # This section could be useful if I end up using neon data to get multiple years of subsidence
-# karst_eml_df <- karst_eml %>%
-#   as.data.frame(xy = TRUE) %>%
-#   rename(class.2017 = 3, class.2018 = 4, class.2019 = 5)
-# 
-# karst_eml_area <- karst_eml_df %>%
-#   filter(!is.na(class.2017)) %>%
-#   gather(key = 'year', value = 'thermokarst', 3:5) %>%
-#   mutate(year = as.numeric(str_sub(year, 7)),
-#          thermokarst = ifelse(thermokarst == 0,
-#                               'undisturbed',
-#                               ifelse(thermokarst == 1,
-#                                      'thermokarst',
-#                                      NA))) %>%
-#   group_by(year, thermokarst) %>%
-#   summarise(n = n())
 ########################################################################################################################
 
 
 ### EC Tower Analysis
 ### Create ALT Points Dataset ##########################################################################################
 ### Load Data
-ec_alt_2008 <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/alt/footprint08.csv')
-ec_alt_2017 <- read_excel('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/alt/ALT_Measurements_201708.xlsx')
-ec_alt_2019 <- read_excel('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/alt/ec_tower_alt_20190810.xlsx')
-points_2017 <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/alt/All_Points_2017_SPCSAK4.shp')
-points_2019 <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/alt/All_Points_2019_Aug_SPCSAK4.shp')
+ec_alt_2008 <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/alt/footprint08.csv')
+ec_alt_2017 <- read_excel('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/alt/ALT_Measurements_201708.xlsx')
+ec_alt_2019 <- read_excel('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/alt/ec_tower_alt_20190810.xlsx')
+points_2017 <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/alt/All_Points_2017_SPCSAK4.shp')
+points_2019 <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/alt/All_Points_2019_Aug_SPCSAK4.shp')
 
 ### Clean GPS points for joining
 points_2008_clean <- ec_alt_2008 %>%
@@ -1701,200 +1436,11 @@ rm(points_2008_clean, points_2017_clean, points_2019_clean, id_fix_2017, id_fix_
 #   mutate(n = seq(1:360))
 # 
 # st_write(wedges_sf, "Z:/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly_250.shp")
-wedges_sf <- st_read("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/wedges_poly_250.shp")
+wedges_sf <- st_read("/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/wedges_poly_250.shp")
 ggplot() +
   geom_sf(data = wedges_sf, aes(color = n)) +
   coord_sf(datum = st_crs(32606)) +
   geom_sf(data = alt_points)
-########################################################################################################################
-
-### Subsidence Distribution at EC Tower ################################################################################
-# Currently only using subsidence on the image-wide analysis, because neither GLiHT or NEON
-# appears to be accurate enough in any given cell, so I have to rely on averages of many
-# cells to trust the results
-# ### Crop and mask GLiHT subsidence dataset to speed up following code
-# # This dataset does not cover the entire ec tower footprint
-# ec_sub_buffer <- crop(sub,
-#                       extend(extent(wedges_sf), c(3)))
-# ec_sub <- mask(crop(ec_sub_buffer,
-#                     as(wedges_sf, 'Spatial')),
-#                as(wedges_sf, 'Spatial'))
-# plot(ec_sub)
-# ec_sub_mean <- mask(crop(focal(ec_sub_buffer,
-#                                w = matrix(c(1,1,1, 1,1,1, 1,1,1),
-#                                           nrow = 3),
-#                                fun = mean),
-#                          as(wedges_sf, 'Spatial')),
-#                     as(wedges_sf, 'Spatial'))
-# ggplot(as.data.frame(ec_sub_mean, xy = TRUE), aes(x = x, y = y)) +
-#   geom_tile(aes(fill = layer)) +
-#   geom_sf(data = alt_points, aes(geometry = geometry), inherit.aes = FALSE) + 
-#   coord_sf(datum = st_crs(32606)) +
-#   scale_fill_viridis()
-# 
-# # ### This section doesn't work very well (relationship between gliht and neon sub is bad at tower...!)
-# # # I am going to try gap-filling the GLiHT subsidence with a relationship to the NEON elevation or subsidence
-# # # first, calculate mean NEON elevation dataset and crop/mask to ec tower
-# # gps_offset <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/lidar_subsidence/gliht_neon_offset.csv')
-# # ec_neon_elev <- mask(crop(elev,
-# #                           as(wedges_sf, 'Spatial')),
-# #                      as(wedges_sf, 'Spatial')) + gps_offset[2:4, 4]
-# # 
-# # ec_neon_sub <- calc(brick(ec_neon_elev[[2]] - ec_neon_elev[[1]],
-# #                           ec_neon_elev[[3]] - ec_neon_elev[[1]]),
-# #                     mean,
-# #                     na.rm = TRUE)
-# # 
-# # ec_neon_elev_mean <- calc(crop(ec_neon_elev, as(wedges_sf, 'Spatial')),
-# #                           fun = mean,
-# #                           na.rm = TRUE)
-# # plot(ec_neon_elev)
-# # 
-# # ec_neon_slope <- mask(crop(terrain(calc(crop(elev,
-# #                                              extend(extent(wedges_sf), c(3))),
-# #                                         fun = mean,
-# #                                         na.rm = TRUE),
-# #                                    opt = 'slope'),
-# #                            as(wedges_sf, 'Spatial')),
-# #                       as(wedges_sf, 'Spatial'))
-# # plot(ec_neon_slope)
-# # 
-# # ec_neon_aspect <- mask(crop(terrain(calc(crop(elev,
-# #                                              extend(extent(wedges_sf), c(3))),
-# #                                         fun = mean,
-# #                                         na.rm = TRUE),
-# #                                    opt = 'aspect'),
-# #                            as(wedges_sf, 'Spatial')),
-# #                       as(wedges_sf, 'Spatial'))
-# # plot(ec_neon_aspect)
-# # 
-# # ec_mtopo15 <- mask(calc(crop(mtopo_brick, as(wedges_sf, 'Spatial')),
-# #                         fun = mean,
-# #                         na.rm = TRUE),
-# #                    as(wedges_sf, 'Spatial'))
-# # plot(ec_mtopo15)
-# # 
-# # ec_terrain_brick <- brick(ec_sub,
-# #                           ec_neon_sub,
-# #                           ec_neon_elev_mean,
-# #                           ec_neon_slope,
-# #                           ec_neon_aspect,
-# #                           ec_mtopo15)
-# # plot(ec_terrain_brick)
-# # ec_terrain_df <- as.data.frame(ec_terrain_brick,
-# #                                xy = TRUE) %>%
-# #   as.data.frame() %>%
-# #   rename(gliht_sub = 3,
-# #          neon_sub = 4,
-# #          neon_elev = 5,
-# #          neon_slope = 6,
-# #          neon_aspect = 7,
-# #          neon_mtopo15 = 8) %>%
-# #   mutate(mask = ifelse(is.nan(neon_slope),
-# #                        1,
-# #                        0),
-# #          neon_slope = ifelse(is.nan(neon_slope),
-# #                              NA,
-# #                              neon_slope))
-# # 
-# # ec_terrain_df %>%
-# #   select(3:8) %>%
-# #   GGally::ggpairs(upper = list(continuous = 'points'), lower = list(continuous = 'cor'))
-# # 
-# # # ggplot(filter(ec_terrain_df, !is.na(gliht_sub)),
-# # #        aes(x = neon_sub, y = gliht_sub)) +
-# # #   geom_point(alpha = 0.2) +
-# # #   geom_smooth(method = 'lm')
-# # # 
-# # # ggplot(filter(ec_terrain_df, !is.na(gliht_sub)),
-# # #        aes(x = neon_elev, y = gliht_sub)) +
-# # #   geom_point(alpha = 0.2) +
-# # #   geom_smooth(method = 'lm')
-# # # 
-# # # ggplot(filter(ec_terrain_df, !is.na(gliht_sub)),
-# # #        aes(x = neon_slope, y = gliht_sub)) +
-# # #   geom_point(alpha = 0.2) +
-# # #   geom_smooth(method = 'lm')
-# # # 
-# # # ggplot(filter(ec_terrain_df, !is.na(gliht_sub)),
-# # #        aes(x = neon_aspect, y = gliht_sub)) +
-# # #   geom_point(alpha = 0.2) +
-# # #   geom_smooth(method = 'lm')
-# # # 
-# # # ggplot(filter(ec_terrain_df, !is.na(gliht_sub)),
-# # #        aes(x = neon_mtopo15, y = gliht_sub)) +
-# # #   geom_point(alpha = 0.2) +
-# # #   geom_smooth(method = 'lm')
-# # 
-# # sub.model <- lm(gliht_sub ~ neon_sub*neon_slope*neon_aspect*neon_mtopo15,
-# #                 data = filter(ec_terrain_df, mask == 0 & !is.na(gliht_sub)))
-# # sub.model <- lm(gliht_sub ~ neon_sub*neon_elev +
-# #                   neon_sub*neon_slope +
-# #                   neon_sub*neon_aspect +
-# #                   neon_sub*neon_mtopo15,
-# #                 data = filter(ec_terrain_df, mask == 0 & !is.na(gliht_sub)))
-# # summary(sub.model)
-# # 
-# # ec_terrain_df <- ec_terrain_df %>%
-# #   mutate(sub_fill = ifelse(mask == 0,
-# #                            predict(sub.model, newdata = .),
-# #                            NA))
-# # 
-# # ggplot(filter(ec_terrain_df, !is.na(gliht_sub)),
-# #        aes(x = gliht_sub, y = sub_fill)) +
-# #   geom_point(alpha = 0.2) +
-# #   geom_smooth(method = 'lm')
-# # 
-# # gapfill.fit <- lm(sub_fill ~ gliht_sub, data = ec_terrain_df)
-# # summary(gapfill.fit)
-# 
-# ### Extract sub at alt points
-# sub_points_extract <- raster::extract(ec_sub_mean, as(alt_points, 'Spatial'),
-#                                       cellnumbers = TRUE,
-#                                       df = TRUE) %>%
-#   as.data.frame()
-# 
-# ### Extract sub in ec tower slices
-# # sub_slice_extract <- raster::extract(sub, as(wedges_sf, 'Spatial'),
-# #                                   cellnumbers = TRUE,
-# #                                   df = TRUE) %>%
-# #   as.data.frame()
-# # 
-# # sub_slice_sf <- sub_slice_extract %>%
-# #   rename(n = ID, sub = 3) %>%
-# #   group_by(n) %>%
-# #   summarise(mean.sub = mean(sub)) %>%
-# #   full_join(wedges_sf, by = c('n'))
-# # st_write(sub_slice_sf, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/tower_sub_extract_na.shp')
-# sub_slice_sf <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/tower_sub_extract_na.shp') %>%
-#   rename(mean.sub = 2)
-# 
-# ggplot() + 
-#   geom_sf(data = sub_slice_sf,
-#           aes(geometry = geometry,
-#               color = mean.sub,
-#               fill = mean.sub)) + 
-#   coord_sf(datum = st_crs(32606)) +
-#   scale_color_viridis() +
-#   scale_fill_viridis()
-# 
-# # ggplot() + 
-# #   geom_sf(data = sub_ec_sf,
-# #           aes(geometry = geometry,
-# #               color = mean.sub.2018,
-# #               fill = mean.sub.2018)) + 
-# #   coord_sf(datum = st_crs(32606)) +
-# #   scale_color_viridis(limits = c(-0.05, 0.15)) +
-# #   scale_fill_viridis(limits = c(-0.05, 0.15))
-# # 
-# # ggplot() + 
-# #   geom_sf(data = sub_ec_sf,
-# #           aes(geometry = geometry,
-# #               color = mean.sub.2019,
-# #               fill = mean.sub.2019)) + 
-# #   coord_sf(datum = st_crs(32606)) +
-# #   scale_color_viridis(limits = c(-0.05, 0.15)) +
-# #   scale_fill_viridis(limits = c(-0.05, 0.15))
 ########################################################################################################################
 
 ### Thermokarst Distribution at EC Tower ###############################################################################
@@ -1923,23 +1469,23 @@ rm(karst_points_extract_2017, karst_points_extract_2019)
 #                                     df = TRUE) %>%
 #   as.data.frame()
 # write.csv(karst_ec_extract,
-#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/ec_karst_extract.csv',
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ec_karst_extract.csv',
 #           row.names = FALSE)
 # 
 # karst_ec_percent <- karst_ec_extract %>%
 #   group_by(ID) %>%
 #   summarise(percent.thermokarst = sum(eml_wtshd_mean_karst/n()))
 # write.csv(karst_ec_percent,
-#           '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/ec_karst_extract_percent.csv',
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ec_karst_extract_percent.csv',
 #           row.names = FALSE)
-# karst_ec_extract_sum <- read.csv('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/ec_karst_extract_percent.csv')
+# karst_ec_extract_sum <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ec_karst_extract_percent.csv')
 # 
 # karst_ec_sf <- karst_ec_extract_sum %>%
 #   rename(n = ID) %>%
 #   full_join(wedges_sf, by = c('n')) %>%
 #   st_as_sf()
-# st_write(karst_ec_sf, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/ec_karst_extract_percent.shp')
-karst_ec_sf <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/ec_karst_extract_percent.shp') %>%
+# st_write(karst_ec_sf, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ec_karst_extract_percent.shp')
+karst_ec_sf <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ec_karst_extract_percent.shp') %>%
   rename(n = 1, percent.thermokarst = 2, geometry = 3)
 
 ggplot() +
@@ -1964,7 +1510,7 @@ ggplot() +
 #             karst.2019 = sum(karst.2019)/n()) %>%
 #   pivot_longer(cols = karst.2017:karst.2019, names_to = 'year', values_to = 'karst.percent') %>%
 #   mutate(year = as.numeric(str_sub(year, 7)))
-# # write.csv(tower_extract_neat, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/tower_karst_extract.csv')
+# # write.csv(tower_extract_neat, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/tower_karst_extract.csv')
 
 # tower_karst_sf <- tower_extract %>%
 #   rename(n = ID, karst.2017 = 3, karst.2018 = 4, karst.2019 = 5) %>%
@@ -1973,8 +1519,8 @@ ggplot() +
 #             karst.percent.2018 = sum(karst.2018)/n(),
 #             karst.percent.2019 = sum(karst.2019)/n()) %>%
 #   full_join(wedges_sf, by = c('n'))
-# st_write(tower_karst_sf, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/tower_karst_extract.shp')
-# tower_karst_sf <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/tower_karst_extract.shp') %>%
+# st_write(tower_karst_sf, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/tower_karst_extract.shp')
+# tower_karst_sf <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/tower_karst_extract.shp') %>%
 #   rename(karst.percent.2017 = 2, karst.percent.2018 = 3, karst.percent.2019 = 4)
 
 # ggplot(tower_extract_neat, aes(x = year, y = karst.percent, color = ID, group = ID)) +
@@ -2027,9 +1573,7 @@ mtopo_08 <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS foot
 mtopo_08_df <- as.data.frame(mtopo_08, xy = TRUE) %>%
   rename(mtopo = 3)
 
-# # test my theory of how Fay made microtopography map
-# # looks like I got it right!
-# # She started with ok_raster (1.45 m), subtracted min elevation to get scale_zero1 (1.45 m),
+# # Fay started with ok_raster (1.45 m), subtracted min elevation to get scale_zero1 (1.45 m),
 # # aggregated the scaled raster to sz_30 (30 m), resampled to sz_30_1_raster or sz_30_1 (1.45 m),
 # # and subtracted sz_30_1_raster from scale_zero1 to get DE_raster (microtopography, 1.45 m)
 # scale_zero1 <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Fay/GIS footprint/GIS footprint/Dev_ele/scale_zero1.img')
@@ -2051,20 +1595,7 @@ ec_elev_buf <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif
               crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), extend(extent(wedges_sf), c(25, 25, 25, 25))),
               crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), extend(extent(wedges_sf), c(25, 25, 25, 25))))
 
-# # Fay didn't use a moving window, but rather subtracted the elevation from a
-# # 30 m aggregated elevation raster
-# weights <- focalWeight(ec_elev[[1]], 15, type = 'rectangle')
-# 
-# ec_mean <- list()
-# ec_mtopo_mean <- list()
-# for (i in 1:3) {
-#   
-#   ec_mean[[i]] <- focal(ec_elev_buf[[i]], weights)
-#   ec_mean[[i]] <- mask(crop(ec_mean[[i]], wedges_sf), wedges_sf)
-#   ec_mtopo_mean[[i]] <- ec_elev[[i]] - ec_mean[[i]]
-# }
-
-# # redo following Fay's methods
+# calculate microtopography following Fay's methods
 ec_mean <- list()
 ec_mtopo_mean <- list()
 for (i in 1:3) {
@@ -2189,10 +1720,10 @@ ggplot(mtopo_ec_df, aes(x = x, y = y, fill = mtopo15)) +
   theme_bw() +
   coord_fixed() +
   theme(axis.title = element_blank())
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/microtopgraphy_map.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopgraphy_map.jpg',
 #        height = 4,
 #        width = 6)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/microtopgraphy_map.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopgraphy_map.pdf',
 #        height = 4,
 #        width = 6)
 
@@ -2217,7 +1748,8 @@ mtopo_points_extract <- rbind(mtopo_points_extract_2017, mtopo_points_extract_20
   rename(mtopo_15 = layer)
 rm(mtopo_points_extract_2017, mtopo_points_extract_2019)
 
-# # Extract mtopo at ec tower slices
+
+# # Extract microtopography at ec tower slices (using my methods for microtopography)
 # mtopo_extract <- raster::extract(mtopo_brick, as(wedges_sf, 'Spatial'), layer = 1, nl = 3, cellnumbers = TRUE, df = TRUE) %>%
 #   as.data.frame()
 # mtopo_extract_neat <- mtopo_extract %>%
@@ -2238,8 +1770,8 @@ rm(mtopo_points_extract_2017, mtopo_points_extract_2019)
 #             mtopo15.sd.2018 = sd(mtopo15.2018),
 #             mtopo15.sd.2019 = sd(mtopo15.2019)) %>%
 #   full_join(wedges_sf, by = c('n'))
-# st_write(mtopo_sf, '/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/tower_mtopo15_extract.shp')
-mtopo_sf <- st_read('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/analysis/tower_mtopo15_extract.shp') %>%
+# st_write(mtopo_sf, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/tower_mtopo15_extract.shp')
+mtopo_sf <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/tower_mtopo15_extract.shp') %>%
   rename(mtopo15.sd.2017 = 2, mtopo15.sd.2018 = 3, mtopo15.sd.2019 = 4)
 
 mtopo_ec_sf <- mtopo_sf %>%
@@ -2321,131 +1853,16 @@ ggplot(mtopo_alt, aes(x = mtopo15, y = alt, color = factor(year), group = year))
   scale_x_continuous(name = 'Microtopography (m)') +
   scale_y_continuous(name = 'Active Layer Thickness (cm)') +
   theme_bw()
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/mtopo_alt_plot_v2.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/mtopo_alt_plot_v2.jpg',
 #        height = 4,
 #        width = 6)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/mtopo_alt_plot_v2.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/mtopo_alt_plot_v2.pdf',
 #        height = 4,
 #        width = 6)
 ########################################################################################################################
 
-### ALT Thermokarst Microtopography Analysis ###########################################################################
-### Calculate Thaw Penetratration in each ec tower footprint cell
-# Start by adjusting ALT to estimate end of August values
-gradient_td <- read_excel("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/alt/ThawDepthGradient2019_SiteID.xlsx",
-                          sheet = 1)
-
-gradient_td_clean <- gradient_td %>%
-  filter((year == 2008 | year == 2017 | year == 2019) & doy >= 214) %>%
-  mutate(date = parse_date_time(paste(year, month, day, sep = '-'),
-                                orders = c('Y!-m!*-d!')),
-         td = td*-1) %>%
-  group_by(year, site, date, doy) %>%
-  summarise(td = mean(td, na.rm = TRUE)) %>%
-  mutate(doy.norm = doy - 214,
-         year.factor = factor(year))
-
-ggplot(gradient_td_clean, aes(x = doy.norm, y = td, color = year, group = year)) +
-  geom_point() +
-  geom_smooth(method = 'lm')
-
-ggplot(gradient_td_clean, aes(x = doy.norm, y = td, color = year, group = year)) +
-  geom_point() +
-  geom_smooth(method = 'lm') +
-  facet_grid(.~site)
-
-# ggplot(gradient_td_clean, aes(x = doy, y = td, color = year, group = year)) +
-#   geom_point() +
-#   scale_x_continuous(limits = c(214, 274),
-#                      breaks = c(214, 245),
-#                      labels = c('Aug', 'Sept')) +
-#   geom_smooth(method = 'lm')
-# 
-# ggplot(gradient_td_clean, aes(x = doy, y = td*-1, color = year)) +
-#   geom_point() +
-#   scale_x_continuous(breaks = c(122, 153, 183, 214, 245),
-#                      labels = c('May', 'Jun', 'Jul', 'Aug', 'Sept'))
-
-td.model <- lm(td ~ doy.norm*year.factor, data = gradient_td_clean)
-summary(td.model)
-td.slopes <- data.frame(year = c(2008, 2017, 2019),
-                        td.slope = c(td.model$coefficients[2],
-                                  td.model$coefficients[2] + td.model$coefficients[5],
-                                  td.model$coefficients[2] + td.model$coefficients[6]))
-
-ec_alt_sf <- ec_alt_sf %>%
-  filter(!is.na(year)) %>%
-  left_join(td.slopes, by = c('year')) %>%
-  mutate(days.to.eos = 243 - doy, # eos = end of season
-         alt.eos = alt*-1 + days.to.eos*td.slope)
-
-### Test modeling ALT with roughness and thermokarst in order to gap fill
-# Join ALT, mtopo, and thermokarst points
-ec_point_data <- ec_alt_sf %>%
-  full_join(select(karst_points_extract, ID, year, eml_wtshd_mean_karst), by = c('ID', 'year')) %>%
-  full_join(select(mtopo_points_extract, ID, year, mtopo_15), by = c('ID', 'year')) %>%
-  rename(karst = eml_wtshd_mean_karst)
-
-ggplot(filter(ec_point_data, !is.na(karst)), aes(x = mtopo_15, y = alt.eos, color = karst)) +
-  geom_point() +
-  facet_grid(.~karst) +
-  geom_smooth(method = 'lm')
-# Looks like gap filling ALT doesn't make any sense
-
-### Join thermokarst and roughness to model carbon fluxes
-ec_footprint_data <- st_as_sf(karst_ec_sf) %>%
-  full_join(select(mtopo_ec_sf, -geometry), by = 'n')
-
-
-# Join mtopo with tp
-ec_all <- ec_tp_sf %>%
-  full_join(ec_mtopo_extract, by = c('point', 'year')) %>%
-  st_as_sf() %>%
-  mutate(gliht.sub.14.18 = gliht_sub_14_18*100) %>%
-  select(time, year, doy, days.to.eos, point, mtopo15 = mtopo, mtopo15.sd, alt, alt.corrected,
-         gliht.sub.14.18, sub.rate, total.sub, tp)
-
-# plot relationship between spatial variables and tp
-ggplot(filter(ec_all, year > 2008), aes(x = mtopo15, y = tp, color = year)) +
-  geom_point()
-
-ggplot(filter(ec_all, year > 2008), aes(x = mtopo15.sd, y = tp, color = year)) +
-  geom_point() +
-  geom_smooth(method = 'lm')
-
-ggplot(filter(ec_all, year > 2008), aes(x = total.sub, y = tp, color = year)) +
-  geom_point()
-
-ggplot(filter(ec_all, year > 2008), aes(x = total.sub, y = alt.corrected, color = year)) +
-  geom_point()
-
-ggplot(filter(ec_all, year > 2008), aes(x = alt.corrected, y = tp, color = year)) +
-  geom_point()
-
-ggplot(filter(ec_all, year > 2008), aes(x = mtopo, y = total.sub, color = year)) +
-  geom_point()
-
-tp.model <- lm(tp ~ total.sub, data = filter(ec_all, year > 2008))
-summary(tp.model)
-tp.model.int <- tp.model$coefficients[1]
-tp.model.slope <- tp.model$coefficients[2]
-
-### Model TP in all cells within ec tower using relationship with subsidence
-sub_tp_ec <- sub_ec_df %>%
-  mutate(sub.rate = gliht_sub_14_18*100/4,
-         sub.2008 = 0,
-         sub.2017 = sub.rate*9,
-         sub.2019 = sub.rate*11) %>%
-  pivot_longer(sub.2008:sub.2019, names_to = 'year', values_to = 'sub') %>%
-  mutate(year = as.numeric(str_sub(year, 5, 8)),
-         tp.fill = tp.model.int + tp.model.slope*sub) %>%
-  st_as_sf(coords = c('x', 'y'))
-
-# need to join measured tp with modeled by cell and year,
-# but not sure how to do this
-
-
-### microtopography by thermokarst
+### Thermokarst Microtopography Analysis ###############################################################################
+### Join microtopography and thermokarst
 karst_mtopo_sf <- karst_ec_sf %>%
   st_drop_geometry() %>%
   full_join(mtopo_ec_sf, 
@@ -2516,11 +1933,11 @@ karst_mtopo <- grid.arrange(ec_karst_plot,
                             ec_karst_mtopo_cont,
                             layout_matrix = rbind(c(1, 2),
                                                   c(3, 3)))
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/thermokarst_roughness.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_roughness.jpg',
 #        karst_mtopo,
 #        height = 8,
 #        width = 10)
-# ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/figures/thermokarst_roughness.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_roughness.pdf',
 #        karst_mtopo,
 #        height = 8,
 #        width = 10)
@@ -2534,15 +1951,15 @@ karst_mtopo <- grid.arrange(ec_karst_plot,
 ### CO2 Analysis
 ### Prep Data ##########################################################################################################
 # use data that we have processed and filtered as we want rather than as Ameriflux wants
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
 
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
 carbon.17 <- export
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
 carbon.18 <- export
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
 carbon.19 <- export
 rm(export)
 
@@ -2663,6 +2080,14 @@ co2.ngs.night <- co2.model.data[group != 'GS Day' & filled == 0]
 ########################################################################################################################
 
 ### Model C Fluxes with Thermokarst ####################################################################################
+# # Can use this code when I resume work on carbon flux modeling
+# # The errors are REALLY not normal...
+# shapiro.test(sample(model.resid, size = 5000))
+# 
+# # However, that should not impact the model itself, only the determination of statistical significance
+# # of parameters via p-values. Can use bootstrapping instead (which is what we normally do anyway).
+# # See: https://data.library.virginia.edu/normality-assumption/
+
 ### NEE
 # NGS/Night
 nee.karst.plot.ngs <- ggplot(co2.ngs.night,
@@ -3873,14 +3298,14 @@ effect.size.plot.gs
 
 ### CH4 Analysis #######################################################################################################
 # load data from our files to get most recent years
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2015-2016/AK15_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2015-2016/AK15_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2016-2017/AK16_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
 Tower18.19[, u_var := NULL]
 Tower18.19[, v_var := NULL]
 Tower18.19[, w_var := NULL]
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
 ch4.flux <- rbind(Tower15.16, Tower16.17, Tower17.18, Tower18.19, Tower19.20)
 ch4.flux[, 46 := NULL]
 ch4.flux[, year := year(ts)]
@@ -4017,16 +3442,16 @@ ch4.flux[, week := week(ts)]
 # #        width = 15)
 
 # load GPP in order to classify groups same as co2
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2016-2017/AK16_Carbon_new_30Apr2019.Rdata')
 carbon.16 <- export
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
 carbon.17 <- export
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
 carbon.18 <- export
 carbon.18[, u_var := NULL]
 carbon.18[, v_var := NULL]
 carbon.18[, w_var := NULL]
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
+load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
 carbon.19 <- export
 rm(export)
 
