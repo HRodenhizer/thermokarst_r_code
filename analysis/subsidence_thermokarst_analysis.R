@@ -2081,11 +2081,10 @@ co2.ngs.night <- co2.model.data[group != 'GS Day' & filled == 0]
 
 ### Model C Fluxes with Thermokarst ####################################################################################
 # # Can use this code when I resume work on carbon flux modeling
-# # The errors are REALLY not normal...
 # shapiro.test(sample(model.resid, size = 5000))
 # 
 # # However, that should not impact the model itself, only the determination of statistical significance
-# # of parameters via p-values. Can use bootstrapping instead (which is what we normally do anyway).
+# # of parameters via p-values. Can use bootstrapping instead (which is what we normally do for mixed effects models anyway).
 # # See: https://data.library.virginia.edu/normality-assumption/
 
 ### NEE
@@ -2146,6 +2145,7 @@ nee.karst.model.ngs.fitted <- fitted(nee.karst.model.ngs)
 nee.karst.model.ngs.sqrt <- sqrt(abs(resid(nee.karst.model.ngs)))
 
 # graph
+hist(nee.karst.model.ngs$residuals)
 par(mfrow=c(2,2), mar = c(4,4,3,2))
 plot(nee.karst.model.ngs.fitted, nee.karst.model.ngs.resid, main='resid, nee.karst.model.ngs')
 plot(nee.karst.model.ngs.fitted, nee.karst.model.ngs.sqrt, main='sqrt resid, nee.karst.model.ngs')
@@ -2250,6 +2250,7 @@ nee.karst.model.gs.fitted <- fitted(nee.karst.model.gs)
 nee.karst.model.gs.sqrt <- sqrt(abs(resid(nee.karst.model.gs)))
 
 # graph
+hist(nee.karst.model.gs$residuals)
 par(mfrow=c(2,2), mar = c(4,4,3,2))
 plot(nee.karst.model.gs.fitted, nee.karst.model.gs.resid, main='resid, nee.karst.model.gs')
 plot(nee.karst.model.gs.fitted, nee.karst.model.gs.sqrt, main='sqrt resid, nee.karst.model.gs')
@@ -2357,6 +2358,7 @@ gpp.karst.model.gs.fitted <- fitted(gpp.karst.model.gs)
 gpp.karst.model.gs.sqrt <- sqrt(abs(resid(gpp.karst.model.gs)))
 
 # graph
+hist(gpp.karst.model.gs$residuals)
 par(mfrow=c(2,2), mar = c(4,4,3,2))
 plot(gpp.karst.model.gs.fitted, gpp.karst.model.gs.resid, main='resid, gpp.karst.model.gs')
 plot(gpp.karst.model.gs.fitted, gpp.karst.model.gs.sqrt, main='sqrt resid, gpp.karst.model.gs')
@@ -2458,6 +2460,7 @@ reco.karst.model.ngs.fitted <- fitted(reco.karst.model.ngs)
 reco.karst.model.ngs.sqrt <- sqrt(abs(resid(reco.karst.model.ngs)))
 
 # graph
+hist(reco.karst.model.ngs$residuals)
 par(mfrow=c(2,2), mar = c(4,4,3,2))
 plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.resid, main='resid, reco.karst.model.ngs')
 plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.sqrt, main='sqrt resid, reco.karst.model.ngs')
@@ -2562,6 +2565,7 @@ reco.karst.model.gs.fitted <- fitted(reco.karst.model.gs)
 reco.karst.model.gs.sqrt <- sqrt(abs(resid(reco.karst.model.gs)))
 
 # graph
+hist(reco.karst.model.gs$residuals)
 par(mfrow=c(2,2), mar = c(4,4,3,2))
 plot(reco.karst.model.gs.fitted, reco.karst.model.gs.resid, main='resid, reco.karst.model.gs')
 plot(reco.karst.model.gs.fitted, reco.karst.model.gs.sqrt, main='sqrt resid, reco.karst.model.gs')
@@ -3298,14 +3302,14 @@ effect.size.plot.gs
 
 ### CH4 Analysis #######################################################################################################
 # load data from our files to get most recent years
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2015-2016/AK15_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2016-2017/AK16_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2015-2016/AK15_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
 Tower18.19[, u_var := NULL]
 Tower18.19[, v_var := NULL]
 Tower18.19[, w_var := NULL]
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
 ch4.flux <- rbind(Tower15.16, Tower16.17, Tower17.18, Tower18.19, Tower19.20)
 ch4.flux[, 46 := NULL]
 ch4.flux[, year := year(ts)]
@@ -3317,7 +3321,7 @@ ch4.flux[, week := week(ts)]
 #   geom_point() +
 #   facet_wrap(~week, scales = 'free_x') +
 #   ggtitle('2016')
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/2016.jpg',
+# # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/thermokarst_project/figures/methane_data_check/2016.jpg',
 # #        height = 8,
 # #        width = 15)
 # 
@@ -3325,7 +3329,7 @@ ch4.flux[, week := week(ts)]
 #   geom_point() +
 #   facet_wrap(~week, scales = 'free_x') +
 #   ggtitle('2017')
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/2017.jpg',
+# # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/thermokarst_project/figures/methane_data_check/2017.jpg',
 # #        height = 8,
 # #        width = 15)
 # 
@@ -3333,7 +3337,7 @@ ch4.flux[, week := week(ts)]
 #   geom_point() +
 #   facet_wrap(~week, scales = 'free_x') +
 #   ggtitle('2018')
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/2018.jpg',
+# # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/thermokarst_project/figures/methane_data_check/2018.jpg',
 # #        height = 8,
 # #        width = 15)
 # 
@@ -3341,7 +3345,7 @@ ch4.flux[, week := week(ts)]
 #   geom_point() +
 #   facet_wrap(~week, scales = 'free_x') +
 #   ggtitle('2019')
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/2019.jpg',
+# # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/thermokarst_project/figures/methane_data_check/2019.jpg',
 # #        height = 8,
 # #        width = 15)
 # 
@@ -3349,7 +3353,7 @@ ch4.flux[, week := week(ts)]
 #        aes(x = ts, y = ch4_flux_filter)) +
 #   geom_point() +
 #   facet_wrap(~year, scales = 'free_x', ncol = 1)
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/May_transition.jpg',
+# # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/thermokarst_project/figures/methane_data_check/May_transition.jpg',
 # #        height = 8,
 # #        width = 15)
 # 
@@ -3392,7 +3396,7 @@ ch4.flux[, week := week(ts)]
 #                       nrow = 1,
 #                       widths = c(0.78, 0.78, 0.78, 0.78, 1))
 # combined
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/air_temp.jpg',
+# # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/thermokarst_project/figures/methane_data_check/air_temp.jpg',
 # #        combined,
 # #        height = 8,
 # #        width = 15)
@@ -3436,22 +3440,22 @@ ch4.flux[, week := week(ts)]
 #                       nrow = 1,
 #                       widths = c(0.78, 0.78, 0.78, 0.78, 1))
 # combined
-# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_data_check/wind_speed.jpg',
+# # ggsave('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/thermokarst_project/figures/methane_data_check/wind_speed.jpg',
 # #        combined,
 # #        height = 8,
 # #        width = 15)
 
 # load GPP in order to classify groups same as co2
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2016-2017/AK16_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_Carbon_new_30Apr2019.Rdata')
 carbon.16 <- export
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
 carbon.17 <- export
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
 carbon.18 <- export
 carbon.18[, u_var := NULL]
 carbon.18[, v_var := NULL]
 carbon.18[, w_var := NULL]
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
 carbon.19 <- export
 rm(export)
 
@@ -3795,9 +3799,9 @@ ggplot(filter(ch4.model.data, spike == 'non-spike'),
 
 # Mixed Effects Model
 # This allows the inclusion of wind speed as a random variable
-# Do I use the untransformed ch4 or the transformed ch4? The transformed one 
+# Do I use the untransformed ch4 or the transformed ch4?
 full.model <- lmer(ch4.flux.hh ~ percent.thermokarst.ffp*month.factor +
-                     (wind_speed_filter | month.factor),
+                     (wind_speed_filter | month.factor) + (mean.swc | month.factor) + (mean.ts.10 | month.factor),
                    data = filter(ch4.model.data, spike == 'non-spike'),
                    REML = FALSE)
 summary(full.model)
@@ -3811,19 +3815,23 @@ ll <- getME(full.model,"lower")
 min(tt[ll==0])
 
 lmerTest::step(full.model)
-ch4.model <- lmer(ch4.flux.hh ~ percent.thermokarst.ffp*month.factor +
-                    (wind_speed_filter | month.factor),
+ch4.lme <- lmer(ch4.flux.hh ~ percent.thermokarst.ffp*month.factor +
+                  (wind_speed_filter | month.factor) + (mean.swc | month.factor) + (mean.ts.10 | month.factor),
                   data = filter(ch4.model.data, spike == 'non-spike'))
-summary(ch4.model)
-plot(ch4.model)
+# saveRDS(ch4.lme,
+#         '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_lme_all_years.rds')
+ch4.lme <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_lme_all_years.rds')
+summary(ch4.lme)
+plot(ch4.lme)
 
 # check model residuals of model2
 # look at residuals
-ch4.model.resid <- resid(ch4.model)
-ch4.model.fitted <- fitted(ch4.model)
-ch4.model.sqrt <- sqrt(abs(resid(ch4.model)))
+ch4.model.resid <- resid(ch4.lme)
+ch4.model.fitted <- fitted(ch4.lme)
+ch4.model.sqrt <- sqrt(abs(resid(ch4.lme)))
 
 # graph
+hist(ch4.model.resid)
 par(mfrow=c(2,2), mar = c(4,4,3,2))
 plot(ch4.model.fitted, ch4.model.resid, main='resid, ch4.model')
 plot(ch4.model.fitted, ch4.model.sqrt, main='sqrt resid, ch4.model')
@@ -3831,7 +3839,7 @@ qqnorm(ch4.model.resid, main = 'ch4.model')
 qqline(ch4.model.resid)
 par(mfrow=c(1,1))
 
-ch4.ci <- extract_ci(ch4.model)
+ch4.ci <- extract_ci(ch4.lme)
 ch4.lme.table <- ch4.ci %>%
   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
@@ -3858,12 +3866,11 @@ ch4.lme.table <- ch4.ci %>%
          `Max CI` = Coefficient + total.radius) %>%
   ungroup() %>%
   mutate(Response = c('CH4', rep('', 23)),
-         `Full Model` = c('TK*Month + (WS|Month)', rep('', 23)),
-         R2m = c(round(r.squaredGLMM(ch4.model)[1], 3), rep('', 23)),
-         R2c = c(round(r.squaredGLMM(ch4.model)[2], 3), rep('', 23))) %>%
+         `Full Model` = c('TK*Month + (WS|Month) + (Soil Moisture|Month) + (Soil Temp|Month)', rep('', 23)),
+         R2m = c(round(r.squaredGLMM(ch4.lme)[1], 3), rep('', 23)),
+         R2c = c(round(r.squaredGLMM(ch4.lme)[2], 3), rep('', 23))) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2m, R2c)
-
-# write.csv(ch4.model.table.complex, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_all_years.csv',
+# write.csv(ch4.lme.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_lme_table_all_years.csv',
 #           row.names = FALSE)
 
 ch4.slopes <- slice(ch4.lme.table, 13:24) %>%
@@ -4223,7 +4230,7 @@ set.seed(10112020)
 # train.all <- sample(1:nrow(ch4.non.spike), 9750)
 # tree.all.data <- tree(ch4.flux.hh ~ ., data = ch4.non.spike, subset = train.all)
 # saveRDS(tree.all.data, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_no_spikes.rds')
-readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_no_spikes.rds')
+tree.all.data <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/methane_tree_no_spikes.rds')
 summary(tree.all.data)
 plot(tree.all.data)
 text(tree.all.data, pretty = 0)
