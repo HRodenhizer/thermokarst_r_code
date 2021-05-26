@@ -1951,15 +1951,15 @@ karst_mtopo <- grid.arrange(ec_karst_plot,
 ### CO2 Analysis
 ### Prep Data ##########################################################################################################
 # use data that we have processed and filtered as we want rather than as Ameriflux wants
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_CO2&CH4_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_CO2&CH4.Rdata')
 
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
 carbon.17 <- export
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
 carbon.18 <- export
-load('/home/heidi/Documents/School/NAU/Schuur Lab/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
 carbon.19 <- export
 rm(export)
 
@@ -1989,7 +1989,8 @@ co2.small <- co2 %>%
   mutate(filled = ifelse(is.na(co2_flux_filter),
                          1,
                          0)) %>%
-  select(ts, NEP, GEP, Reco, wind_speed_filter, wind_dir, tair, Ts_20_KT_Avg, PAR_filter, VPD, filled) %>%
+  select(ts, NEP, GEP, Reco, wind_speed_filter, wind_dir, tair, Ts_20_KT_Avg,
+         TS_1_1_1, TS_5_1_1, SWC_1_1_1, SWC_2_1_1, PAR_filter, VPD, filled) %>%
   mutate(GEP = -1*GEP,
          direction = ceiling(wind_dir),
          month = month(ts),
@@ -2006,10 +2007,25 @@ co2.small <- co2 %>%
                        ifelse(month < 5,
                               year(ts) - 1,
                               NA)),
-         month.factor = factor(month)) %>%
+         month.factor = factor(month),
+         mean.swc = ifelse(!is.na(SWC_1_1_1) & !is.na(SWC_2_1_1),
+                           (SWC_1_1_1 + SWC_2_1_1)/2,
+                           ifelse(!is.na(SWC_1_1_1),
+                                  SWC_1_1_1,
+                                  ifelse(!is.na(SWC_2_1_1),
+                                         SWC_2_1_1,
+                                         NA))),
+         mean.ts.10 = ifelse(!is.na(TS_1_1_1) & !is.na(TS_5_1_1),
+                             (TS_1_1_1 + TS_5_1_1)/2,
+                             ifelse(!is.na(TS_1_1_1),
+                                    TS_1_1_1,
+                                    ifelse(!is.na(TS_5_1_1),
+                                           TS_5_1_1,
+                                           NA)))) %>%
   filter(!is.na(wind_dir)) %>%
   select(ts, year, month, month.factor, doy, group, NEP, GEP, Reco, WS = wind_speed_filter,
-         WD = wind_dir, direction, tair, tsoil = Ts_20_KT_Avg, PAR = PAR_filter, VPD, filled)
+         WD = wind_dir, direction, tair, tsoil = Ts_20_KT_Avg, mean.ts.10, mean.swc,
+         PAR = PAR_filter, VPD, filled)
 
 # check that group assignment went as expected
 ggplot(co2.small, aes(x = ts, y = NEP, color = group)) +
@@ -3799,10 +3815,36 @@ ggplot(filter(ch4.model.data, spike == 'non-spike'),
 
 # Mixed Effects Model
 # This allows the inclusion of wind speed as a random variable
+# scale values before running model
+ch4.no.spike <- ch4.model.data %>%
+  filter(spike == 'non-spike') %>%
+  select(ch4.flux.hh, ch4.hyp.sine, month.factor, percent.thermokarst.ffp, wind_speed_filter, mean.swc, mean.ts.10) %>%
+  mutate(ch4.scale = scale(ch4.hyp.sine),
+         percent.thermokarst.scale = scale(percent.thermokarst.ffp),
+         wind.speed.scale = scale(wind_speed_filter),
+         mean.swc.scale = scale(mean.swc),
+         mean.ts.10.scale = scale(mean.ts.10))
+
+ch4.no.spike %>%
+  group_by(month.factor) %>%
+  summarise(span = max(percent.thermokarst.ffp, na.rm = TRUE) - min(percent.thermokarst.ffp, na.rm = TRUE)) %>%
+  ggplot(aes(x = span)) + geom_density()
+
+ggplot(ch4.no.spike, aes(x = ch4.flux.hh.scale)) +
+  geom_density() +
+  stat_function(fun = dnorm, color = 'red')
+ggplot(ch4.no.spike, aes(x = ch4.hyp.sine)) +
+  geom_density() +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(ch4.model.data$ch4.hyp.sine),
+                            sd = sd(ch4.model.data$ch4.hyp.sine)),
+                color = 'red')
+ggplot(ch4.no.spike, aes(x = month.factor)) +
+  geom_histogram(stat = 'count')
 # Do I use the untransformed ch4 or the transformed ch4?
-full.model <- lmer(ch4.flux.hh ~ percent.thermokarst.ffp*month.factor +
+full.model <- lmer(ch4.flux.hh ~ percent.thermokarst.scale +
                      (wind_speed_filter | month.factor) + (mean.swc | month.factor) + (mean.ts.10 | month.factor),
-                   data = filter(ch4.model.data, spike == 'non-spike'),
+                   data = ch4.no.spike,
                    REML = FALSE)
 summary(full.model)
 
@@ -3821,7 +3863,7 @@ ch4.lme <- lmer(ch4.flux.hh ~ percent.thermokarst.ffp*month.factor +
 # saveRDS(ch4.lme,
 #         '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_lme_all_years.rds')
 ch4.lme <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_lme_all_years.rds')
-summary(ch4.lme)
+summary(ch4.lme) # highly correlated intercepts and slopes is not good. Can try centering and scaling or transformations.
 plot(ch4.lme)
 
 # check model residuals of model2
@@ -3872,7 +3914,7 @@ ch4.lme.table <- ch4.ci %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2m, R2c)
 # write.csv(ch4.lme.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_lme_table_all_years.csv',
 #           row.names = FALSE)
-
+ch4.lme.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_lme_table_all_years.csv')
 ch4.slopes <- slice(ch4.lme.table, 13:24) %>%
   select(3:6) %>%
   mutate(month = seq(1:12))
