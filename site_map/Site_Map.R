@@ -159,11 +159,11 @@ tk.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_raster(data = thermokarst.df,
               aes(x = x, y = y, fill = tk),
               inherit.aes = FALSE) +
-  scale_fill_manual(values = c('black'),
+  scale_fill_manual(values = c('#463480FF'),
                     na.value = NA) +
-  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'gray') +
-  geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'gray') +
-  geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'gray') +
+  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
+  geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   coord_sf(datum = st_crs(ec_sf),
            expand = FALSE) +
   theme_bw() +
