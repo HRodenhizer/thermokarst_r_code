@@ -54,7 +54,7 @@ karst_1_poly <- map(filenames[which(str_detect(filenames, pattern = 'karst_combi
                     ~ st_read(.x))
 names(karst_1_poly) <- c(2017, 2018, 2019)
 
-filenames <- list.files('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/int_output',
+filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output',
                         full.names = TRUE,
                         pattern = 'mtopo.+9km')
 
@@ -1387,10 +1387,10 @@ rm(points_2008_clean, points_2017_clean, points_2019_clean, id_fix_2017, id_fix_
 ########################################################################################################################
 
 ### Create EC Tower Footprint Slices ###################################################################################
-# # point for ec tower location
-# ec <- st_sfc(st_point(c(389389.25, 7085586.3), dim = 'XY'), crs = 32606)
-# ec_sf <- st_sf(geometry = ec, crs = 32606)
-# 
+# point for ec tower location
+ec <- st_sfc(st_point(c(389389.25, 7085586.3), dim = 'XY'), crs = 32606)
+ec_sf <- st_sf(geometry = ec, crs = 32606)
+
 # # create a circle around the ec tower with radius = 200 m
 # circle <- st_buffer(ec, dist = 225)
 # circle_sf <- st_sf(geometry = circle)
@@ -1663,15 +1663,44 @@ change_plot
 #        height = 4,
 #        width = 6)
 
-ggplot(mtopo_change_df, aes(y = mtopo_change)) +
+# change boxplot
+mtopo.change.boxplot <- ggplot(mtopo_change_df, aes(y = mtopo_change)) +
   geom_boxplot() +
-  scale_y_continuous(name = expression(Delta ~ 'Microtopography')) +
+  scale_y_continuous(name = expression(Delta ~ 'Microtopography (m)')) +
   theme_bw() +
   theme(axis.text.x = element_blank())
+mtopo.change.boxplot
+mtopo.change.boxplot <- ggplotGrob(mtopo.change.boxplot)
+
+# summarize change in microtopography
+mtopo_change_summary <- mtopo_change_df %>%
+  filter(!is.na(mtopo_change)) %>%
+  summarize(mean_mtopo_change = mean(mtopo_change),
+            se_mtopo_change = sd(mtopo_change)/sqrt(n())) %>%
+  mutate(x = 0)
+
+mtopo.change.point <- ggplot(mtopo_change_summary, aes(x = x)) +
+  geom_point(aes(y = mean_mtopo_change)) +
+  geom_errorbar(aes(ymin = mean_mtopo_change - se_mtopo_change,
+                    ymax = mean_mtopo_change + se_mtopo_change),
+                width = 0.5) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") +
+  scale_y_continuous(name = expression(Delta ~ 'Microtopography (m)'),
+                     limits = c(-0.01, 0.02)) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks = element_blank())
+mtopo.change.point
+mtopo.change.point <- ggplotGrob(mtopo.change.point)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopography_change_08_19_boxplot.jpg',
+#        mtopo.change.boxplot,
 #        height = 4,
 #        width = 2)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopography_change_08_19_boxplot.pdf',
+#        mtopo.change.boxplot,
 #        height = 4,
 #        width = 2)
 summary(mtopo_change_df$mtopo_change)
@@ -1708,24 +1737,39 @@ mtopo_plot <- ggarrange(mtopo_08_plot,
 mtopo_plot
 
 # Plot microtopography at ec tower
-mtopo_ec <- mask(crop(mean_mtopo, as(wedges_sf, 'Spatial')), as(wedges_sf, 'Spatial'))
+mtopo_ec <- crop(mean_mtopo, extend(extent(as(circle_sf, 'Spatial')), 25))
 mtopo_ec_df <- mtopo_ec %>%
   as.data.frame(xy = TRUE) %>%
   rename(mtopo15 = 3)
 
-ggplot(mtopo_ec_df, aes(x = x, y = y, fill = mtopo15)) +
-  geom_raster() +
-  scale_fill_viridis(name = 'Microtopography',
+# Microtopography with change overlaid
+mtopo.change.plot <- ggplot(mtopo_ec_df, aes(x = x, y = y)) +
+  geom_raster(aes(fill = mtopo15)) +
+  scale_fill_viridis(name = 'Microtopography (m)',
                      na.value = 'transparent') +
+  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
+  geom_sf(data = circle_sf, inherit.aes = FALSE, color = "black", fill = NA) +
   theme_bw() +
-  coord_fixed() +
-  theme(axis.title = element_blank())
+  coord_sf(clip = "off",
+           datum = st_crs(circle_sf),
+           expand = FALSE) +
+  theme(axis.title = element_blank(),
+        legend.justification = 'top') +
+  annotation_custom(mtopo.change.boxplot,
+                    xmin = 389660,
+                    xmax = 389875,
+                    ymin = 7085350,
+                    ymax = 7085600)
+mtopo.change.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopgraphy_map.jpg',
+#        mtopo.change.plot,
 #        height = 4,
 #        width = 6)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopgraphy_map.pdf',
+#        mtopo.change.plot,
 #        height = 4,
 #        width = 6)
+
 
 ### Extract Thermokarst values at ALT points
 mtopo_points_extract_2017 <- raster::extract(mean_mtopo,
