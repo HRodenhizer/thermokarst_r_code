@@ -864,6 +864,17 @@ modelci<-merge(ci,modeldf,by="row.names",all.x=F)
 colnames(modelci)<-c("term","min","max","coefs")
 return (modelci)}
 
+extract_ci_lm <- function(x) {
+  coefs<-coef(x) 
+  modeldf<-as.data.frame(coefs)
+  #calculate confidence intervals; merge fixed effects and ci into one dataframe
+  ci <- confint(x,method="boot",boot.type="norm",level=0.95,nsim=1000)
+  modelci<-merge(ci,modeldf,by="row.names",all.x=F)
+  #rename colnames so that they make sense and remove symbols
+  colnames(modelci)<-c("term","min","max","coefs")
+  return (modelci)
+}
+
 # graph CI
 graph_ci <- function(ci,figtitle,model) {ggplot(ci,aes(x=names,y=coefs))+
     geom_errorbar(aes(ymin=min,ymax=max),width=0,size=1)+
@@ -2119,7 +2130,17 @@ co2.model.data <- co2.small %>%
   full_join(karst_roughness, by = 'ts') %>%
   rename(percent.thermokarst.ffp = karst.pc, mtopo15.sd.ffp = sd.mtopo) %>%
   as.data.table() %>%
-  mutate(GEP = -1*GEP) # make GPP negative so that source/sink sides of graphs will be consistent
+  mutate(GEP = -1*GEP, # make GPP negative so that source/sink sides of graphs will be consistent
+         direction.factor = case_when(
+           direction <= 23 | direction >= 338 ~ 'N',
+           direction >= 24 & direction <= 68 ~ 'NW',
+           direction >= 69 & direction <= 113 ~ 'W',
+           direction >= 114 & direction <= 157 ~ 'SW',
+           direction >= 158 & direction <= 202 ~ 'S',
+           direction >= 203 & direction <= 247 ~ 'SE',
+           direction >= 248 & direction <= 292 ~ 'E',
+           direction >= 293 & direction <= 337 ~ 'NE'
+         ))
 rm(co2.small)
 
 # arrange data in chronological order
@@ -2198,7 +2219,7 @@ nee.contrast <- emmeans(nee.karst.model.ngs, specs = pairwise~month.factor)
 nee.contrast
 shapiro.test(sample(rstandard(nee.karst.model.ngs), 5000))
 
-# check model residuals of model2
+# check model residuals of model
 # look at residuals
 nee.karst.model.ngs.resid <- resid(nee.karst.model.ngs)
 nee.karst.model.ngs.fitted <- fitted(nee.karst.model.ngs)
@@ -2211,30 +2232,30 @@ plot(nee.karst.model.ngs.fitted, nee.karst.model.ngs.resid, main='resid, nee.kar
 plot(nee.karst.model.ngs.fitted, nee.karst.model.ngs.sqrt, main='sqrt resid, nee.karst.model.ngs')
 qqnorm(nee.karst.model.ngs.resid, main = 'nee.karst.model.ngs')
 qqline(nee.karst.model.ngs.resid)
+plot(co2.ngs.night$direction, nee.karst.model.ngs.resid) # inspect whether there
+# is spatial autocorrelation in model residuals
 par(mfrow=c(1,1))
 
-# this is a gross way to summarize and make everything look nice - better options?
-nee.karst.model.ngs.table <- data.frame(variables = names(nee.karst.model.ngs[['coefficients']]),
-                                        coefficient = nee.karst.model.ngs[['coefficients']],
-                                        min.ci = as.numeric(confint(nee.karst.model.ngs)[,1]),
-                                        max.ci = as.numeric(confint(nee.karst.model.ngs)[,2]),
-                                        row.names = NULL) %>%
-  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+# # this is a gross way to summarize and make everything look nice - better options?
+nee.karst.model.ngs.ci <- extract_ci_lm(nee.karst.model.ngs)
+nee.karst.model.ngs.table <- nee.karst.model.ngs.ci %>%
+  mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
                                     paste(`Final Variables`, '(Intercept)'),
                                     `Final Variables`),
          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
-         radius = coefficient - min.ci,
+         radius = coefs - min,
          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
                                    'intercept',
-                                   'slope')) %>%
+                                   'slope'),
+         month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
   group_by(coefficient.type) %>%
-  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
-                              round(coefficient, 5),
-                              round(first(coefficient) + coefficient, 5)),
-         total.radius = ifelse(coefficient - first(coefficient) == 0,
+  mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+                              round(coefs, 5),
+                              round(first(coefs) + coefs, 5)),
+         total.radius = ifelse(coefs - first(coefs) == 0,
                                radius,
                                sqrt(radius^2 + first(radius)^2)),
          `Min CI` = Coefficient - total.radius,
@@ -2243,11 +2264,78 @@ nee.karst.model.ngs.table <- data.frame(variables = names(nee.karst.model.ngs[['
   mutate(Response = c('NEE', rep('', 23)),
          `Full Model` = c('TK*Group', rep('', 23)),
          R2 = c(round(summary(nee.karst.model.ngs)$r.squared, 3), rep('', 23))) %>%
-  arrange(coefficient.type) %>%
+  arrange(coefficient.type, month) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-
 # write.csv(nee.karst.model.ngs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_table_ngs.csv',
-#           row.names = FALSE)
+# row.names = FALSE)
+
+# # there is maybe a small amount of spatial autocorrelation, try lme with direction as random effect
+# # The model with a random effect for direction doesn't seem to improve residuals much
+# full.lme <- lmer(NEP ~ percent.thermokarst.ffp*month.factor +
+#                      (1|direction.factor),
+#                    data = co2.ngs.night,
+#                    REML = FALSE)
+# summary(full.lme)
+# lmerTest::step(full.lme)
+# nee.karst.lme.ngs <- lmer(NEP ~ percent.thermokarst.ffp*month.factor +
+#                      (1|direction.factor),
+#                    data = co2.ngs.night,
+#                    REML = TRUE,
+#                    control=lmerControl(check.conv.singular="warning"))
+# # saveRDS(nee.karst.lme.ngs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_ngs.rds')
+# nee.karst.lme.ngs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_ngs.rds')
+# summary(nee.karst.lme.ngs)
+# 
+# # check model residuals of model
+# # look at residuals
+# nee.karst.lme.ngs.resid <- resid(nee.karst.lme.ngs)
+# nee.karst.lme.ngs.fitted <- fitted(nee.karst.lme.ngs)
+# nee.karst.lme.ngs.sqrt <- sqrt(abs(resid(nee.karst.lme.ngs)))
+# 
+# # graph
+# hist(nee.karst.lme.ngs.resid)
+# par(mfrow=c(2,2), mar = c(4,4,3,2))
+# plot(nee.karst.lme.ngs.fitted, nee.karst.lme.ngs.resid, main='resid, nee.karst.lme.ngs')
+# plot(nee.karst.lme.ngs.fitted, nee.karst.lme.ngs.sqrt, main='sqrt resid, nee.karst.lme.ngs')
+# qqnorm(nee.karst.lme.ngs.resid, main = 'nee.karst.lme.ngs')
+# qqline(nee.karst.lme.ngs.resid)
+# plot(co2.ngs.night$direction,nee.karst.lme.ngs.resid) # inspect whether there
+# # is spatial autocorrelation in model residuals
+# par(mfrow=c(1,1))
+# 
+# # this is a gross way to summarize and make everything look nice - better options?
+# nee.karst.lme.ngs.ci <- extract_ci(nee.karst.lme.ngs)
+# nee.karst.lme.ngs.table <- nee.karst.lme.ngs.ci %>%
+#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
+#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
+#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
+#                                     paste(`Final Variables`, '(Intercept)'),
+#                                     `Final Variables`),
+#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
+#          radius = coefs - min,
+#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+#                                    'intercept',
+#                                    'slope'),
+#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
+#   group_by(coefficient.type) %>%
+#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+#                               round(coefs, 5),
+#                               round(first(coefs) + coefs, 5)),
+#          total.radius = ifelse(coefs - first(coefs) == 0,
+#                                radius,
+#                                sqrt(radius^2 + first(radius)^2)),
+#          `Min CI` = Coefficient - total.radius,
+#          `Max CI` = Coefficient + total.radius) %>%
+#   ungroup() %>%
+#   mutate(Response = c('NEE', rep('', 23)),
+#          `Full Model` = c('TK*Group', rep('', 23)),
+#          R2 = c(round(summary(nee.karst.model.ngs)$r.squared, 3), rep('', 23))) %>%
+#   arrange(coefficient.type, month) %>%
+#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+# 
+# # write.csv(nee.karst.lme.ngs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_table_ngs.csv',
+# #           row.names = FALSE)
 
 ### NEE
 # GS Day
@@ -2316,15 +2404,13 @@ plot(nee.karst.model.gs.fitted, nee.karst.model.gs.resid, main='resid, nee.karst
 plot(nee.karst.model.gs.fitted, nee.karst.model.gs.sqrt, main='sqrt resid, nee.karst.model.gs')
 qqnorm(nee.karst.model.gs.resid, main = 'nee.karst.model.gs')
 qqline(nee.karst.model.gs.resid)
+plot(co2.gs.day$direction, nee.karst.model.gs.resid)
 par(mfrow=c(1,1))
 
-# this is a gross way to summarize and make everything look nice - better options?
-nee.karst.model.gs.table <- data.frame(variables = names(nee.karst.model.gs[['coefficients']]),
-                                    coefficient = nee.karst.model.gs[['coefficients']],
-                                    min.ci = as.numeric(confint(nee.karst.model.gs)[,1]),
-                                    max.ci = as.numeric(confint(nee.karst.model.gs)[,2]),
-                                    row.names = NULL) %>%
-  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+# # this is a gross way to summarize and make everything look nice - better options?
+nee.karst.model.gs.ci <- extract_ci_lm(nee.karst.model.gs)
+nee.karst.model.gs.table <- nee.karst.model.gs.ci %>%
+  mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4'),
          `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
@@ -2332,15 +2418,16 @@ nee.karst.model.gs.table <- data.frame(variables = names(nee.karst.model.gs[['co
                                     paste(`Final Variables`, '(Intercept)'),
                                     `Final Variables`),
          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
-         radius = coefficient - min.ci,
+         radius = coefs - min,
          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
                                    'intercept',
-                                   'slope')) %>%
+                                   'slope'),
+         month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
   group_by(coefficient.type) %>%
-  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
-                              round(coefficient, 5),
-                              round(first(coefficient) + coefficient, 5)),
-         total.radius = ifelse(coefficient - first(coefficient) == 0,
+  mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+                              round(coefs, 5),
+                              round(first(coefs) + coefs, 5)),
+         total.radius = ifelse(coefs - first(coefs) == 0,
                                radius,
                                sqrt(radius^2 + first(radius)^2)),
          `Min CI` = Coefficient - total.radius,
@@ -2349,11 +2436,79 @@ nee.karst.model.gs.table <- data.frame(variables = names(nee.karst.model.gs[['co
   mutate(Response = c('NEE', rep('', 13)),
          `Full Model` = c('TK*Month', rep('', 13)),
          R2 = c(round(summary(nee.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
-  arrange(coefficient.type) %>%
+  arrange(coefficient.type, month) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-
 # write.csv(nee.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_table_gs.csv',
-#           row.names = FALSE)
+# row.names = FALSE)
+
+# # there is some spatial autocorrelation, try lme with direction as random effect
+# # The model with a random effect for direction doesn't seem to improve residuals much
+# full.lme <- lmer(NEP ~ percent.thermokarst.ffp*month.factor +
+#                      (1|direction.factor),
+#                    data = co2.gs.day,
+#                    REML = FALSE)
+# summary(full.lme)
+# lmerTest::step(full.lme)
+# nee.karst.lme.gs <- lmer(NEP ~ percent.thermokarst.ffp*month.factor +
+#                             (1|direction.factor),
+#                           data = co2.gs.day,
+#                           REML = TRUE,
+#                           control=lmerControl(check.conv.singular="warning"))
+# # saveRDS(nee.karst.lme.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_gs.rds')
+# nee.karst.lme.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_gs.rds')
+# summary(nee.karst.lme.gs)
+# 
+# # check model residuals of model
+# # look at residuals
+# nee.karst.lme.gs.resid <- resid(nee.karst.lme.gs)
+# nee.karst.lme.gs.fitted <- fitted(nee.karst.lme.gs)
+# nee.karst.lme.gs.sqrt <- sqrt(abs(resid(nee.karst.lme.gs)))
+# 
+# # graph
+# hist(nee.karst.lme.gs.resid)
+# par(mfrow=c(2,2), mar = c(4,4,3,2))
+# plot(nee.karst.lme.gs.fitted, nee.karst.lme.gs.resid, main='resid, nee.karst.lme.gs')
+# plot(nee.karst.lme.gs.fitted, nee.karst.lme.gs.sqrt, main='sqrt resid, nee.karst.lme.gs')
+# qqnorm(nee.karst.lme.gs.resid, main = 'nee.karst.lme.gs')
+# qqline(nee.karst.lme.gs.resid)
+# plot(co2.gs.day$direction, nee.karst.lme.gs.resid) # inspect whether there
+# # is spatial autocorrelation in model residuals
+# par(mfrow=c(1,1))
+# 
+# # this is a gross way to summarize and make everything look nice - better options?
+# nee.karst.lme.gs.ci <- extract_ci(nee.karst.lme.gs)
+# nee.karst.lme.gs.table <- nee.karst.lme.gs.ci %>%
+#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
+#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4'),
+#          `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
+#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]'),
+#                                     paste(`Final Variables`, '(Intercept)'),
+#                                     `Final Variables`),
+#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
+#          radius = coefs - min,
+#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+#                                    'intercept',
+#                                    'slope'),
+#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
+#   group_by(coefficient.type) %>%
+#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+#                               round(coefs, 5),
+#                               round(first(coefs) + coefs, 5)),
+#          total.radius = ifelse(coefs - first(coefs) == 0,
+#                                radius,
+#                                sqrt(radius^2 + first(radius)^2)),
+#          `Min CI` = Coefficient - total.radius,
+#          `Max CI` = Coefficient + total.radius) %>%
+#   ungroup() %>%
+#   mutate(Response = c('NEE', rep('', 13)),
+#          `Full Model` = c('TK*Month', rep('', 13)),
+#          R2 = c(round(summary(nee.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
+#   arrange(coefficient.type, month) %>%
+#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+# 
+# # write.csv(nee.karst.lme.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_table_gs.csv',
+# #           row.names = FALSE)
 
 
 # GPP
@@ -2424,31 +2579,29 @@ plot(gpp.karst.model.gs.fitted, gpp.karst.model.gs.resid, main='resid, gpp.karst
 plot(gpp.karst.model.gs.fitted, gpp.karst.model.gs.sqrt, main='sqrt resid, gpp.karst.model.gs')
 qqnorm(gpp.karst.model.gs.resid, main = 'gpp.karst.model.gs')
 qqline(gpp.karst.model.gs.resid)
+plot(co2.gs.day[GEP <= 0]$direction, gpp.karst.model.gs.resid)
 par(mfrow=c(1,1))
 
 # this is a gross way to summarize and make everything look nice - better options?
-gpp.karst.model.gs.table <- data.frame(variables = names(gpp.karst.model.gs[['coefficients']]),
-                              coefficient = gpp.karst.model.gs[['coefficients']],
-                              min.ci = as.numeric(confint(gpp.karst.model.gs)[,1]),
-                              max.ci = as.numeric(confint(gpp.karst.model.gs)[,2]),
-                              row.names = NULL) %>%
-  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+gpp.karst.model.gs.ci <- extract_ci_lm(gpp.karst.model.gs)
+gpp.karst.model.gs.table <- gpp.karst.model.gs.ci %>%
+  mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4 (Intercept)'),
          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'), 
                                     str_c(`Final Variables`, ' (Intercept)'),
                                     `Final Variables`),
          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
-         order = c(1, 8, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14),
-         radius = coefficient - min.ci,
+         radius = coefs - min,
          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
                                    'intercept',
-                                   'slope')) %>%
+                                   'slope'),
+         month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
   group_by(coefficient.type) %>%
-  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
-                              round(coefficient, 5),
-                              round(first(coefficient) + coefficient, 5)),
-         total.radius = ifelse(coefficient - first(coefficient) == 0,
+  mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+                              round(coefs, 5),
+                              round(first(coefs) + coefs, 5)),
+         total.radius = ifelse(coefs - first(coefs) == 0,
                                radius,
                                sqrt(radius^2 + first(radius)^2)),
          `Min CI` = Coefficient - total.radius,
@@ -2457,11 +2610,78 @@ gpp.karst.model.gs.table <- data.frame(variables = names(gpp.karst.model.gs[['co
   mutate(Response = c('GPP', rep('', 13)),
          `Full Model` = c('TK*Month', rep('', 13)),
          R2 = c(round(summary(gpp.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
-  arrange(order) %>%
+  arrange(coefficient.type, month) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-
 # write.csv(gpp.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_table_gs.csv',
-#           row.names = FALSE)
+# row.names = FALSE)
+
+# # there is some spatial autocorrelation, try lme with direction as random effect
+# # The model with a random effect for direction doesn't seem to improve residuals much
+# full.lme <- lmer(GEP ~ percent.thermokarst.ffp*month.factor +
+#                      (1|direction.factor),
+#                    data = co2.gs.day,
+#                    REML = FALSE)
+# summary(full.lme)
+# lmerTest::step(full.lme)
+# gpp.karst.lme.gs <- lmer(GEP ~ percent.thermokarst.ffp*month.factor +
+#                            (1|direction.factor),
+#                          data = co2.gs.day,
+#                          REML = TRUE,
+#                          control=lmerControl(check.conv.singular="warning"))
+# # saveRDS(gpp.karst.lme.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_lme_gs.rds')
+# gpp.karst.lme.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_lme_gs.rds')
+# summary(gpp.karst.lme.gs)
+# 
+# # check model residuals of model
+# # look at residuals
+# gpp.karst.lme.gs.resid <- resid(gpp.karst.lme.gs)
+# gpp.karst.lme.gs.fitted <- fitted(gpp.karst.lme.gs)
+# gpp.karst.lme.gs.sqrt <- sqrt(abs(resid(gpp.karst.lme.gs)))
+# 
+# # graph
+# hist(gpp.karst.lme.gs.resid)
+# par(mfrow=c(2,2), mar = c(4,4,3,2))
+# plot(gpp.karst.lme.gs.fitted, gpp.karst.lme.gs.resid, main='resid, gpp.karst.lme.gs')
+# plot(gpp.karst.lme.gs.fitted, gpp.karst.lme.gs.sqrt, main='sqrt resid, gpp.karst.lme.gs')
+# qqnorm(gpp.karst.lme.gs.resid, main = 'gpp.karst.lme.gs')
+# qqline(gpp.karst.lme.gs.resid)
+# plot(co2.gs.day$direction, gpp.karst.lme.gs.resid) # inspect whether there
+# # is spatial autocorrelation in lme residuals
+# par(mfrow=c(1,1))
+# 
+# # this is a gross way to summarize and make everything look nice - better options?
+# gpp.karst.lme.gs.ci <- extract_ci(gpp.karst.lme.gs)
+# gpp.karst.lme.gs.table <- gpp.karst.lme.gs.ci %>%
+#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
+#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4 (Intercept)'),
+#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'), 
+#                                     str_c(`Final Variables`, ' (Intercept)'),
+#                                     `Final Variables`),
+#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
+#          radius = coefs - min,
+#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+#                                    'intercept',
+#                                    'slope'),
+#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
+#   group_by(coefficient.type) %>%
+#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+#                               round(coefs, 5),
+#                               round(first(coefs) + coefs, 5)),
+#          total.radius = ifelse(coefs - first(coefs) == 0,
+#                                radius,
+#                                sqrt(radius^2 + first(radius)^2)),
+#          `Min CI` = Coefficient - total.radius,
+#          `Max CI` = Coefficient + total.radius) %>%
+#   ungroup() %>%
+#   mutate(Response = c('GPP', rep('', 13)),
+#          `Full Model` = c('TK*Month', rep('', 13)),
+#          R2 = c(round(summary(gpp.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
+#   arrange(coefficient.type, month) %>%
+#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+# 
+# # write.csv(gpp.karst.lme.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_lme_table_gs.csv',
+# #           row.names = FALSE)
 
 ### Reco
 # NGS/Night
@@ -2526,30 +2746,29 @@ plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.resid, main='resid, reco.
 plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.sqrt, main='sqrt resid, reco.karst.model.ngs')
 qqnorm(reco.karst.model.ngs.resid, main = 'reco.karst.model.ngs')
 qqline(reco.karst.model.ngs.resid)
+plot(co2.ngs.night[Reco >= 0]$direction, reco.karst.model.ngs.resid)
 par(mfrow=c(1,1))
 
 # this is a gross way to summarize and make everything look nice - better options?
-reco.karst.model.ngs.table <- data.frame(variables = names(reco.karst.model.ngs[['coefficients']]),
-                              coefficient = reco.karst.model.ngs[['coefficients']],
-                              min.ci = as.numeric(confint(reco.karst.model.ngs)[,1]),
-                              max.ci = as.numeric(confint(reco.karst.model.ngs)[,2]),
-                              row.names = NULL) %>%
-  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+reco.karst.model.ngs.ci <- extract_ci_lm(reco.karst.model.ngs)
+reco.karst.model.ngs.table <- reco.karst.model.ngs.ci %>%
+  mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
                                     paste(`Final Variables`, '(Intercept)'),
                                     `Final Variables`),
          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
-         radius = coefficient - min.ci,
+         radius = coefs - min,
          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
                                    'intercept',
-                                   'slope')) %>%
+                                   'slope'),
+         month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
   group_by(coefficient.type) %>%
-  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
-                              round(coefficient, 5),
-                              round(first(coefficient) + coefficient, 5)),
-         total.radius = ifelse(coefficient - first(coefficient) == 0,
+  mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+                              round(coefs, 5),
+                              round(first(coefs) + coefs, 5)),
+         total.radius = ifelse(coefs - first(coefs) == 0,
                                radius,
                                sqrt(radius^2 + first(radius)^2)),
          `Min CI` = Coefficient - total.radius,
@@ -2558,11 +2777,79 @@ reco.karst.model.ngs.table <- data.frame(variables = names(reco.karst.model.ngs[
   mutate(Response = c('Reco', rep('', 23)),
          `Full Model` = c('TK*Group', rep('', 23)),
          R2 = c(round(summary(reco.karst.model.ngs)$r.squared, 3), rep('', 23))) %>%
-  arrange(coefficient.type) %>%
+  arrange(coefficient.type, month) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-
 # write.csv(reco.karst.model.ngs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table_ngs.csv',
 #           row.names = FALSE)
+
+# # there is maybe a small amount of spatial autocorrelation, try lme with direction as random effect
+# # The model with a random effect for direction doesn't seem to improve residuals much
+# data <- co2.ngs.night[Reco >= 0]
+# full.lme <- lmer(Reco ~ percent.thermokarst.ffp*month.factor +
+#                      (1|direction.factor),
+#                    data = data,
+#                    REML = FALSE)
+# summary(full.lme)
+# lmerTest::step(full.lme)
+# reco.karst.lme.ngs <- lmer(Reco ~ percent.thermokarst.ffp*month.factor +
+#                             (1|direction.factor),
+#                           data = co2.ngs.night[Reco >= 0],
+#                           REML = TRUE,
+#                           control=lmerControl(check.conv.singular="warning"))
+# # saveRDS(reco.karst.lme.ngs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_ngs.rds')
+# reco.karst.lme.ngs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_ngs.rds')
+# summary(reco.karst.lme.ngs)
+# 
+# # check model residuals of model
+# # look at residuals
+# reco.karst.model.ngs.resid <- resid(reco.karst.lme.ngs)
+# reco.karst.model.ngs.fitted <- fitted(reco.karst.lme.ngs)
+# reco.karst.model.ngs.sqrt <- sqrt(abs(resid(reco.karst.lme.ngs)))
+# 
+# # graph
+# hist(reco.karst.model.ngs.resid)
+# par(mfrow=c(2,2), mar = c(4,4,3,2))
+# plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.resid, main='resid, reco.karst.model.ngs')
+# plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.sqrt, main='sqrt resid, reco.karst.model.ngs')
+# qqnorm(reco.karst.model.ngs.resid, main = 'reco.karst.model.ngs')
+# qqline(reco.karst.model.ngs.resid)
+# plot(co2.ngs.night$direction, reco.karst.model.ngs.resid) # inspect whether there
+# # is spatial autocorrelation in model residuals
+# par(mfrow=c(1,1))
+# 
+# # this is a gross way to summarize and make everything look nice - better options?
+# reco.karst.lme.ngs.ci <- extract_ci(reco.karst.lme.ngs)
+# reco.karst.lme.ngs.table <- reco.karst.lme.ngs.ci %>%
+#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
+#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
+#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
+#                                     paste(`Final Variables`, '(Intercept)'),
+#                                     `Final Variables`),
+#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
+#          radius = coefs - min,
+#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+#                                    'intercept',
+#                                    'slope'),
+#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
+#   group_by(coefficient.type) %>%
+#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+#                               round(coefs, 5),
+#                               round(first(coefs) + coefs, 5)),
+#          total.radius = ifelse(coefs - first(coefs) == 0,
+#                                radius,
+#                                sqrt(radius^2 + first(radius)^2)),
+#          `Min CI` = Coefficient - total.radius,
+#          `Max CI` = Coefficient + total.radius) %>%
+#   ungroup() %>%
+#   mutate(Response = c('Reco', rep('', 23)),
+#          `Full Model` = c('TK*Group', rep('', 23)),
+#          R2 = c(round(summary(reco.karst.model.ngs)$r.squared, 3), rep('', 23))) %>%
+#   arrange(coefficient.type, month) %>%
+#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+# 
+# # write.csv(reco.karst.lme.ngs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_table_ngs.csv',
+# #           row.names = FALSE)
 
 ### Reco
 # GS Day
@@ -2631,15 +2918,13 @@ plot(reco.karst.model.gs.fitted, reco.karst.model.gs.resid, main='resid, reco.ka
 plot(reco.karst.model.gs.fitted, reco.karst.model.gs.sqrt, main='sqrt resid, reco.karst.model.gs')
 qqnorm(reco.karst.model.gs.resid, main = 'reco.karst.model.gs')
 qqline(reco.karst.model.gs.resid)
+plot(co2.gs.day[Reco >= 0]$direction, reco.karst.model.gs.resid)
 par(mfrow=c(1,1))
 
 # this is a gross way to summarize and make everything look nice - better options?
-reco.karst.model.gs.table <- data.frame(variables = names(reco.karst.model.gs[['coefficients']]),
-                                          coefficient = reco.karst.model.gs[['coefficients']],
-                                          min.ci = as.numeric(confint(reco.karst.model.gs)[,1]),
-                                          max.ci = as.numeric(confint(reco.karst.model.gs)[,2]),
-                                          row.names = NULL) %>%
-  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+reco.karst.model.gs.ci <- extract_ci_lm(reco.karst.model.gs)
+reco.karst.model.gs.table <-reco.karst.model.gs.ci %>%
+  mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4'),
          `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
@@ -2647,15 +2932,16 @@ reco.karst.model.gs.table <- data.frame(variables = names(reco.karst.model.gs[['
                                     paste(`Final Variables`, '(Intercept)'),
                                     `Final Variables`),
          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
-         radius = coefficient - min.ci,
+         radius = coefs - min,
          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
                                    'intercept',
-                                   'slope')) %>%
+                                   'slope'),
+         month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
   group_by(coefficient.type) %>%
-  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
-                              round(coefficient, 5),
-                              round(first(coefficient) + coefficient, 5)),
-         total.radius = ifelse(coefficient - first(coefficient) == 0,
+  mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+                              round(coefs, 5),
+                              round(first(coefs) + coefs, 5)),
+         total.radius = ifelse(coefs - first(coefs) == 0,
                                radius,
                                sqrt(radius^2 + first(radius)^2)),
          `Min CI` = Coefficient - total.radius,
@@ -2664,11 +2950,80 @@ reco.karst.model.gs.table <- data.frame(variables = names(reco.karst.model.gs[['
   mutate(Response = c('Reco', rep('', 13)),
          `Full Model` = c('TK*Month', rep('', 13)),
          R2 = c(round(summary(reco.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
-  arrange(coefficient.type) %>%
+  arrange(coefficient.type, month) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-
 # write.csv(reco.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table_gs.csv',
 #           row.names = FALSE)
+
+# # there is some spatial autocorrelation, try lme with direction as random effect
+# # The model with a random effect for direction doesn't seem to improve residuals much
+# data <- co2.gs.day[Reco >= 0]
+# full.lme <- lmer(Reco ~ percent.thermokarst.ffp*month.factor +
+#                      (1|direction.factor),
+#                    data = data,
+#                    REML = FALSE)
+# summary(full.lme)
+# lmerTest::step(full.lme)
+# reco.karst.lme.gs <- lmer(Reco ~ percent.thermokarst.ffp*month.factor +
+#                              (1|direction.factor),
+#                            data = co2.gs.day[Reco >= 0],
+#                            REML = TRUE,
+#                            control=lmerControl(check.conv.singular="warning"))
+# # saveRDS(reco.karst.lme.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_gs.rds')
+# reco.karst.lme.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_gs.rds')
+# summary(reco.karst.lme.gs)
+# 
+# # check model residuals of model
+# # look at residuals
+# reco.karst.model.gs.resid <- resid(reco.karst.lme.gs)
+# reco.karst.model.gs.fitted <- fitted(reco.karst.lme.gs)
+# reco.karst.model.gs.sqrt <- sqrt(abs(resid(reco.karst.lme.gs)))
+# 
+# # graph
+# hist(reco.karst.model.gs.resid)
+# par(mfrow=c(2,2), mar = c(4,4,3,2))
+# plot(reco.karst.model.gs.fitted, reco.karst.model.gs.resid, main='resid, reco.karst.model.gs')
+# plot(reco.karst.model.gs.fitted, reco.karst.model.gs.sqrt, main='sqrt resid, reco.karst.model.gs')
+# qqnorm(reco.karst.model.gs.resid, main = 'reco.karst.model.gs')
+# qqline(reco.karst.model.gs.resid)
+# plot(co2.gs.day$direction, reco.karst.model.gs.resid) # inspect whether there
+# # is spatial autocorrelation in model residuals
+# par(mfrow=c(1,1))
+# 
+# # this is a gross way to summarize and make everything look nice - better options?
+# reco.karst.lme.gs.ci <- extract_ci(reco.karst.lme.gs)
+# reco.karst.lme.gs.table <- reco.karst.lme.gs.ci %>%
+#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
+#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
+#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4'),
+#          `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
+#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]'),
+#                                     paste(`Final Variables`, '(Intercept)'),
+#                                     `Final Variables`),
+#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
+#          radius = coefs - min,
+#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
+#                                    'intercept',
+#                                    'slope'),
+#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
+#   group_by(coefficient.type) %>%
+#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+#                               round(coefs, 5),
+#                               round(first(coefs) + coefs, 5)),
+#          total.radius = ifelse(coefs - first(coefs) == 0,
+#                                radius,
+#                                sqrt(radius^2 + first(radius)^2)),
+#          `Min CI` = Coefficient - total.radius,
+#          `Max CI` = Coefficient + total.radius) %>%
+#   ungroup() %>%
+#   mutate(Response = c('Reco', rep('', 13)),
+#          `Full Model` = c('TK*Month', rep('', 13)),
+#          R2 = c(round(summary(reco.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
+#   arrange(coefficient.type, month) %>%
+#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
+# 
+# # write.csv(reco.karst.lme.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_table_gs.csv',
+# #           row.names = FALSE)
 ########################################################################################################################
 
 ### Model C Fluxes with Roughness ######################################################################################
@@ -3128,6 +3483,11 @@ nee.roughness.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuu
 gpp.roughness.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_roughness_model_table_gs.csv')
 reco.roughness.model.ngs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_table_ngs.csv')
 reco.roughness.model.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_roughness_model_table_gs.csv')
+# nee.karst.lme.ngs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_table_ngs.csv')
+# nee.karst.lme.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_table_gs.csv')
+# gpp.karst.lme.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_lme_table_gs.csv')
+# reco.karst.lme.ngs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_table_ngs.csv')
+# reco.karst.lme.gs.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_table_gs.csv')
 
 co2.models.ngs <- rbind.data.frame(nee.karst.model.ngs.table %>%
                                        mutate(Response = 'NEE',
@@ -3194,16 +3554,16 @@ rm(gpp.karst.model.gs.table,
    reco.roughness.model.gs.table,
    reco.roughness.model.ngs.table)
 
-r2.label.ngs <- co2.models.ngs %>%
-  select(Predictor, Response, label, season) %>%
-  distinct() %>%
-  as.data.frame() %>%
-  mutate(x = c(rep(0.15, 2), rep(0.6, 2)))
-r2.label.gs <- co2.models.gs %>%
-  select(Predictor, Response, label, season) %>%
-  distinct() %>%
-  as.data.frame() %>%
-  mutate(x = c(rep(-0.25, 3), rep(-0.8, 3)))
+# r2.label.ngs <- co2.models.ngs %>%
+#   select(Predictor, Response, label, season) %>%
+#   distinct() %>%
+#   as.data.frame() %>%
+#   mutate(x = c(rep(0.15, 2), rep(0.6, 2)))
+# r2.label.gs <- co2.models.gs %>%
+#   select(Predictor, Response, label, season) %>%
+#   distinct() %>%
+#   as.data.frame() %>%
+#   mutate(x = c(rep(-0.25, 3), rep(-0.8, 3)))
 r2.label <- co2.model.summary %>%
   filter(Predictor == 'Thermokarst') %>%
   select(Predictor, Response, label, season) %>%
@@ -3886,30 +4246,28 @@ summary(ch4.model)
 
 # this is a gross way to summarize and make everything look nice - better options?
 # simple model
-ch4.model.table <- data.frame(variables = names(ch4.model.simple[['coefficients']]),
-                              coefficient = ch4.model.simple[['coefficients']],
-                              min.ci = as.numeric(confint(ch4.model.simple)[,1]),
-                              max.ci = as.numeric(confint(ch4.model.simple)[,2]),
-                              row.names = NULL) %>%
-  mutate(`Final Variables` = str_replace(variables, 'percent.thermokarst.ffp', 'TK'),
+ch4.model.ci <- extract_ci_lm(ch4.model)
+ch4.model.table <- ch4.model.ci %>%
+  mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
                                     str_c(`Final Variables`, ' (Intercept)'),
                                     `Final Variables`),
          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
-         radius = coefficient - min.ci,
+         radius = coefs - min,
          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+')),
          coefficient.type = factor(ifelse(str_detect(`Final Variables`, '(Intercept)'),
                                           'intercept',
                                           'slope'),
-                                   levels = c('intercept', 'slope'))) %>%
+                                   levels = c('intercept', 'slope')),
+         month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
   arrange(coefficient.type, month) %>%
-  group_by(coefficient.type) %>%
-  mutate(Coefficient = ifelse(coefficient - first(coefficient) == 0,
-                              round(coefficient, 5),
-                              round(first(coefficient) + coefficient, 5)),
-         total.radius = ifelse(coefficient - first(coefficient) == 0,
+  group_by(coefficient.type, month) %>%
+  mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
+                              round(coefs, 5),
+                              round(first(coefs) + coefs, 5)),
+         total.radius = ifelse(coefs - first(coefs) == 0,
                                radius,
                                sqrt(radius^2 + first(radius)^2)),
          `Min CI` = Coefficient - total.radius,
@@ -3917,7 +4275,7 @@ ch4.model.table <- data.frame(variables = names(ch4.model.simple[['coefficients'
   ungroup() %>%
   mutate(Response = c('CH4', rep('', 23)),
          `Full Model` = c('TK*Month', rep('', 23)),
-         R2 = c(round(summary(ch4.model.simple)$r.squared, 3), rep('', 23))) %>%
+         R2 = c(round(summary(ch4.model)$r.squared, 3), rep('', 23))) %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2)
 
 # write.csv(ch4.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_all_years.csv',
@@ -3926,13 +4284,15 @@ ch4.model.table <- data.frame(variables = names(ch4.model.simple[['coefficients'
 ch4.slopes <- slice(ch4.model.table, 13:24) %>%
   select(3:6) %>%
   mutate(month = seq(1:12))
-
+ch4.intercepts <- slice(ch4.model.table, 1:12) %>%
+  select(3:6) %>%
+  mutate(month = seq(1:12))
 # this seems a bit misleading, because the higher methane uptake with higher
 # thermokarst is probably actually driven by high release at low thermokarst
 # which is a coincidence because winter storms with high wind speeds and high
 # methane release happen to come from a direction with low thermokrst!
 ch4.slopes.plot <- ggplot(ch4.slopes, aes(x = month, y = Coefficient)) +
-  geom_rect(data = rects,
+  geom_rect(data = filter(rects, Response == 'NEE'),
             aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
             alpha = 0.2,
             inherit.aes = FALSE) +
@@ -3958,6 +4318,36 @@ ch4.slopes.plot
 #        width = 4)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.pdf',
 #        ch4.slopes.plot,
+#        height = 4,
+#        width = 4)
+
+ch4.intercepts.plot <- ggplot(ch4.intercepts, aes(x = month, y = Coefficient)) +
+  geom_rect(data = filter(rects, Response == 'NEE'),
+            aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
+            alpha = 0.2,
+            inherit.aes = FALSE) +
+  geom_point() +
+  geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
+                width = 0.1) +
+  scale_x_continuous(breaks = seq(1, 12),
+                     labels = month.name[seq(1, 12)],
+                     minor_breaks = NULL) +
+  scale_y_continuous(name = 'Intercept') +
+  scale_fill_manual(breaks = c('a', 'b'),
+                    values = c('#99CC33', '#CC3300'),
+                    labels = c('Sink',
+                               'Source')) +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        legend.title = element_blank())
+ch4.intercepts.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_intercepts_all_years.jpg',
+#        ch4.intercepts.plot,
+#        height = 4,
+#        width = 4)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_intercepts_all_years.pdf',
+#        ch4.intercepts.plot,
 #        height = 4,
 #        width = 4)
 
@@ -4007,6 +4397,12 @@ ggplot(filter(ch4.model.data, spike == 'release spike'),
   scale_color_viridis() +
   theme_bw()
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_pulse_release_ws_tk_season.jpg')
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = mean.swc)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  theme_bw()
 ggplot(filter(ch4.model.data, spike == 'release spike' & season == 'NGS'),
        aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
   geom_point() +
@@ -4023,12 +4419,14 @@ ggplot(filter(ch4.model.data, spike == 'release spike'),
   geom_point() +
   facet_grid(season ~ .) +
   scale_color_viridis() +
-  # geom_smooth(method = "nls", formula = y ~ alpha * exp(beta1 * x),
-  #             se=F,
-  #             method.args = list(start=c(alpha=1,beta1=1)),
-  #             color = 'black') +
   theme_bw()
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_pulse_release_tk_ws_season.jpg')
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = mean.swc, group = season)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_color_viridis() +
+  theme_bw()
 
 # air temp doesn't matter for summer
 ggplot(filter(ch4.model.data, spike == 'release spike'),
