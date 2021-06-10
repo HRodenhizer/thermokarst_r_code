@@ -1129,14 +1129,18 @@ points_plot_2 <- ggplot(model.table, aes(x = Class, y = Mean)) +
   geom_point(data = sub.gps.summary,
              aes(x = karst, y = mean.sub, color = 'GPS'),
              size = 2,
-             inherit.aes = FALSE) +
+             inherit.aes = FALSE,
+             position = position_nudge(x = 0.05)) +
   geom_errorbar(data = sub.gps.summary,
                 aes(x = karst, ymin = `Lower CI`, ymax = `Upper CI`, color = 'GPS'),
                 inherit.aes = FALSE,
-                width = 0.1) +
-  geom_point(size = 3, aes(color = 'LiDAR')) +
+                width = 0.1,
+                position = position_nudge(x = 0.05)) +
+  geom_point(size = 3, aes(color = 'LiDAR'),
+             position = position_nudge(x = -0.05)) +
   geom_errorbar(aes(ymin =`Lower CI`, ymax = `Upper CI`, color = 'LiDAR'),
-                width = 0.1) +
+                width = 0.1,
+                position = position_nudge(x = -0.05)) +
   geom_text(aes(y = -0.14, label = Group)) +
   scale_y_continuous(name = expression(Delta ~ "Elevation"),
                      limits = c(-0.15, 0.05)) +
@@ -2161,10 +2165,7 @@ co2.ngs.night <- co2.model.data[group != 'GS Day' & filled == 0]
 ########################################################################################################################
 
 ### Model C Fluxes with Thermokarst ####################################################################################
-# # Can use this code when I resume work on carbon flux modeling
-# shapiro.test(sample(model.resid, size = 5000))
-# 
-# # However, that should not impact the model itself, only the determination of statistical significance
+# # Non-normality of errors should not impact the model itself, only the determination of statistical significance
 # # of parameters via p-values. Can use bootstrapping instead (which is what we normally do for mixed effects models anyway).
 # # See: https://data.library.virginia.edu/normality-assumption/
 
@@ -2269,73 +2270,6 @@ nee.karst.model.ngs.table <- nee.karst.model.ngs.ci %>%
 # write.csv(nee.karst.model.ngs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_table_ngs.csv',
 # row.names = FALSE)
 
-# # there is maybe a small amount of spatial autocorrelation, try lme with direction as random effect
-# # The model with a random effect for direction doesn't seem to improve residuals much
-# full.lme <- lmer(NEP ~ percent.thermokarst.ffp*month.factor +
-#                      (1|direction.factor),
-#                    data = co2.ngs.night,
-#                    REML = FALSE)
-# summary(full.lme)
-# lmerTest::step(full.lme)
-# nee.karst.lme.ngs <- lmer(NEP ~ percent.thermokarst.ffp*month.factor +
-#                      (1|direction.factor),
-#                    data = co2.ngs.night,
-#                    REML = TRUE,
-#                    control=lmerControl(check.conv.singular="warning"))
-# # saveRDS(nee.karst.lme.ngs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_ngs.rds')
-# nee.karst.lme.ngs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_ngs.rds')
-# summary(nee.karst.lme.ngs)
-# 
-# # check model residuals of model
-# # look at residuals
-# nee.karst.lme.ngs.resid <- resid(nee.karst.lme.ngs)
-# nee.karst.lme.ngs.fitted <- fitted(nee.karst.lme.ngs)
-# nee.karst.lme.ngs.sqrt <- sqrt(abs(resid(nee.karst.lme.ngs)))
-# 
-# # graph
-# hist(nee.karst.lme.ngs.resid)
-# par(mfrow=c(2,2), mar = c(4,4,3,2))
-# plot(nee.karst.lme.ngs.fitted, nee.karst.lme.ngs.resid, main='resid, nee.karst.lme.ngs')
-# plot(nee.karst.lme.ngs.fitted, nee.karst.lme.ngs.sqrt, main='sqrt resid, nee.karst.lme.ngs')
-# qqnorm(nee.karst.lme.ngs.resid, main = 'nee.karst.lme.ngs')
-# qqline(nee.karst.lme.ngs.resid)
-# plot(co2.ngs.night$direction,nee.karst.lme.ngs.resid) # inspect whether there
-# # is spatial autocorrelation in model residuals
-# par(mfrow=c(1,1))
-# 
-# # this is a gross way to summarize and make everything look nice - better options?
-# nee.karst.lme.ngs.ci <- extract_ci(nee.karst.lme.ngs)
-# nee.karst.lme.ngs.table <- nee.karst.lme.ngs.ci %>%
-#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
-#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
-#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
-#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
-#                                     paste(`Final Variables`, '(Intercept)'),
-#                                     `Final Variables`),
-#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
-#          radius = coefs - min,
-#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
-#                                    'intercept',
-#                                    'slope'),
-#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
-#   group_by(coefficient.type) %>%
-#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
-#                               round(coefs, 5),
-#                               round(first(coefs) + coefs, 5)),
-#          total.radius = ifelse(coefs - first(coefs) == 0,
-#                                radius,
-#                                sqrt(radius^2 + first(radius)^2)),
-#          `Min CI` = Coefficient - total.radius,
-#          `Max CI` = Coefficient + total.radius) %>%
-#   ungroup() %>%
-#   mutate(Response = c('NEE', rep('', 23)),
-#          `Full Model` = c('TK*Group', rep('', 23)),
-#          R2 = c(round(summary(nee.karst.model.ngs)$r.squared, 3), rep('', 23))) %>%
-#   arrange(coefficient.type, month) %>%
-#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-# 
-# # write.csv(nee.karst.lme.ngs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_table_ngs.csv',
-# #           row.names = FALSE)
 
 ### NEE
 # GS Day
@@ -2440,75 +2374,6 @@ nee.karst.model.gs.table <- nee.karst.model.gs.ci %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
 # write.csv(nee.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_table_gs.csv',
 # row.names = FALSE)
-
-# # there is some spatial autocorrelation, try lme with direction as random effect
-# # The model with a random effect for direction doesn't seem to improve residuals much
-# full.lme <- lmer(NEP ~ percent.thermokarst.ffp*month.factor +
-#                      (1|direction.factor),
-#                    data = co2.gs.day,
-#                    REML = FALSE)
-# summary(full.lme)
-# lmerTest::step(full.lme)
-# nee.karst.lme.gs <- lmer(NEP ~ percent.thermokarst.ffp*month.factor +
-#                             (1|direction.factor),
-#                           data = co2.gs.day,
-#                           REML = TRUE,
-#                           control=lmerControl(check.conv.singular="warning"))
-# # saveRDS(nee.karst.lme.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_gs.rds')
-# nee.karst.lme.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_gs.rds')
-# summary(nee.karst.lme.gs)
-# 
-# # check model residuals of model
-# # look at residuals
-# nee.karst.lme.gs.resid <- resid(nee.karst.lme.gs)
-# nee.karst.lme.gs.fitted <- fitted(nee.karst.lme.gs)
-# nee.karst.lme.gs.sqrt <- sqrt(abs(resid(nee.karst.lme.gs)))
-# 
-# # graph
-# hist(nee.karst.lme.gs.resid)
-# par(mfrow=c(2,2), mar = c(4,4,3,2))
-# plot(nee.karst.lme.gs.fitted, nee.karst.lme.gs.resid, main='resid, nee.karst.lme.gs')
-# plot(nee.karst.lme.gs.fitted, nee.karst.lme.gs.sqrt, main='sqrt resid, nee.karst.lme.gs')
-# qqnorm(nee.karst.lme.gs.resid, main = 'nee.karst.lme.gs')
-# qqline(nee.karst.lme.gs.resid)
-# plot(co2.gs.day$direction, nee.karst.lme.gs.resid) # inspect whether there
-# # is spatial autocorrelation in model residuals
-# par(mfrow=c(1,1))
-# 
-# # this is a gross way to summarize and make everything look nice - better options?
-# nee.karst.lme.gs.ci <- extract_ci(nee.karst.lme.gs)
-# nee.karst.lme.gs.table <- nee.karst.lme.gs.ci %>%
-#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
-#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
-#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4'),
-#          `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
-#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]'),
-#                                     paste(`Final Variables`, '(Intercept)'),
-#                                     `Final Variables`),
-#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
-#          radius = coefs - min,
-#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
-#                                    'intercept',
-#                                    'slope'),
-#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
-#   group_by(coefficient.type) %>%
-#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
-#                               round(coefs, 5),
-#                               round(first(coefs) + coefs, 5)),
-#          total.radius = ifelse(coefs - first(coefs) == 0,
-#                                radius,
-#                                sqrt(radius^2 + first(radius)^2)),
-#          `Min CI` = Coefficient - total.radius,
-#          `Max CI` = Coefficient + total.radius) %>%
-#   ungroup() %>%
-#   mutate(Response = c('NEE', rep('', 13)),
-#          `Full Model` = c('TK*Month', rep('', 13)),
-#          R2 = c(round(summary(nee.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
-#   arrange(coefficient.type, month) %>%
-#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-# 
-# # write.csv(nee.karst.lme.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_lme_table_gs.csv',
-# #           row.names = FALSE)
 
 
 # GPP
@@ -2615,73 +2480,6 @@ gpp.karst.model.gs.table <- gpp.karst.model.gs.ci %>%
 # write.csv(gpp.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_model_table_gs.csv',
 # row.names = FALSE)
 
-# # there is some spatial autocorrelation, try lme with direction as random effect
-# # The model with a random effect for direction doesn't seem to improve residuals much
-# full.lme <- lmer(GEP ~ percent.thermokarst.ffp*month.factor +
-#                      (1|direction.factor),
-#                    data = co2.gs.day,
-#                    REML = FALSE)
-# summary(full.lme)
-# lmerTest::step(full.lme)
-# gpp.karst.lme.gs <- lmer(GEP ~ percent.thermokarst.ffp*month.factor +
-#                            (1|direction.factor),
-#                          data = co2.gs.day,
-#                          REML = TRUE,
-#                          control=lmerControl(check.conv.singular="warning"))
-# # saveRDS(gpp.karst.lme.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_lme_gs.rds')
-# gpp.karst.lme.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_lme_gs.rds')
-# summary(gpp.karst.lme.gs)
-# 
-# # check model residuals of model
-# # look at residuals
-# gpp.karst.lme.gs.resid <- resid(gpp.karst.lme.gs)
-# gpp.karst.lme.gs.fitted <- fitted(gpp.karst.lme.gs)
-# gpp.karst.lme.gs.sqrt <- sqrt(abs(resid(gpp.karst.lme.gs)))
-# 
-# # graph
-# hist(gpp.karst.lme.gs.resid)
-# par(mfrow=c(2,2), mar = c(4,4,3,2))
-# plot(gpp.karst.lme.gs.fitted, gpp.karst.lme.gs.resid, main='resid, gpp.karst.lme.gs')
-# plot(gpp.karst.lme.gs.fitted, gpp.karst.lme.gs.sqrt, main='sqrt resid, gpp.karst.lme.gs')
-# qqnorm(gpp.karst.lme.gs.resid, main = 'gpp.karst.lme.gs')
-# qqline(gpp.karst.lme.gs.resid)
-# plot(co2.gs.day$direction, gpp.karst.lme.gs.resid) # inspect whether there
-# # is spatial autocorrelation in lme residuals
-# par(mfrow=c(1,1))
-# 
-# # this is a gross way to summarize and make everything look nice - better options?
-# gpp.karst.lme.gs.ci <- extract_ci(gpp.karst.lme.gs)
-# gpp.karst.lme.gs.table <- gpp.karst.lme.gs.ci %>%
-#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
-#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
-#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4 (Intercept)'),
-#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'), 
-#                                     str_c(`Final Variables`, ' (Intercept)'),
-#                                     `Final Variables`),
-#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
-#          radius = coefs - min,
-#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
-#                                    'intercept',
-#                                    'slope'),
-#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
-#   group_by(coefficient.type) %>%
-#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
-#                               round(coefs, 5),
-#                               round(first(coefs) + coefs, 5)),
-#          total.radius = ifelse(coefs - first(coefs) == 0,
-#                                radius,
-#                                sqrt(radius^2 + first(radius)^2)),
-#          `Min CI` = Coefficient - total.radius,
-#          `Max CI` = Coefficient + total.radius) %>%
-#   ungroup() %>%
-#   mutate(Response = c('GPP', rep('', 13)),
-#          `Full Model` = c('TK*Month', rep('', 13)),
-#          R2 = c(round(summary(gpp.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
-#   arrange(coefficient.type, month) %>%
-#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-# 
-# # write.csv(gpp.karst.lme.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gpp_karst_lme_table_gs.csv',
-# #           row.names = FALSE)
 
 ### Reco
 # NGS/Night
@@ -2782,74 +2580,6 @@ reco.karst.model.ngs.table <- reco.karst.model.ngs.ci %>%
 # write.csv(reco.karst.model.ngs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table_ngs.csv',
 #           row.names = FALSE)
 
-# # there is maybe a small amount of spatial autocorrelation, try lme with direction as random effect
-# # The model with a random effect for direction doesn't seem to improve residuals much
-# data <- co2.ngs.night[Reco >= 0]
-# full.lme <- lmer(Reco ~ percent.thermokarst.ffp*month.factor +
-#                      (1|direction.factor),
-#                    data = data,
-#                    REML = FALSE)
-# summary(full.lme)
-# lmerTest::step(full.lme)
-# reco.karst.lme.ngs <- lmer(Reco ~ percent.thermokarst.ffp*month.factor +
-#                             (1|direction.factor),
-#                           data = co2.ngs.night[Reco >= 0],
-#                           REML = TRUE,
-#                           control=lmerControl(check.conv.singular="warning"))
-# # saveRDS(reco.karst.lme.ngs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_ngs.rds')
-# reco.karst.lme.ngs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_ngs.rds')
-# summary(reco.karst.lme.ngs)
-# 
-# # check model residuals of model
-# # look at residuals
-# reco.karst.model.ngs.resid <- resid(reco.karst.lme.ngs)
-# reco.karst.model.ngs.fitted <- fitted(reco.karst.lme.ngs)
-# reco.karst.model.ngs.sqrt <- sqrt(abs(resid(reco.karst.lme.ngs)))
-# 
-# # graph
-# hist(reco.karst.model.ngs.resid)
-# par(mfrow=c(2,2), mar = c(4,4,3,2))
-# plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.resid, main='resid, reco.karst.model.ngs')
-# plot(reco.karst.model.ngs.fitted, reco.karst.model.ngs.sqrt, main='sqrt resid, reco.karst.model.ngs')
-# qqnorm(reco.karst.model.ngs.resid, main = 'reco.karst.model.ngs')
-# qqline(reco.karst.model.ngs.resid)
-# plot(co2.ngs.night$direction, reco.karst.model.ngs.resid) # inspect whether there
-# # is spatial autocorrelation in model residuals
-# par(mfrow=c(1,1))
-# 
-# # this is a gross way to summarize and make everything look nice - better options?
-# reco.karst.lme.ngs.ci <- extract_ci(reco.karst.lme.ngs)
-# reco.karst.lme.ngs.table <- reco.karst.lme.ngs.ci %>%
-#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
-#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
-#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 1 (Intercept)'),
-#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]+$'),
-#                                     paste(`Final Variables`, '(Intercept)'),
-#                                     `Final Variables`),
-#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 1'),
-#          radius = coefs - min,
-#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
-#                                    'intercept',
-#                                    'slope'),
-#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
-#   group_by(coefficient.type) %>%
-#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
-#                               round(coefs, 5),
-#                               round(first(coefs) + coefs, 5)),
-#          total.radius = ifelse(coefs - first(coefs) == 0,
-#                                radius,
-#                                sqrt(radius^2 + first(radius)^2)),
-#          `Min CI` = Coefficient - total.radius,
-#          `Max CI` = Coefficient + total.radius) %>%
-#   ungroup() %>%
-#   mutate(Response = c('Reco', rep('', 23)),
-#          `Full Model` = c('TK*Group', rep('', 23)),
-#          R2 = c(round(summary(reco.karst.model.ngs)$r.squared, 3), rep('', 23))) %>%
-#   arrange(coefficient.type, month) %>%
-#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-# 
-# # write.csv(reco.karst.lme.ngs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_table_ngs.csv',
-# #           row.names = FALSE)
 
 ### Reco
 # GS Day
@@ -2954,76 +2684,6 @@ reco.karst.model.gs.table <-reco.karst.model.gs.ci %>%
   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
 # write.csv(reco.karst.model.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_model_table_gs.csv',
 #           row.names = FALSE)
-
-# # there is some spatial autocorrelation, try lme with direction as random effect
-# # The model with a random effect for direction doesn't seem to improve residuals much
-# data <- co2.gs.day[Reco >= 0]
-# full.lme <- lmer(Reco ~ percent.thermokarst.ffp*month.factor +
-#                      (1|direction.factor),
-#                    data = data,
-#                    REML = FALSE)
-# summary(full.lme)
-# lmerTest::step(full.lme)
-# reco.karst.lme.gs <- lmer(Reco ~ percent.thermokarst.ffp*month.factor +
-#                              (1|direction.factor),
-#                            data = co2.gs.day[Reco >= 0],
-#                            REML = TRUE,
-#                            control=lmerControl(check.conv.singular="warning"))
-# # saveRDS(reco.karst.lme.gs, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_gs.rds')
-# reco.karst.lme.gs <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_gs.rds')
-# summary(reco.karst.lme.gs)
-# 
-# # check model residuals of model
-# # look at residuals
-# reco.karst.model.gs.resid <- resid(reco.karst.lme.gs)
-# reco.karst.model.gs.fitted <- fitted(reco.karst.lme.gs)
-# reco.karst.model.gs.sqrt <- sqrt(abs(resid(reco.karst.lme.gs)))
-# 
-# # graph
-# hist(reco.karst.model.gs.resid)
-# par(mfrow=c(2,2), mar = c(4,4,3,2))
-# plot(reco.karst.model.gs.fitted, reco.karst.model.gs.resid, main='resid, reco.karst.model.gs')
-# plot(reco.karst.model.gs.fitted, reco.karst.model.gs.sqrt, main='sqrt resid, reco.karst.model.gs')
-# qqnorm(reco.karst.model.gs.resid, main = 'reco.karst.model.gs')
-# qqline(reco.karst.model.gs.resid)
-# plot(co2.gs.day$direction, reco.karst.model.gs.resid) # inspect whether there
-# # is spatial autocorrelation in model residuals
-# par(mfrow=c(1,1))
-# 
-# # this is a gross way to summarize and make everything look nice - better options?
-# reco.karst.lme.gs.ci <- extract_ci(reco.karst.lme.gs)
-# reco.karst.lme.gs.table <- reco.karst.lme.gs.ci %>%
-#   mutate(`Final Variables` = str_replace(term, 'percent.thermokarst.ffp', 'TK'),
-#          `Final Variables` = str_replace(`Final Variables`, 'month.factor', 'Month - '),
-#          `Final Variables` = str_replace(`Final Variables`, '\\(Intercept\\)', 'Month - 4'),
-#          `Final Variables` = str_replace(`Final Variables`, '^month.factor', 'Month - '),
-#          `Final Variables` = ifelse(str_detect(`Final Variables`, '^Month - [:digit:]'),
-#                                     paste(`Final Variables`, '(Intercept)'),
-#                                     `Final Variables`),
-#          `Final Variables` = str_replace(`Final Variables`, '^TK$', 'TK:Month - 4'),
-#          radius = coefs - min,
-#          coefficient.type = ifelse(str_detect(`Final Variables`, '(Intercept)'),
-#                                    'intercept',
-#                                    'slope'),
-#          month = as.numeric(str_extract(`Final Variables`, '[:digit:]+'))) %>%
-#   group_by(coefficient.type) %>%
-#   mutate(Coefficient = ifelse(coefs - first(coefs) == 0,
-#                               round(coefs, 5),
-#                               round(first(coefs) + coefs, 5)),
-#          total.radius = ifelse(coefs - first(coefs) == 0,
-#                                radius,
-#                                sqrt(radius^2 + first(radius)^2)),
-#          `Min CI` = Coefficient - total.radius,
-#          `Max CI` = Coefficient + total.radius) %>%
-#   ungroup() %>%
-#   mutate(Response = c('Reco', rep('', 13)),
-#          `Full Model` = c('TK*Month', rep('', 13)),
-#          R2 = c(round(summary(reco.karst.model.gs)$r.squared, 3), rep('', 13))) %>%
-#   arrange(coefficient.type, month) %>%
-#   select(Response, `Full Model`, `Final Variables`, Coefficient, `Min CI`, `Max CI`, R2, coefficient.type)
-# 
-# # write.csv(reco.karst.lme.gs.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/reco_karst_lme_table_gs.csv',
-# #           row.names = FALSE)
 ########################################################################################################################
 
 ### Model C Fluxes with Roughness ######################################################################################
@@ -3538,7 +3198,10 @@ co2.models.gs <- rbind.data.frame(gpp.karst.model.gs.table %>%
 # all seasons combined
 co2.model.summary <- co2.models.ngs %>%
   rbind.data.frame(co2.models.gs) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(coefficient.type = str_to_title(coefficient.type),
+         Response = factor(Response,
+                           levels = c('Reco', 'NEE', 'GPP')))
 # write.csv(co2.model.summary,
 #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/co2_model_parameters.csv',
 #           row.names = FALSE)
@@ -3584,19 +3247,66 @@ rects <- rects %>%
                             xmax = Inf,
                             col = letters[2]))
 
-### all seasons, thermokarst only
-effect.size.plot <- ggplot(filter(co2.model.summary, coefficient.type == 'slope' & Predictor == 'Thermokarst'),
-                           aes(x = Month, color = Response, group = Response)) +
+# ### all seasons, thermokarst only, slopes only
+# effect.size.plot <- ggplot(filter(co2.model.summary, coefficient.type == 'slope' & Predictor == 'Thermokarst'),
+#                            aes(x = Month, color = Response, group = Response)) +
+#   geom_rect(data = filter(rects, Predictor == 'Thermokarst'),
+#             aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
+#             alpha = 0.2,
+#             inherit.aes = FALSE) +
+#   geom_hline(yintercept = 0) +
+#   geom_point(aes(y = Coefficient),
+#              show.legend = FALSE) +
+#   geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
+#                 width = 0.1,
+#                 show.legend = FALSE) +
+#   geom_text(data = filter(r2.label, Predictor == 'Thermokarst'),
+#             aes(x = 12.5, y = x, label = label),
+#             parse = TRUE,
+#             inherit.aes = FALSE,
+#             size = 3,
+#             vjust = 'inward',
+#             hjust = 'inward') +
+#   scale_x_continuous(breaks = seq(1:12),
+#                      labels = str_sub(month.name[1:12], start = 1, end = 3)) +
+#   scale_y_continuous(name = 'Slope') +
+#   scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
+#                      values = c('#99CC33', '#CC3300', '#000066')) +
+#   scale_fill_manual(name = 'As thermokarst\nincreases:',
+#                     breaks = c('a', 'b'),
+#                     values = c('#99CC33', '#CC3300'),
+#                     labels = c('Sink \U02191 or Source \U02193',
+#                                'Sink \U02193 or Source \U02191')) +
+#   facet_grid(season ~ Response, scales = 'free_y') +
+#   theme_bw() +
+#   theme(axis.title.x = element_blank(),
+#         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+#         legend.position = c(0.01, 0.01),
+#         legend.justification = c(0, 0))
+# effect.size.plot
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.jpg',
+# #        effect.size.plot,
+# #        height = 4,
+# #        width = 7)
+# # 
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.pdf',
+# #        effect.size.plot,
+# #        height = 4,
+# #        width = 7)
+
+### all seasons, thermokarst only, with intercepts
+effect.size.plot <- ggplot(filter(co2.model.summary, Predictor == 'Thermokarst'),
+                           aes(x = Month, group = coefficient.type)) +
   geom_rect(data = filter(rects, Predictor == 'Thermokarst'),
             aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
             alpha = 0.2,
             inherit.aes = FALSE) +
   geom_hline(yintercept = 0) +
-  geom_point(aes(y = Coefficient),
-             show.legend = FALSE) +
-  geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
-                width = 0.1,
-                show.legend = FALSE) +
+  geom_point(aes(y = Coefficient, color = coefficient.type),
+             position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`, color = coefficient.type),
+                position = position_dodge(width = 0.5),
+                width = 0.3) +
   geom_text(data = filter(r2.label, Predictor == 'Thermokarst'),
             aes(x = 12.5, y = x, label = label),
             parse = TRUE,
@@ -3606,20 +3316,21 @@ effect.size.plot <- ggplot(filter(co2.model.summary, coefficient.type == 'slope'
             hjust = 'inward') +
   scale_x_continuous(breaks = seq(1:12),
                      labels = str_sub(month.name[1:12], start = 1, end = 3)) +
-  scale_y_continuous(name = 'Slope') +
-  scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
-                     values = c('#99CC33', '#CC3300', '#000066')) +
-  scale_fill_manual(name = 'As thermokarst\nincreases:',
+  scale_color_manual(name = element_blank(),
+                     values = c('gray', 'black')) +
+  scale_fill_manual(name = element_blank(),
                     breaks = c('a', 'b'),
                     values = c('#99CC33', '#CC3300'),
-                    labels = c('Sink \U02191 or Source \U02193',
-                               'Sink \U02193 or Source \U02191')) +
+                    labels = c('Sink',
+                               'Source')) +
   facet_grid(season ~ Response, scales = 'free_y') +
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        legend.position = c(0.01, 0.01),
-        legend.justification = c(0, 0))
+        legend.position = c(0.998, -0.1),
+        legend.justification = c(1, 0),
+        legend.box.background = element_rect(color = 'white', fill = "white"),
+        legend.box.margin = margin(0,0.8,0.3,0.3,"inches"))
 effect.size.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.jpg',
 #        effect.size.plot,
@@ -3631,96 +3342,97 @@ effect.size.plot
 #        height = 4,
 #        width = 7)
 
-### Some older plots
-### Plot NGS/Night
-# both thermokarst and roughness
-effect.size.plot.ngs <- ggplot(filter(co2.models.ngs, coefficient.type == 'slope'),
-                           aes(y = Variable, color = Response, group = Response)) +
-  geom_rect(data = filter(rects, Response != 'GPP'),
-            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = col),
-            alpha = 0.2,
-            inherit.aes = FALSE) +
-  geom_vline(xintercept = 0) +
-  geom_point(aes(x = Coefficient),
-             show.legend = FALSE) +
-  geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`),
-                width = 0.1,
-                show.legend = FALSE) +
-  geom_text(data = r2.label.ngs,
-            aes(x = x, y = 12.5, label = label),
-            parse = TRUE,
-            inherit.aes = FALSE,
-            size = 3,
-            vjust = 'inward',
-            hjust = 'inward') +
-  scale_y_discrete(limits = rev,
-                   labels = c('Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul', 'Jun', 'May', 'Apr', 'Mar', 'Feb', 'Jan')) +
-  scale_x_continuous(name = 'Slope') +
-  scale_color_manual(breaks = c('Reco', 'NEE'),
-                     values = c('#CC3300', '#000066')) +
-  scale_fill_manual(breaks = c('a', 'b'),
-                    values = c('#99CC33', '#FF6633'),
-                    labels = c('Greater Sink/\nSmaller Source',
-                               'Greater Source/\nSmaller Sink')) +
-  facet_grid(Response ~ Predictor, scales = 'free_x') +
-  theme_bw() +
-  theme(axis.title.y = element_blank(),
-        legend.title = element_blank())
-effect.size.plot.ngs
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_ngs.jpg',
-#        effect.size.plot.ngs,
-#        height = 6,
-#        width = 6)
+# ### Some older plots
+# ### Plot NGS/Night
+# # both thermokarst and roughness
+# effect.size.plot.ngs <- ggplot(filter(co2.models.ngs, coefficient.type == 'slope'),
+#                            aes(y = Variable, color = Response, group = Response)) +
+#   geom_rect(data = filter(rects, Response != 'GPP'),
+#             aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = col),
+#             alpha = 0.2,
+#             inherit.aes = FALSE) +
+#   geom_vline(xintercept = 0) +
+#   geom_point(aes(x = Coefficient),
+#              show.legend = FALSE) +
+#   geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`),
+#                 width = 0.1,
+#                 show.legend = FALSE) +
+#   geom_text(data = r2.label.ngs,
+#             aes(x = x, y = 12.5, label = label),
+#             parse = TRUE,
+#             inherit.aes = FALSE,
+#             size = 3,
+#             vjust = 'inward',
+#             hjust = 'inward') +
+#   scale_y_discrete(limits = rev,
+#                    labels = c('Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul', 'Jun', 'May', 'Apr', 'Mar', 'Feb', 'Jan')) +
+#   scale_x_continuous(name = 'Slope') +
+#   scale_color_manual(breaks = c('Reco', 'NEE'),
+#                      values = c('#CC3300', '#000066')) +
+#   scale_fill_manual(breaks = c('a', 'b'),
+#                     values = c('#99CC33', '#FF6633'),
+#                     labels = c('Greater Sink/\nSmaller Source',
+#                                'Greater Source/\nSmaller Sink')) +
+#   facet_grid(Response ~ Predictor, scales = 'free_x') +
+#   theme_bw() +
+#   theme(axis.title.y = element_blank(),
+#         legend.title = element_blank())
+# effect.size.plot.ngs
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_ngs.jpg',
+# #        effect.size.plot.ngs,
+# #        height = 6,
+# #        width = 6)
+# # 
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_ngs.pdf',
+# #        effect.size.plot.ngs,
+# #        height = 6,
+# #        width = 6)
 # 
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_ngs.pdf',
-#        effect.size.plot.ngs,
-#        height = 6,
-#        width = 6)
-
-### GS Day
-effect.size.plot.gs <- ggplot(filter(co2.models.gs, coefficient.type == 'slope'),
-                              aes(y = Variable, color = Response, group = Response)) +
-  geom_rect(data = rects,
-            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = col),
-            alpha = 0.2,
-            inherit.aes = FALSE) +
-  geom_vline(xintercept = 0) +
-  geom_point(aes(x = Coefficient)) +
-  geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`), width = 0.1) +
-  geom_text(data = r2.label.gs,
-            aes(x = x, y = 7.5, label = label),
-            parse = TRUE,
-            inherit.aes = FALSE,
-            size = 3,
-            vjust = 'inward',
-            hjust = 'inward') +
-  scale_y_discrete(limits = rev,
-                   labels = c('Oct', 'Sep', 'Aug', 'Jul', 'Jun', 'May', 'Apr')) +
-  scale_x_continuous(name = 'Slope') +
-  scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
-                     values = c('#99CC33','#CC3300', '#000066')) +
-  scale_fill_manual(breaks = c('a', 'b'),
-                    values = c('#99CC33', '#FF6633'),
-                    labels = c('Greater Sink/\nSmaller Source',
-                               'Greater Source/\nSmaller Sink')) +
-  facet_grid(Response ~ Predictor, scales = 'free_x') +
-  theme_bw() +
-  theme(axis.title.y = element_blank(),
-        legend.position = 'none')
-effect.size.plot.gs
-
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_gs.jpg',
-#        effect.size.plot.gs,
-#        height = 6,
-#        width = 6)
+# ### GS Day
+# effect.size.plot.gs <- ggplot(filter(co2.models.gs, coefficient.type == 'slope'),
+#                               aes(y = Variable, color = Response, group = Response)) +
+#   geom_rect(data = rects,
+#             aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = col),
+#             alpha = 0.2,
+#             inherit.aes = FALSE) +
+#   geom_vline(xintercept = 0) +
+#   geom_point(aes(x = Coefficient)) +
+#   geom_errorbar(aes(xmin = `Min CI`, xmax = `Max CI`), width = 0.1) +
+#   geom_text(data = r2.label.gs,
+#             aes(x = x, y = 7.5, label = label),
+#             parse = TRUE,
+#             inherit.aes = FALSE,
+#             size = 3,
+#             vjust = 'inward',
+#             hjust = 'inward') +
+#   scale_y_discrete(limits = rev,
+#                    labels = c('Oct', 'Sep', 'Aug', 'Jul', 'Jun', 'May', 'Apr')) +
+#   scale_x_continuous(name = 'Slope') +
+#   scale_color_manual(breaks = c('GPP', 'Reco', 'NEE'),
+#                      values = c('#99CC33','#CC3300', '#000066')) +
+#   scale_fill_manual(breaks = c('a', 'b'),
+#                     values = c('#99CC33', '#FF6633'),
+#                     labels = c('Greater Sink/\nSmaller Source',
+#                                'Greater Source/\nSmaller Sink')) +
+#   facet_grid(Response ~ Predictor, scales = 'free_x') +
+#   theme_bw() +
+#   theme(axis.title.y = element_blank(),
+#         legend.position = 'none')
+# effect.size.plot.gs
 # 
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_gs.pdf',
-#        effect.size.plot.gs,
-#        height = 6,
-#        width = 6)
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_gs.jpg',
+# #        effect.size.plot.gs,
+# #        height = 6,
+# #        width = 6)
+# # 
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size_gs.pdf',
+# #        effect.size.plot.gs,
+# #        height = 6,
+# #        width = 6)
 ########################################################################################################################
 
-### CH4 Analysis #######################################################################################################
+### CH4 Analysis
+### Prep Data ##########################################################################################################
 # load data from our files to get most recent years
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2015-2016/AK15_CO2&CH4_30Apr2019.Rdata')
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_CO2&CH4_30Apr2019.Rdata')
@@ -3736,6 +3448,126 @@ ch4.flux[, year := year(ts)]
 ch4.flux[, month := month(ts)]
 ch4.flux[, week := week(ts)]
 
+# load GPP in order to classify groups same as co2
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_Carbon_new_30Apr2019.Rdata')
+carbon.16 <- export
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
+carbon.17 <- export
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
+carbon.18 <- export
+carbon.18[, u_var := NULL]
+carbon.18[, v_var := NULL]
+carbon.18[, w_var := NULL]
+load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
+carbon.19 <- export
+rm(export)
+
+gpp <- rbind(carbon.16,
+             carbon.17,
+             carbon.18,
+             carbon.19) %>%
+  select(ts, GEP)
+
+
+# Join ch4 and karst/roughness data
+ch4.model.data <- ch4.flux %>%
+  left_join(karst_roughness, by = c('ts', 'wind_dir')) %>%
+  rename(percent.thermokarst.ffp = karst.pc, mtopo15.sd.ffp = sd.mtopo) %>%
+  filter(!(is.na(ch4_flux_filter) | is.na(percent.thermokarst.ffp))) %>%
+  mutate(year.factor = factor(year(ts)),
+         month.factor = factor(month),
+         ch4.flux.hh = ch4_flux_filter*(12.0107 * 1800)/1000, # convert to mg/half hour from micromol/s
+         ch4.clean = ifelse(ch4.flux.hh > mean(ch4.flux.hh) + 3*sd(ch4.flux.hh) |
+                              ch4.flux.hh < mean(ch4.flux.hh) - 3*sd(ch4.flux.hh), # remove outliers at 3 std dev for calculation of rolling mean
+                            NA,
+                            ch4.flux.hh),
+         ch4.mean.15d = rollapply(ch4.clean, 720, mean, na.rm = TRUE, partial = TRUE),
+         ch4.sd.15d = rollapply(ch4.clean, 720, sd, na.rm = TRUE, partial = TRUE),
+         spike = ifelse(ch4.flux.hh > ch4.mean.15d + 3*ch4.sd.15d,
+                        'release spike',
+                        ifelse(ch4.flux.hh < ch4.mean.15d - 3*ch4.sd.15d,
+                               'uptake spike',
+                               'non-spike'))) %>%
+  filter(!(year.factor == 2017 & ts > as_date('2017-12-01') |
+             year.factor == 2018 & ts <= as_date('2018-05-12'))) %>%
+  as.data.table() %>%
+  left_join(gpp,
+            by = c('ts')) %>%
+  mutate(season = ifelse(month >= 5 & month <= 9,
+                         'GS',
+                         'NGS'),
+         group = ifelse(PAR_filter >= 10 & (month >= 5 & month <= 9 | (month == 4 | month == 10) & GEP > 0),
+                        'GS Day',
+                        ifelse(PAR_filter < 10 & month >= 5 & month <= 9,
+                               'GS Night',
+                               ifelse(month <= 4 | month >= 10,
+                                      'NGS',
+                                      NA))),
+         wind.speed.groups = factor(ifelse(wind_speed_filter < 4,
+                                           '<4',
+                                           ifelse(wind_speed_filter < 8,
+                                                  '4-8',
+                                                  ifelse(wind_speed_filter < 12,
+                                                         '8-12',
+                                                         ifelse(wind_speed_filter >= 12,
+                                                                '>12',
+                                                                NA)))),
+                                    levels = c('<4', '4-8', '8-12', '>12')),
+         thermokarst.groups = factor(ifelse(percent.thermokarst.ffp < 0.1,
+                                            '<0.1',
+                                            ifelse(percent.thermokarst.ffp < 0.2,
+                                                   '0.1-0.2',
+                                                   ifelse(percent.thermokarst.ffp < 0.3,
+                                                          '0.2-0.3',
+                                                          ifelse(percent.thermokarst.ffp >= 0.3,
+                                                                 '>0.3',
+                                                                 NA)))),
+                                     levels = c('<0.1', '0.1-0.2', '0.2-0.3', '>0.3')),
+         mean.swc = ifelse(!is.na(SWC_1_1_1) & !is.na(SWC_2_1_1),
+                           (SWC_1_1_1 + SWC_2_1_1)/2,
+                           ifelse(!is.na(SWC_1_1_1),
+                                  SWC_1_1_1,
+                                  ifelse(!is.na(SWC_2_1_1),
+                                         SWC_2_1_1,
+                                         NA))),
+         mean.ts.10 = ifelse(!is.na(TS_1_1_1) & !is.na(TS_5_1_1),
+                             (TS_1_1_1 + TS_5_1_1)/2,
+                             ifelse(!is.na(TS_1_1_1),
+                                    TS_1_1_1,
+                                    ifelse(!is.na(TS_5_1_1),
+                                           TS_5_1_1,
+                                           NA))))
+
+ch4.model.data <- ch4.model.data[order(ts)]
+
+hist(ch4.model.data$ch4_flux_filter)
+hist(ch4.model.data$ch4.flux.hh)
+
+# make sure the groups came out correctly
+ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = group)) +
+  geom_point()
+ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = spike)) +
+  geom_point()
+
+hist(filter(ch4.model.data, spike == 'non-spike')$ch4.flux.hh)
+hist(filter(ch4.model.data, spike == 'release spike')$ch4.flux.hh)
+hist(filter(ch4.model.data, spike == 'uptake spike')$ch4.flux.hh)
+
+ch4.no.spike <- ch4.model.data %>%
+  filter(spike == 'non-spike') %>%
+  select(ch4.flux.hh, ch4.hyp.sine, month.factor, percent.thermokarst.ffp, wind_speed_filter, mean.swc, mean.ts.10) %>%
+  mutate(ch4.scale = scale(ch4.hyp.sine),
+         percent.thermokarst.scale = scale(percent.thermokarst.ffp),
+         wind.speed.scale = scale(wind_speed_filter),
+         mean.swc.scale = scale(mean.swc),
+         mean.ts.10.scale = scale(mean.ts.10))
+
+ch4.no.spike <- ch4.model.data %>%
+  filter(spike == 'non-spike') %>%
+  select(ch4.flux.hh, month.factor, percent.thermokarst.ffp, wind_speed_filter, mean.swc, mean.ts.10)
+########################################################################################################################
+
+### Check Diurnal Variation in Fluxes ##################################################################################
 # # Look for diurnal variation
 # ggplot(ch4.flux[year == 2016], aes(x = ts, y = ch4_flux_filter)) +
 #   geom_point() +
@@ -3864,131 +3696,9 @@ ch4.flux[, week := week(ts)]
 # #        combined,
 # #        height = 8,
 # #        width = 15)
+########################################################################################################################
 
-# load GPP in order to classify groups same as co2
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2016-2017/AK16_Carbon_new_30Apr2019.Rdata')
-carbon.16 <- export
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_Carbon_new_30Apr2019.Rdata')
-carbon.17 <- export
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2018-2019/AK18_Carbon_new_30Apr2019.Rdata')
-carbon.18 <- export
-carbon.18[, u_var := NULL]
-carbon.18[, v_var := NULL]
-carbon.18[, w_var := NULL]
-load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2019-2020/AK19_Carbon.Rdata')
-carbon.19 <- export
-rm(export)
-
-gpp <- rbind(carbon.16,
-             carbon.17,
-             carbon.18,
-             carbon.19) %>%
-  select(ts, GEP)
-
-
-# Join ch4 and karst/roughness data
-ch4.model.data <- ch4.flux %>%
-  left_join(karst_roughness, by = c('ts', 'wind_dir')) %>%
-  rename(percent.thermokarst.ffp = karst.pc, mtopo15.sd.ffp = sd.mtopo) %>%
-  filter(!(is.na(ch4_flux_filter) | is.na(percent.thermokarst.ffp))) %>%
-  mutate(year.factor = factor(year(ts)),
-         month.factor = factor(month),
-         ch4.flux.hh = ch4_flux_filter*(12.0107 * 1800)/1000, # convert to mg/half hour from micromol/s
-         ch4.flux.h = ch4_flux_filter*(12.0107 * 3600)/1000, # convert to mg/half hour from micromol/s
-         ch4.flux.4h = ch4_flux_filter*(12.0107 * 14400)/1000, # convert to mg/half hour from micromol/s
-         ch4.flux.6h = ch4_flux_filter*(12.0107 * 21600)/1000, # convert to mg/half hour from micromol/s
-         ch4.flux.8h = ch4_flux_filter*(12.0107 * 28800)/1000, # convert to mg/half hour from micromol/s
-         ch4.flux.d = ch4_flux_filter*(12.0107 * 86400)/1000, # convert to mg/half hour from micromol/s
-         ch4.hyp.sine = log(ch4.flux.6h + (ch4.flux.6h^2 + 1)^(1/2)), # inverse hyperbolic sine transformation (somewhat like log but works with negative values)
-         ch4.clean = ifelse(ch4.flux.hh > mean(ch4.flux.hh) + 3*sd(ch4.flux.hh) |
-                              ch4.flux.hh < mean(ch4.flux.hh) - 3*sd(ch4.flux.hh), # remove outliers at 3 std dev for calculation of rolling mean
-                            NA,
-                            ch4.flux.hh),
-         ch4.mean.15d = rollapply(ch4.clean, 720, mean, na.rm = TRUE, partial = TRUE),
-         ch4.sd.15d = rollapply(ch4.clean, 720, sd, na.rm = TRUE, partial = TRUE),
-         spike = ifelse(ch4.flux.hh > ch4.mean.15d + 3*ch4.sd.15d,
-                        'release spike',
-                        ifelse(ch4.flux.hh < ch4.mean.15d - 3*ch4.sd.15d,
-                               'uptake spike',
-                               'non-spike'))) %>%
-  filter(!(year.factor == 2017 & ts > as_date('2017-12-01') |
-             year.factor == 2018 & ts <= as_date('2018-05-12'))) %>%
-  as.data.table() %>%
-  left_join(gpp,
-            by = c('ts')) %>%
-  mutate(season = ifelse(month >= 5 & month <= 9,
-                         'GS',
-                         'NGS'),
-         group = ifelse(PAR_filter >= 10 & (month >= 5 & month <= 9 | (month == 4 | month == 10) & GEP > 0),
-                        'GS Day',
-                        ifelse(PAR_filter < 10 & month >= 5 & month <= 9,
-                               'GS Night',
-                               ifelse(month <= 4 | month >= 10,
-                                      'NGS',
-                                      NA))),
-         wind.speed.groups = factor(ifelse(wind_speed_filter < 4,
-                                           '<4',
-                                           ifelse(wind_speed_filter < 8,
-                                                  '4-8',
-                                                  ifelse(wind_speed_filter < 12,
-                                                         '8-12',
-                                                         ifelse(wind_speed_filter >= 12,
-                                                                '>12',
-                                                                NA)))),
-                                    levels = c('<4', '4-8', '8-12', '>12')),
-         thermokarst.groups = factor(ifelse(percent.thermokarst.ffp < 0.1,
-                                            '<0.1',
-                                            ifelse(percent.thermokarst.ffp < 0.2,
-                                                   '0.1-0.2',
-                                                   ifelse(percent.thermokarst.ffp < 0.3,
-                                                          '0.2-0.3',
-                                                          ifelse(percent.thermokarst.ffp >= 0.3,
-                                                                 '>0.3',
-                                                                 NA)))),
-                                     levels = c('<0.1', '0.1-0.2', '0.2-0.3', '>0.3')),
-         mean.swc = ifelse(!is.na(SWC_1_1_1) & !is.na(SWC_2_1_1),
-                           (SWC_1_1_1 + SWC_2_1_1)/2,
-                           ifelse(!is.na(SWC_1_1_1),
-                                  SWC_1_1_1,
-                                  ifelse(!is.na(SWC_2_1_1),
-                                         SWC_2_1_1,
-                                         NA))),
-         mean.ts.10 = ifelse(!is.na(TS_1_1_1) & !is.na(TS_5_1_1),
-                             (TS_1_1_1 + TS_5_1_1)/2,
-                             ifelse(!is.na(TS_1_1_1),
-                                    TS_1_1_1,
-                                    ifelse(!is.na(TS_5_1_1),
-                                           TS_5_1_1,
-                                           NA))))
-
-ch4.model.data <- ch4.model.data[order(ts)]
-
-hist(ch4.model.data$ch4_flux_filter)
-hist(ch4.model.data$ch4.flux.hh)
-hist(ch4.model.data$ch4.hyp.sine)
-
-
-# make sure the groups came out correctly
-ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = group)) +
-  geom_point()
-
-ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
-  geom_point() +
-  scale_y_continuous(limits = c(-8, 8))
-ggplot(ch4.model.data, aes(x = ts, y = ch4.clean, color = percent.thermokarst.ffp)) +
-  geom_point() +
-  scale_y_continuous(limits = c(-8, 8))
-ggplot(ch4.model.data, aes(x = ts, y = ch4.mean.15d, color = percent.thermokarst.ffp)) +
-  geom_point()
-ggplot(ch4.model.data, aes(x = ts, y = ch4.sd.15d, color = percent.thermokarst.ffp)) +
-  geom_point()
-ggplot(ch4.model.data, aes(x = ts, y = ch4.flux.hh, color = spike)) +
-  geom_point()
-
-hist(filter(ch4.model.data, spike == 'non-spike')$ch4.flux.hh)
-hist(filter(ch4.model.data, spike == 'release spike')$ch4.flux.hh)
-hist(filter(ch4.model.data, spike == 'uptake spike')$ch4.flux.hh)
-
+### Plot Data ##########################################################################################################
 # plot by thermokarst
 ch4.plot <- ggplot(filter(ch4.model.data, spike == 'non-spike'),
                     aes(x = percent.thermokarst.ffp,
@@ -4216,20 +3926,9 @@ ggplot(filter(ch4.model.data, spike == 'non-spike'),
 # # using an aic improvement cutoff of 5 to add terms, we select FCH4 ~ 
 # # percent.thermokarst.slice + year.factor. So the slopes are the same between 2018
 # # and other years, but the intercept (flux magnitude) is different
+########################################################################################################################
 
-# Mixed Effects Model
-# This allows the inclusion of wind speed as a random variable
-# scale values before running model
-ch4.no.spike <- ch4.model.data %>%
-  filter(spike == 'non-spike') %>%
-  select(ch4.flux.hh, ch4.hyp.sine, month.factor, percent.thermokarst.ffp, wind_speed_filter, mean.swc, mean.ts.10) %>%
-  mutate(ch4.scale = scale(ch4.hyp.sine),
-         percent.thermokarst.scale = scale(percent.thermokarst.ffp),
-         wind.speed.scale = scale(wind_speed_filter),
-         mean.swc.scale = scale(mean.swc),
-         mean.ts.10.scale = scale(mean.ts.10))
-
-# # Linear model
+### Linear Model of Non-Spike Data #####################################################################################
 # simple
 smallest <- ch4.flux.hh ~ 1
 biggest <- ch4.flux.hh ~ percent.thermokarst.ffp*month.factor
@@ -4283,76 +3982,134 @@ ch4.model.table <- ch4.model.ci %>%
 
 ch4.slopes <- slice(ch4.model.table, 13:24) %>%
   select(3:6) %>%
-  mutate(month = seq(1:12))
+  mutate(month = seq(1:12),
+         coefficient = 'Slope')
 ch4.intercepts <- slice(ch4.model.table, 1:12) %>%
   select(3:6) %>%
-  mutate(month = seq(1:12))
+  mutate(month = seq(1:12),
+         coefficient = 'Intercept')
+ch4.coefficients <- rbind(ch4.intercepts, ch4.slopes)
+text <- data.frame(x = 12,
+                   y = -0.0225,
+                   label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', ch4.model.table$R2[1]))
+ch4.rects <- data.frame(ymin = c(-Inf, 0),
+                        ymax = c(0, Inf),
+                        col = c('a', 'b'))
 # this seems a bit misleading, because the higher methane uptake with higher
 # thermokarst is probably actually driven by high release at low thermokarst
 # which is a coincidence because winter storms with high wind speeds and high
 # methane release happen to come from a direction with low thermokrst!
-ch4.slopes.plot <- ggplot(ch4.slopes, aes(x = month, y = Coefficient)) +
-  geom_rect(data = filter(rects, Response == 'NEE'),
-            aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
+ch4.coefficients.plot <- ggplot(ch4.coefficients,
+                                aes(x = month, y = Coefficient, color = coefficient)) +
+  geom_rect(data = ch4.rects,
+            aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, fill = col),
             alpha = 0.2,
             inherit.aes = FALSE) +
-  geom_point() +
+  geom_point(position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
-                width = 0.1) +
+                position = position_dodge(width = 0.5),
+                width = 0.3) +
+  geom_text(data = text,
+            aes(x = x, y = y, label = label),
+            inherit.aes = FALSE,
+            parse = TRUE,
+            size = 3,
+            vjust = 'inward',
+            hjust = 'inward') +
   scale_x_continuous(breaks = seq(1, 12),
                      labels = month.name[seq(1, 12)],
                      minor_breaks = NULL) +
-  scale_y_continuous(name = 'Slope') +
-  scale_fill_manual(name = 'As thermokarst\nincreases:',
+  scale_y_continuous(name = 'Coefficient') +
+  scale_color_manual(name = element_blank(),
+                     values = c('gray', 'black')) +
+  scale_fill_manual(name = element_blank(),
                     breaks = c('a', 'b'),
-                    values = c('#99CC33', '#CC3300'),
-                    labels = c('Sink \U02191 or Source \U02193',
-                               'Sink \U02193 or Source \U02191')) +
-  theme_bw() +
-  theme(axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-ch4.slopes.plot
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.jpg',
-#        ch4.slopes.plot,
-#        height = 4,
-#        width = 4)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.pdf',
-#        ch4.slopes.plot,
-#        height = 4,
-#        width = 4)
-
-ch4.intercepts.plot <- ggplot(ch4.intercepts, aes(x = month, y = Coefficient)) +
-  geom_rect(data = filter(rects, Response == 'NEE'),
-            aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
-            alpha = 0.2,
-            inherit.aes = FALSE) +
-  geom_point() +
-  geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
-                width = 0.1) +
-  scale_x_continuous(breaks = seq(1, 12),
-                     labels = month.name[seq(1, 12)],
-                     minor_breaks = NULL) +
-  scale_y_continuous(name = 'Intercept') +
-  scale_fill_manual(breaks = c('a', 'b'),
                     values = c('#99CC33', '#CC3300'),
                     labels = c('Sink',
                                'Source')) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        legend.title = element_blank())
-ch4.intercepts.plot
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_intercepts_all_years.jpg',
-#        ch4.intercepts.plot,
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+ch4.coefficients.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_coefficients_all_years.jpg',
+#        ch4.coefficients.plot,
 #        height = 4,
 #        width = 4)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_intercepts_all_years.pdf',
-#        ch4.intercepts.plot,
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_coefficients_all_years.pdf',
+#        ch4.coefficients.plot,
 #        height = 4,
 #        width = 4)
 
+# # Plot with only slopes
+# ch4.slopes.plot <- ggplot(ch4.slopes, aes(x = month, y = Coefficient)) +
+#   geom_rect(data = ch4.rects,
+#             aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, fill = col),
+#             alpha = 0.2,
+#             inherit.aes = FALSE) +
+#   geom_point() +
+#   geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
+#                 width = 0.1) +
+#   geom_text(data = text,
+#             aes(x = x, y = y, label = label),
+#             parse = TRUE,
+#             size = 3,
+#             vjust = 'inward',
+#             hjust = 'inward') +
+#   scale_x_continuous(breaks = seq(1, 12),
+#                      labels = month.name[seq(1, 12)],
+#                      minor_breaks = NULL) +
+#   scale_y_continuous(name = 'Slope') +
+#   scale_fill_manual(name = 'As thermokarst\nincreases:',
+#                     breaks = c('a', 'b'),
+#                     values = c('#99CC33', '#CC3300'),
+#                     labels = c('Sink \U02191 or Source \U02193',
+#                                'Sink \U02193 or Source \U02191')) +
+#   theme_bw() +
+#   theme(axis.title.x = element_blank(),
+#         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+# ch4.slopes.plot
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.jpg',
+# #        ch4.slopes.plot,
+# #        height = 4,
+# #        width = 4)
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_slopes_all_years.pdf',
+# #        ch4.slopes.plot,
+# #        height = 4,
+# #        width = 4)
 
-### Investigate Pulses
+# # Plot with only intercepts
+# ch4.intercepts.plot <- ggplot(ch4.intercepts, aes(x = month, y = Coefficient)) +
+#   geom_rect(data = filter(rects, Response == 'NEE'),
+#             aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
+#             alpha = 0.2,
+#             inherit.aes = FALSE) +
+#   geom_point() +
+#   geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
+#                 width = 0.1) +
+#   scale_x_continuous(breaks = seq(1, 12),
+#                      labels = month.name[seq(1, 12)],
+#                      minor_breaks = NULL) +
+#   scale_y_continuous(name = 'Intercept') +
+#   scale_fill_manual(breaks = c('a', 'b'),
+#                     values = c('#99CC33', '#CC3300'),
+#                     labels = c('Sink',
+#                                'Source')) +
+#   theme_bw() +
+#   theme(axis.title.x = element_blank(),
+#         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+#         legend.title = element_blank())
+# ch4.intercepts.plot
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_intercepts_all_years.jpg',
+# #        ch4.intercepts.plot,
+# #        height = 4,
+# #        width = 4)
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_intercepts_all_years.pdf',
+# #        ch4.intercepts.plot,
+# #        height = 4,
+# #        width = 4)
+########################################################################################################################
+
+### Investigate Pulses #################################################################################################
 ### Pulse Release
 ggplot(filter(ch4.model.data, spike == 'release spike'),
        aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter)) +
