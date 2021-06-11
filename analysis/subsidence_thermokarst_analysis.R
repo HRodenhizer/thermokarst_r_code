@@ -407,25 +407,43 @@ karst_1_summary <- karst_1_summary_year %>%
 # write.csv(karst_1_summary,
 #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_summary.csv')
 
+########################################################################################################################
+
+### Thermokarst Morphology (Polygon Compactness via Polsby-Popper Test) ################################################
+# Load karst_1_stats_sf from previous section
+karst_1_stats_sf <- read_sf('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp') %>%
+  rename(min.depth = min_d,
+         mean.depth = mean_d,
+         median.depth = med_d,
+         max.depth = max_d,
+         sd.depth = sd_d,
+         se.depth = se_d,
+         min.depth.clean = min_d_c,
+         mean.depth.clean = mean_d_c,
+         median.depth.clean = med_d_c,
+         max.depth.clean = max_d_c,
+         sd.depth.clean = sd_d_c,
+         se.depth.clean= se_d_c)
+
 # create a data frame to explore relationship between size classes and prevalence, percent cover,
 # percent volume, and mean depth
 karst_size <- karst_1_stats_sf %>%
   select(-ends_with('clean')) %>%
   mutate(size.cat.exp = ifelse(size <= 10^0,
-                              0,
-                              ifelse(size <= 10^1,
-                                     1,
-                                     ifelse(size <= 10^2,
-                                            2,
-                                            ifelse(size <= 10^3,
-                                                   3,
-                                                   ifelse(size <= 10^4,
-                                                          4,
-                                                          ifelse(size <= 10^5,
-                                                                 5,
-                                                                 ifelse(size <= 10^6,
-                                                                        6,
-                                                                        NA))))))),
+                               0,
+                               ifelse(size <= 10^1,
+                                      1,
+                                      ifelse(size <= 10^2,
+                                             2,
+                                             ifelse(size <= 10^3,
+                                                    3,
+                                                    ifelse(size <= 10^4,
+                                                           4,
+                                                           ifelse(size <= 10^5,
+                                                                  5,
+                                                                  ifelse(size <= 10^6,
+                                                                         6,
+                                                                         NA))))))),
          size.cat = 10^size.cat.exp,
          volume = size*mean.depth) %>%
   select(-c(ID, FID)) %>%
@@ -529,23 +547,7 @@ size_plot
 #        size_plot,
 #        height = 10,
 #        width = 6)
-########################################################################################################################
 
-### Thermokarst Morphology (Polygon Compactness via Polsby-Popper Test) ################################################
-# Load karst_1_stats_sf from previous section
-karst_1_stats_sf <- read_sf('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp') %>%
-  rename(min.depth = min_d,
-         mean.depth = mean_d,
-         median.depth = med_d,
-         max.depth = max_d,
-         sd.depth = sd_d,
-         se.depth = se_d,
-         min.depth.clean = min_d_c,
-         mean.depth.clean = mean_d_c,
-         median.depth.clean = med_d_c,
-         max.depth.clean = max_d_c,
-         sd.depth.clean = sd_d_c,
-         se.depth.clean= se_d_c)
 
 # remove the cleaned values column here, because the summarizing will take care of extreme values
 karst_morph <- karst_1_stats_sf %>%
@@ -678,7 +680,7 @@ shape_depth_plot <- ggplot(karst_morph_sum, aes(x = shape.cat.10, y = mean.depth
             inherit.aes = FALSE,
             vjust = "inward",
             hjust = "inward") +
-  geom_segment(aes(x = 2, y = 0.0005, xend = 6.8, yend = 0.0005),
+  geom_segment(aes(x = 2.3, y = 0.0005, xend = 6.5, yend = 0.0005),
                inherit.aes = FALSE,
                arrow = arrow(length = unit(0.03, "npc"), ends = "both")) +
   scale_x_continuous(breaks = seq(1:8),
@@ -726,12 +728,12 @@ size_morph_plot
 
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/size_morphology.jpg',
 #        size_morph_plot,
-#        height = 8,
-#        width = 7)
+#        height = 7.5,
+#        width = 6.5)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/size_morphology.pdf',
 #        size_morph_plot,
-#        height = 8,
-#        width = 7)
+#        height = 7.5,
+#        width = 6.5)
 
 # ggplot(karst_morph_sum, aes(x = shape.cat.10, y = min.depth)) +
 #   geom_point() +
@@ -1943,25 +1945,31 @@ ggplot(karst_mtopo_sf) +
 ec_karst_plot <- ggplot() +
   geom_sf(data = karst_mtopo_sf, aes(color = percent.thermokarst, fill = percent.thermokarst)) +
   coord_sf(datum = st_crs(32606)) +
-  scale_x_continuous(name = 'Longitude (m)') +
-  scale_y_continuous(name = 'Latitude (m)') +
+  scale_x_continuous(name = 'Longitude (m)',
+                     breaks = c(389200, 389400, 389600)) +
+  scale_y_continuous(name = 'Latitude (m)',
+                     breaks = c(7085400, 7085600, 7085800)) +
   scale_color_viridis(name = 'Thermokarst (%)',
                       direction = -1) +
   scale_fill_viridis(name = 'Thermokarst (%)',
                      direction = -1) +
-  theme_bw()
+  theme_bw() +
+  theme(legend.position = 'bottom')
 ec_karst_plot
 
 ec_mtopo_plot <- ggplot() +
   geom_sf(data = karst_mtopo_sf, aes(color = mtopo15.sd, fill = mtopo15.sd)) +
   coord_sf(datum = st_crs(32606)) +
-  scale_x_continuous(name = 'Longitude (m)') +
-  scale_y_continuous(name = 'Latitude (m)') +
+  scale_x_continuous(name = 'Longitude (m)',
+                     breaks = c(389200, 389400, 389600)) +
+  scale_y_continuous(name = 'Latitude (m)',
+                     breaks = c(7085400, 7085600, 7085800)) +
   scale_color_viridis(name = 'Roughness (m)',
                       direction = -1) +
   scale_fill_viridis(name = 'Roughness (m)',
                      direction = -1) +
-  theme_bw()
+  theme_bw() +
+  theme(legend.position = 'bottom')
 ec_mtopo_plot
 
 ec_karst_mtopo_class <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = mtopo15.sd)) +
@@ -1979,7 +1987,7 @@ ec_karst_mtopo_cont <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = m
   geom_smooth(method = 'gam',
               formula = y ~ s(x, bs = "cs"),
               color = 'black') +
-  scale_x_continuous(name = 'Thermokarst (%)') +
+  scale_x_continuous(name = 'Thermokarst\n(%)') +
   scale_y_continuous(name = 'Roughness (m)') +
   scale_color_gradient(name = "Direction",
                        low = '#CCCCCC',
@@ -1994,12 +2002,12 @@ karst_mtopo <- grid.arrange(ec_karst_plot,
                                                   c(3, 3)))
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_roughness.jpg',
 #        karst_mtopo,
-#        height = 8,
-#        width = 10)
+#        height = 6.5,
+#        width = 6.5)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_roughness.pdf',
 #        karst_mtopo,
-#        height = 8,
-#        width = 10)
+#        height = 6.5,
+#        width = 6.5)
 
 # try to figure out why the mtopo values always have 999 or 000 in decimal places 3-5
 # # I guess the raw LiDAR elevation somehow is only actually significant to 2 decimal places. Why?
@@ -2159,9 +2167,12 @@ rm(test)
 co2.model.data[, wind_dir := NULL]
 co2.model.data[, offset := NULL]
 
+# remove filled data
+co2.model.data <- co2.model.data[filled == 0]
+
 # subset GS Day or Non-Growing Season/Night
-co2.gs.day <- co2.model.data[group == 'GS Day' & filled == 0]
-co2.ngs.night <- co2.model.data[group != 'GS Day' & filled == 0]
+co2.gs.day <- co2.model.data[group == 'GS Day']
+co2.ngs.night <- co2.model.data[group != 'GS Day']
 ########################################################################################################################
 
 ### Model C Fluxes with Thermokarst ####################################################################################
@@ -2170,6 +2181,14 @@ co2.ngs.night <- co2.model.data[group != 'GS Day' & filled == 0]
 # # See: https://data.library.virginia.edu/normality-assumption/
 
 ### NEE
+# All times
+nee.karst.model <- lm(NEP ~ percent.thermokarst.ffp,
+                      data = co2.model.data)
+# saveRDS(nee.karst.model,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple.rds')
+nee.karst.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple.rds')
+summary(nee.karst.model)
+
 # NGS/Night
 nee.karst.plot.ngs <- ggplot(co2.ngs.night,
                    aes(x = percent.thermokarst.ffp,
@@ -3327,20 +3346,21 @@ effect.size.plot <- ggplot(filter(co2.model.summary, Predictor == 'Thermokarst')
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        legend.position = c(0.998, -0.1),
+        legend.position = c(0.999, 0.002),
         legend.justification = c(1, 0),
-        legend.box.background = element_rect(color = 'white', fill = "white"),
-        legend.box.margin = margin(0,0.8,0.3,0.3,"inches"))
+        legend.margin = margin(-0.1, 0.1, -0.1, 0.1, "inches"),
+        legend.box.background = element_rect(color = 'gray40', fill = "white"),
+        legend.box.margin = margin(0.196,0.6,0.34,0.24,"inches"))
 effect.size.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.jpg',
 #        effect.size.plot,
-#        height = 4,
-#        width = 7)
+#        height = 3.75,
+#        width = 6.5)
 # 
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.pdf',
 #        effect.size.plot,
-#        height = 4,
-#        width = 7)
+#        height = 3.75,
+#        width = 6.5)
 
 # ### Some older plots
 # ### Plot NGS/Night
@@ -3429,6 +3449,15 @@ effect.size.plot
 # #        effect.size.plot.gs,
 # #        height = 6,
 # #        width = 6)
+
+### Scatterplot with smooth line for NEE at all times
+co2.tk.plot <- ggplot(co2.model.data, aes(x = percent.thermokarst.ffp, y = NEP, color = month.factor)) +
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  scale_color_viridis(discrete = TRUE,
+                      option = 'B') +
+  theme_bw()
+co2.tk.plot
 ########################################################################################################################
 
 ### CH4 Analysis
@@ -3979,6 +4008,9 @@ ch4.model.table <- ch4.model.ci %>%
 
 # write.csv(ch4.model.table, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_all_years.csv',
 #           row.names = FALSE)
+ch4.model.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/ch4_model_table_all_years.csv') %>%
+  rename('Response' = 1, 'Full Model' = 2, 'Final Variables' = 3,
+         'Coefficient' = 4, 'Min CI' = 5, 'Max CI' = 6, 'R2' = 7)
 
 ch4.slopes <- slice(ch4.model.table, 13:24) %>%
   select(3:6) %>%
@@ -3995,7 +4027,7 @@ text <- data.frame(x = 12,
 ch4.rects <- data.frame(ymin = c(-Inf, 0),
                         ymax = c(0, Inf),
                         col = c('a', 'b'))
-# this seems a bit misleading, because the higher methane uptake with higher
+# the higher methane uptake with higher
 # thermokarst is probably actually driven by high release at low thermokarst
 # which is a coincidence because winter storms with high wind speeds and high
 # methane release happen to come from a direction with low thermokrst!
@@ -4110,6 +4142,52 @@ ch4.coefficients.plot
 ########################################################################################################################
 
 ### Investigate Pulses #################################################################################################
+### Best Plots
+# wind speed important in winter spikes
+ch4.ws.plot <- ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_x_continuous(name = 'Wind Speed (m/s)') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux (mg C m'^-2 ~ 'half hour'^-1 ~ ')')) +
+  scale_color_viridis(name = 'Thermokarst % Cover') +
+  theme_bw() +
+  theme(legend.position = 'bottom',
+        strip.background = element_blank(),
+        strip.text = element_blank())
+ch4.ws.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_pulse_release_ws_tk_season.jpg')
+
+# Soil Moisture important in summer spikes
+ch4.swc.plot <- ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = mean.swc, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_x_continuous(name = 'Soil Moisture (%)') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux (mg C m'^-2 ~ 'half hour'^-1 ~ ')')) +
+  scale_color_viridis(name = 'Thermokarst % Cover') +
+  theme_bw() +
+  theme(legend.position = 'bottom',
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank())
+ch4.swc.plot
+ch4.pulse.plot <- ggarrange(ch4.ws.plot,
+          ch4.swc.plot,
+          ncol = 2,
+          widths = c(1, 0.945),
+          legend = 'bottom',
+          legend.grob = get_legend(ch4.swc.plot))
+ch4.pulse.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_pulse_release.jpg',
+#        ch4.pulse.plot,
+#        height = 4,
+#        width = 4)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_pulse_release.pdf',
+#        ch4.pulse.plot,
+#        height = 4,
+#        width = 4)
+
+
 ### Pulse Release
 ggplot(filter(ch4.model.data, spike == 'release spike'),
        aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter)) +
@@ -4146,44 +4224,42 @@ ggplot(filter(ch4.model.data, spike == 'release spike'),
                       option = 'B')
 
 # separated by growing season
-# wind speed important in winter spikes
-ggplot(filter(ch4.model.data, spike == 'release spike'),
-       aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
-  geom_point() +
-  facet_grid(season ~ .) +
-  scale_color_viridis() +
-  theme_bw()
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_pulse_release_ws_tk_season.jpg')
 ggplot(filter(ch4.model.data, spike == 'release spike'),
        aes(x = wind_speed_filter, y = ch4.flux.hh, color = mean.swc)) +
   geom_point() +
   facet_grid(season ~ .) +
+  scale_x_continuous(name = 'Wind Speed') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux (mg C m'^-2 ~ 'half hour'^-1 ~ ')')) +
   scale_color_viridis() +
   theme_bw()
-ggplot(filter(ch4.model.data, spike == 'release spike' & season == 'NGS'),
-       aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
-  geom_point() +
-  facet_grid(season ~ .) +
-  scale_color_viridis() +
-  geom_smooth(method = "nls", formula = y ~ a + b*exp(c * x),
-              se=F,
-              method.args = list(start = c(a = 10, b = 1, c = 0.5)),
-              color = 'black') +
-  theme_bw()
-# thermokarst somewhat important in summer?
-ggplot(filter(ch4.model.data, spike == 'release spike'),
-       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = wind_speed_filter, group = season)) +
-  geom_point() +
-  facet_grid(season ~ .) +
-  scale_color_viridis() +
-  theme_bw()
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_pulse_release_tk_ws_season.jpg')
+# ggplot(filter(ch4.model.data, spike == 'release spike' & season == 'NGS'),
+#        aes(x = wind_speed_filter, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
+#   geom_point() +
+#   facet_grid(season ~ .) +
+#   scale_color_viridis() +
+#   geom_smooth(method = "nls", formula = y ~ a + b*exp(c * x),
+#               se=F,
+#               method.args = list(start = c(a = 10, b = 1, c = 0.5)),
+#               color = 'black') +
+#   theme_bw()
 ggplot(filter(ch4.model.data, spike == 'release spike'),
        aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = mean.swc, group = season)) +
   geom_point() +
   facet_grid(season ~ .) +
+  scale_x_continuous(name = 'Wind Speed') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux (mg C m'^-2 ~ 'half hour'^-1 ~ ')')) +
   scale_color_viridis() +
   theme_bw()
+
+ggplot(filter(ch4.model.data, spike == 'release spike'),
+       aes(x = percent.thermokarst.ffp, y = ch4.flux.hh, color = mean.swc, group = season)) +
+  geom_point() +
+  facet_grid(season ~ .) +
+  scale_x_continuous(name = 'Thermokarst % Cover') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux (mg C m'^-2 ~ 'half hour'^-1 ~ ')')) +
+  scale_color_viridis(name = 'Soil Moisture') +
+  theme_bw()
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/methane_pulse_release_tk_ws_season.jpg')
 
 # air temp doesn't matter for summer
 ggplot(filter(ch4.model.data, spike == 'release spike'),
@@ -4220,12 +4296,16 @@ ggplot(filter(ch4.model.data, spike == 'release spike'),
        aes(x = mean.swc, y = ch4.flux.hh, color = percent.thermokarst.ffp)) +
   geom_point() +
   facet_grid(season ~ .) +
+  scale_x_continuous(name = 'Soil Moisture') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux (mg C m'^-2 ~ 'half hour'^-1 ~ ')')) +
   scale_color_viridis() +
   theme_bw()
 ggplot(filter(ch4.model.data, spike == 'release spike'),
        aes(x = mean.swc, y = ch4.flux.hh, group = season, color = month.factor)) +
   geom_point() +
   facet_grid(season ~ .) +
+  scale_x_continuous(name = 'Soil Moisture') +
+  scale_y_continuous(name = expression('CH'[4] ~ 'Flux (mg C m'^-2 ~ 'half hour'^-1 ~ ')')) +
   scale_color_viridis(discrete = TRUE,
                       option = 'B') +
   theme_bw()

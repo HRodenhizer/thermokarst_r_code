@@ -6,7 +6,7 @@
 ### Load Libraries ###########################################################################################
 library(sf)
 library(raster)
-# library(ggmap)
+library(ggmap)
 library(ggthemes)
 library(ggnewscale)
 library(viridis)
@@ -124,6 +124,8 @@ site.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_sf(data = ec_sf, inherit.aes = FALSE) +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
   coord_sf(datum = st_crs(ec_sf),
            expand = FALSE) +
   theme_bw() +
@@ -132,12 +134,12 @@ site.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
 site.map
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/site_map.jpg',
 #        site.map,
-#        height = 6,
-#        width = 7)
+#        height = 3.25,
+#        width = 4)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/site_map.pdf',
 #        site.map,
-#        height = 6,
-#        width = 7)
+#        height = 3.25,
+#        width = 4)
 ##############################################################################################################
 
 ### Add in Thermokarst Classification ########################################################################
@@ -164,6 +166,8 @@ tk.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
   coord_sf(datum = st_crs(ec_sf),
            expand = FALSE) +
   theme_bw() +
@@ -172,10 +176,10 @@ tk.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
 tk.map
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_map.jpg',
 #        tk.map,
-#        height = 6,
-#        width = 7)
+#        height = 5.5,
+#        width = 6.5)
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_map.pdf',
 #        tk.map,
-#        height = 6,
-#        width = 7)
+#        height = 5.5,
+#        width = 6.5)
 ##############################################################################################################
