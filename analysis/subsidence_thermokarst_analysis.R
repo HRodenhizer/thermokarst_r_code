@@ -4322,6 +4322,12 @@ ggplot(filter(ch4.model.data, spike == 'release spike' & season == 'GS' & !(mont
               color = 'black') +
   theme_bw()
 
+
+### plot snow depth to see if high methane relates to snow depth
+snow.plot <- ggplot(ch4.flux[SNOWD_1_1_1 < 2 & SNOWD_1_1_1 > -2], aes(x = ts, y = SNOWD_1_1_1)) +
+  geom_point()
+plotly::ggplotly(snow.plot)
+
 # test how non linear models work - not looking so good...
 model <- nls(ch4.flux.hh ~ a + b*exp(c*wind_speed_filter),
              data = filter(ch4.model.data, spike == 'release spike' & season == 'NGS'),
