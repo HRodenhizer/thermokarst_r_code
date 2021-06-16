@@ -1408,10 +1408,10 @@ rm(points_2008_clean, points_2017_clean, points_2019_clean, id_fix_2017, id_fix_
 ec <- st_sfc(st_point(c(389389.25, 7085586.3), dim = 'XY'), crs = 32606)
 ec_sf <- st_sf(geometry = ec, crs = 32606)
 
-# # create a circle around the ec tower with radius = 200 m
-# circle <- st_buffer(ec, dist = 225)
-# circle_sf <- st_sf(geometry = circle)
-# 
+# create a circle around the ec tower with radius = 200 m
+circle <- st_buffer(ec, dist = 225)
+circle_sf <- st_sf(geometry = circle)
+
 # ggplot() +
 #   geom_sf(data = circle_sf, aes(geometry = geometry)) +
 #   geom_sf(data = ec_sf, aes(geometry = geometry))
@@ -1580,9 +1580,9 @@ ggplot() +
 ########################################################################################################################
 
 ### Microtopography Distribution (Roughness) at EC Tower ###############################################################
-mtopo_brick <- brick(mtopo[[1]][[1]],
-                     mtopo[[2]][[1]],
-                     mtopo[[3]][[1]])
+mtopo_brick <- brick(calc(mtopo[[1]], fun = min, na.rm = TRUE),
+                     calc(mtopo[[2]], fun = min, na.rm = TRUE),
+                     calc(mtopo[[3]], fun = min, na.rm = TRUE))
 mean_mtopo <- calc(mtopo_brick, mean, na.rm = FALSE)
 
 # read in Fay's microtopography
@@ -2188,6 +2188,47 @@ nee.karst.model <- lm(NEP ~ percent.thermokarst.ffp,
 #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple.rds')
 nee.karst.model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/nee_karst_model_simple.rds')
 summary(nee.karst.model)
+r2.label <- expression('R'^2 ~ '== ' ~ summary(nee.karst.model)$r.squared)
+nee.karst.plot <- ggplot(co2.model.data,
+                         aes(x = percent.thermokarst.ffp,
+                             y = NEP,
+                             color = month.factor)) +
+  geom_point(alpha = 0.4,
+             size = 1) +
+  geom_smooth(color = 'black',
+              fill = 'gray',
+              method = 'lm') +
+  geom_text(aes(x = 0.3, y = 0.2,
+                label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', round(summary(nee.karst.model)$r.squared, 4))),
+            inherit.aes = FALSE,
+            parse = TRUE,
+            size = 3,
+            vjust = 'outward',
+            hjust = 'outward') +
+  geom_text(aes(x = 0.295, y = 0.17,
+                label = paste0('Slope = ', round(summary(nee.karst.model)$coefficients[2, 1], 3))),
+            inherit.aes = FALSE,
+            size = 3,
+            vjust = 'outward',
+            hjust = 'outward') +
+  scale_x_continuous(name = 'Thermokarst Cover (%)') +
+  scale_y_continuous(name = expression('Net Ecosystem Exchange' ~ ('g C' ~ 'm'^-2 ~ 'hh'^-1))) +
+  scale_color_viridis(breaks = seq(1, 12),
+                      labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
+                      option = 'B',
+                      discrete = TRUE) +
+  theme_bw() +
+  theme(legend.title = element_blank())
+nee.karst.plot
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_karst_plot.jpg',
+#        nee.karst.plot,
+#        height = 4,
+#        width = 4)
+# 
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/nee_karst_plot.pdf',
+#        nee.karst.plot,
+#        height = 4,
+#        width = 4)
 
 # NGS/Night
 nee.karst.plot.ngs <- ggplot(co2.ngs.night,
