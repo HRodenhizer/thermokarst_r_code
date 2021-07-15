@@ -1014,10 +1014,11 @@ sub_karst_summary <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remot
 # saveRDS(model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500.rds')
 model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500.rds')
 summary(model)
-model.contrast <- emmeans(model, specs= pairwise~karst) %>%
-  summary(level=0.90)
-model.contrast
+# model.contrast <- emmeans(model, specs= pairwise~karst) %>%
+#   summary(level=0.90)
 # write.csv(model.contrast, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500_contrast.csv')
+model.contrast <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500_contrast.csv')
+model.contrast
 
 letters <- data.frame(karst = factor(c(0, 1, 2)),
                       sub = 0.25,
