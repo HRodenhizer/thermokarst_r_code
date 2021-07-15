@@ -17,7 +17,13 @@ library(tidyverse)
 
 ### Load Data ################################################################################################
 emldtm <- raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/DTM/NEON_DTM_2017.tif')
-crop_extent_final <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byrow = TRUE))
+crop_extent_final <- extent(matrix(c(386500, 396500, 7080000, 7090000), nrow = 2, byrow = TRUE))
+extent_sf <- data.frame(x = c(387000, 387000, 396000, 396000),
+                   y = c(7080500, 7089500, 7089500, 7080500)) %>%
+  st_as_sf(coords = c('x', 'y'),
+           crs = st_crs(emldtm)) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  st_cast('POLYGON')
 # crop_extent_test <- extent(matrix(c(390500, 390800, 7085800, 7086100), nrow = 2, byrow = TRUE))
 # emlrgb17 <- crop(projectRaster(brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/NEON/Airborne_Data_2017/2017_HEAL_RGB/QA/Camera/2017_HEAL_1_all_5m_ll_geo.tif'),
 #                              crs = crs(emldtm)),
@@ -25,6 +31,8 @@ crop_extent_final <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2
 emlrgb18 <- crop(projectRaster(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/QA/Camera/2018_HEAL_2_all_5m_ll_geo.tif'),
                              crs = crs(emldtm)),
                y = crop_extent_final)
+emlrgb18_full <- projectRaster(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/QA/Camera/2018_HEAL_2_all_5m_ll_geo.tif'),
+                               crs = crs(emldtm))
 # emlrgb19 <- crop(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2019_HEAL_RGB/2019_HEAL_3_all_1m_UTM_geo.tif'),
 #                  y = crop_extent_final)
 # emlrgb19 <- emlrgb19 <- aggregate(emlrgb19, fact = 5)
@@ -61,6 +69,7 @@ emlrgb18.stretch <- stretch(emlrgb18,
 emlrgb18.df <- as.data.frame(emlrgb18.stretch,
                              xy = TRUE) %>%
   rename(r = 3, g = 4, b = 5) %>%
+  filter(!(is.na(r) | is.na(g) | is.na(b))) %>%
   mutate(color.hex = factor(rgb(r, g, b, maxColorValue = 255)))
 
 # ggplot(emlrgb17.df, aes(x = x, y = y, fill = color.hex)) +
@@ -124,8 +133,11 @@ site.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_sf(data = ec_sf, inherit.aes = FALSE) +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
-  scale_x_continuous(name = 'Longitude (m)') +
-  scale_y_continuous(name = 'Latitude (m)') +
+  geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  scale_x_continuous(name = 'Longitude (m)',
+                     limits = c(386500, 396500)) +
+  scale_y_continuous(name = 'Latitude (m)',
+                     limits = c(7080000, 7090000)) +
   coord_sf(datum = st_crs(ec_sf),
            expand = FALSE) +
   theme_bw() +
@@ -143,6 +155,7 @@ site.map
 ##############################################################################################################
 
 ### Add in Thermokarst Classification ########################################################################
+# to plot features only
 thermokarst5 <- aggregate(thermokarst, fact = 5)
 thermokarst.df <- thermokarst5 %>%
   as.data.frame(xy = TRUE) %>%
@@ -150,6 +163,38 @@ thermokarst.df <- thermokarst5 %>%
   mutate(tk = factor(ifelse(is.nan(tk),
                      NA,
                      tk)))
+
+# to plot with depth
+filenames <- list.files('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output',
+                        full.names = TRUE,
+                        pattern = 'mtopo.+9km')
+
+mtopo <- list(stack(filenames[which(str_detect(filenames, pattern = 'mtopo15.+_1\\.tif$'))],
+                    filenames[which(str_detect(filenames, pattern = 'mtopo25.+_1\\.tif$'))],
+                    filenames[which(str_detect(filenames, pattern = 'mtopo35.+_1\\.tif$'))]),
+              stack(filenames[which(str_detect(filenames, pattern = 'mtopo15.+_2\\.tif$'))],
+                    filenames[which(str_detect(filenames, pattern = 'mtopo25.+_2\\.tif$'))],
+                    filenames[which(str_detect(filenames, pattern = 'mtopo35.+_2\\.tif$'))]),
+              stack(filenames[which(str_detect(filenames, pattern = 'mtopo15.+_3\\.tif$'))],
+                    filenames[which(str_detect(filenames, pattern = 'mtopo25.+_3\\.tif$'))],
+                    filenames[which(str_detect(filenames, pattern = 'mtopo35.+_3\\.tif$'))]))
+rm(filenames)
+mtopo_brick <- brick(calc(mtopo[[1]], fun = min, na.rm = TRUE),
+                     calc(mtopo[[2]], fun = min, na.rm = TRUE),
+                     calc(mtopo[[3]], fun = min, na.rm = TRUE))
+mean_mtopo <- calc(mtopo_brick, mean, na.rm = FALSE)
+mean_mtopo5 <- aggregate(mean_mtopo, fact = 5)
+depth5 <- mask(mean_mtopo5, thermokarst5)
+depth.df <- depth5 %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(depth = 3) %>%
+  mutate(depth = ifelse(is.nan(depth),
+                        NA,
+                        ifelse(depth > 0,
+                               0,
+                               depth))) %>%
+  filter(!is.na(depth))
+
 
 tk.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_raster() +
@@ -182,4 +227,35 @@ tk.map
 #        tk.map,
 #        height = 5.5,
 #        width = 6.5)
+
+tk.depth.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
+  geom_raster() +
+  scale_fill_gradient(low = '#000000', high = '#FFFFFF') +
+  new_scale('fill') +
+  geom_raster(data = emlrgb18.df, aes(x = x, y = y, fill = color.hex), inherit.aes = FALSE, alpha = 0.8) +
+  scale_fill_manual(values = levels(emlrgb18.df$color.hex)) +
+  new_scale('fill') +
+  geom_raster(data = depth.df,
+              aes(x = x, y = y, fill = depth),
+              inherit.aes = FALSE) +
+  scale_fill_viridis(name = 'Thermokarst\nDepth',
+                     na.value = NA) +
+  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
+  geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  coord_sf(datum = st_crs(ec_sf),
+           expand = FALSE) +
+  theme_bw() +
+  theme()
+tk.depth.map
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_depth_map.jpg',
+#        tk.depth.map,
+#        height = 5.5,
+#        width = 7.5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_depth_map.pdf',
+#        tk.depth.map,
+#        height = 5.5,
+#        width = 7.5)
 ##############################################################################################################
