@@ -38,7 +38,7 @@ crop_extent <- extent(matrix(c(387000, 396000, 7080500, 7089500), nrow = 2, byro
 elev <- brick(crop(raster(filenames[which(str_detect(filenames, '2017.tif$'))]), crop_extent),
              crop(raster(filenames[which(str_detect(filenames, '2018.tif$'))]), crop_extent),
              crop(raster(filenames[which(str_detect(filenames, '2019.tif$'))]), crop_extent))
-sub <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/lidar_subsidence/gliht_sub_14_18.tif')
+sub <- raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/lidar_subsidence/neon/subsidence_2017_2019.tif')
 karst_1 <- brick(stack("/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_1.tif",
                        "/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_2.tif",
                        "/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_3.tif"))
@@ -854,46 +854,6 @@ landclasses <- rasterToPolygons(landforms[[2]])
 st_write(landclasses, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/landforms.shp')
 ########################################################################################################################
 
-### Subsidence Mixed-Effects Model
-######################## DEFINE FUNCTIONS TO EXTRACT AND GRAPH CI #########################
-#Extract the coefficients for the fixed effects from your model, make a dataframe with them called model
-extract_ci <- function(x) {coefs<-fixef(x) 
-modeldf<-as.data.frame(coefs)
-#calculate confidence intervals; merge fixed effects and ci into one dataframe
-ci <- confint(x,method="boot",boot.type="norm",level=0.95,nsim=1000)
-modelci<-merge(ci,modeldf,by="row.names",all.x=F)
-#rename colnames so that they make sense and remove symbols
-colnames(modelci)<-c("term","min","max","coefs")
-return (modelci)}
-
-extract_ci_lm <- function(x) {
-  coefs<-coef(x) 
-  modeldf<-as.data.frame(coefs)
-  #calculate confidence intervals; merge fixed effects and ci into one dataframe
-  ci <- confint(x,method="boot",boot.type="norm",level=0.95,nsim=1000)
-  modelci<-merge(ci,modeldf,by="row.names",all.x=F)
-  #rename colnames so that they make sense and remove symbols
-  colnames(modelci)<-c("term","min","max","coefs")
-  return (modelci)
-}
-
-# graph CI
-graph_ci <- function(ci,figtitle,model) {ggplot(ci,aes(x=names,y=coefs))+
-    geom_errorbar(aes(ymin=min,ymax=max),width=0,size=1)+
-    geom_point(aes(size=2))+
-    labs (title = paste(figtitle, ", AIC:", round(AIC(model),2), sep =" ") , x = "Fixed effect", y = "Effect size and 95% CI") +
-    guides(size=F,shape=F)+
-    theme_bw()+
-    theme(axis.text.x=element_text(size=18),
-          axis.title.x=element_text(size=26),
-          axis.title.y=element_text(size=26,vjust=1),
-          axis.text.y=element_text(size=22),
-          panel.grid.minor=element_blank(),
-          panel.grid.major.x=element_blank())+
-    geom_hline(yintercept=0)+
-    coord_flip() } 
-########################################################################################################################
-
 ### Mixed Effects Model of Subsidence by Thermokarst Class #############################################################
 karst_edges <- brick(stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_1.tif',
                            '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_2.tif',
@@ -901,115 +861,65 @@ karst_edges <- brick(stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote S
 # create mask of karst_edges
 karst_edges_mask <- mask(crop(karst_edges, sub), sub)
   
-# take stratified random sample of cells (currently set up for non-thermokarst, thermokarst center and thermokarst edges)
-set.seed(333)
-samples <- st_as_sf(sampleStratified(karst_edges_mask[[1]], size = 1000, xy = TRUE, sp = TRUE)) %>%
-  select(-4) %>%
-  mutate(ID = seq(1, 3000))
-ggplot(samples, aes(x = x, y = y)) +
-  geom_point() +
-  coord_fixed()
-
-# st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
-# st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_1000.shp')
-# st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_2000.shp')
-samples <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_1000.shp')
-
-# extract values from subsidence brick
-# use a buffer to average out erroneous very high/low reads
-# extract all cells from sub (do not average them) join with the karst extract with all cells in
-# a 1.5 m buffer and (in later steps) then filter out non-matching thermokarst classes and then average
-# sub_extract <- raster::extract(sub, as(samples, 'Spatial'), buffer = 1.5, cellnumbers = TRUE, df = TRUE) %>%
+# # take stratified random sample of cells (currently set up for non-thermokarst, thermokarst center and thermokarst edges)
+# set.seed(333)
+# samples <- st_as_sf(sampleStratified(karst_edges_mask[[1]], 
+#                                      size = 500, 
+#                                      xy = TRUE, 
+#                                      sp = TRUE)) %>%
+#   select(-4) %>%
+#   mutate(ID = seq(1, 1500))
+# ggplot(samples, aes(x = x, y = y)) +
+#   geom_point() +
+#   coord_fixed()
+# 
+# # st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
+# samples <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
+# 
+# # extract values from subsidence brick
+# sub_extract <- raster::extract(sub, as(samples, 'Spatial'), cellnumbers = TRUE, df = TRUE) %>%
 #   as.data.frame() %>%
 #   rename(cell = cells,
 #          sub = 3) %>%
 #   arrange(ID)
 # 
-# write.csv(sub_extract, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_gliht_1000.csv')
-sub_extract <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_gliht_1000.csv')
-
-# elev_extract <- raster::extract(elev, as(samples, 'Spatial'), buffer = 1.5, layer = 1, nl = 3, cellnumbers = TRUE, df = TRUE) %>%
-#   as.data.frame() %>%
-#   rename(cell = cells,
-#          elev.2017 = 3,
-#          elev.2018 = 4,
-#          elev.2019 = 5) %>%
-#   gather(key = year, value = elev, elev.2017:elev.2019) %>%
-#   mutate(year = as.numeric(str_sub(year, 6))) %>%
-#   arrange(year, ID)
-
-
-# karst_extract_buffer <- raster::extract(karst_1_0, as(samples, 'Spatial'), buffer = 1.5, layer = 1, nl = 3, cellnumbers = TRUE, df = TRUE) %>%
-#   as.data.frame() %>%
+# # write.csv(sub_extract,
+# #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_neon_500.csv',
+# #           row.names = FALSE)
+# sub_extract <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_neon_500.csv')
+# 
+# # extract values from thermokarst classification brick
+# # no buffer so that this dataset can be used to identify the cells which samples are from
+# # the buffers when joined with the buffered extracted sub and karst
+# karst_extract <- raster::extract(karst_edges, as(samples, 'Spatial'),
+#                                  layer = 1,
+#                                  nl = 3,
+#                                  cellnumbers = TRUE,
+#                                  df = TRUE) %>%
 #   rename(cell = cells,
 #          karst.2017 = 3,
 #          karst.2018 = 4,
 #          karst.2019 = 5) %>%
-#   mutate(karst.2017 = ifelse(karst.2017 == 1 | karst.2018 == 1 | karst.2019 == 1, # if any year is thermokarst reassign as thermokarst
-#                           1,
-#                           ifelse(karst.2017 == 2 | karst.2018 == 2  | karst.2019 == 2, # if any year is thermokarst edge reassign as thermokarst edge (this will replace thermokarst with thermokarst edge)
-#                                  2,
-#                                  0)),
-#          karst.2018 = ifelse(karst.2017 == 1 | karst.2018 == 1 | karst.2019 == 1, # if any year is thermokarst reassign as thermokarst
-#                           1,
-#                           ifelse(karst.2017 == 2 | karst.2018 == 2  | karst.2019 == 2, # if any year is thermokarst edge reassign as thermokarst edge (this will replace thermokarst with thermokarst edge)
-#                                  2,
-#                                  0)),
-#          karst.2019 = ifelse(karst.2017 == 1 | karst.2018 == 1 | karst.2019 == 1, # if any year is thermokarst reassign as thermokarst
-#                           1,
-#                           ifelse(karst.2017 == 2 | karst.2018 == 2  | karst.2019 == 2, # if any year is thermokarst edge reassign as thermokarst edge (this will replace thermokarst with thermokarst edge)
-#                                  2,
-#                                  0))) %>%
 #   gather(key = year, value = karst, karst.2017:karst.2019) %>%
-#   mutate(year = as.numeric(str_sub(year, 7))) %>%
-#   arrange(year, ID)
-karst_extract_buffer <- raster::extract(karst_edges,
-                                        as(samples, 'Spatial'),
-                                        buffer = 1.5,
-                                        layer = 1,
-                                        nl = 3,
-                                        cellnumbers = TRUE,
-                                        df = TRUE) %>%
-  as.data.frame() %>%
-  rename(cell = cells,
-         karst.2017 = 3,
-         karst.2018 = 4,
-         karst.2019 = 5) %>%
-  gather(key = year, value = karst, karst.2017:karst.2019) %>%
-  group_by(ID, cell) %>%
-  summarise(karst = ifelse(any(karst == 2),
-                           2,
-                           ifelse(any(karst == 1),
-                                  1,
-                                  0))) %>%
-  arrange(ID)
-
-# extract values from thermokarst classification brick
-# no buffer so that this dataset can be used to identify the cells which samples are from
-# the buffers when joined with the buffered extracted sub and karst
-karst_extract <- raster::extract(karst_edges, as(samples, 'Spatial'),
-                                 layer = 1,
-                                 nl = 3,
-                                 cellnumbers = TRUE,
-                                 df = TRUE) %>%
-  rename(cell = cells,
-         karst.2017 = 3,
-         karst.2018 = 4,
-         karst.2019 = 5) %>%
-  gather(key = year, value = sample.cell, karst.2017:karst.2019) %>%
-  group_by(ID, cell) %>%
-  summarise(sample.cell = ifelse(any(sample.cell == 2),
-                           2,
-                           ifelse(any(sample.cell == 1),
-                                  1,
-                                  0))) %>%
-  arrange(ID)
-
+#   group_by(ID, cell) %>%
+#   summarise(karst = factor(ifelse(any(karst == 2),
+#                                   2,
+#                                   ifelse(any(karst == 1),
+#                                          1,
+#                                          0)),
+#                            levels = c(0, 1, 2))) %>%
+#   arrange(ID)
+# 
+# sub_karst_summary <- karst_extract %>%
+#   full_join(sub_extract, by = c('ID', 'cell'))
+# # write.csv(sub_karst_summary,
+# #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_summary_500.csv',
+# #           row.names = FALSE)
 
 ### Model subsidence by thermokarst class
-sub_karst_summary <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_summary_500.csv') %>%
-  mutate(karst = factor(karst, levels = c(0, 1, 2)))
-
+# sub_karst_summary <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_summary_500.csv') %>%
+#   mutate(karst = factor(karst, levels = c(0, 1, 2)))
+# 
 # model <- lm(sub ~ karst, sub_karst_summary)
 # saveRDS(model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500.rds')
 model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500.rds')
@@ -1022,16 +932,16 @@ model.contrast
 
 letters <- data.frame(karst = factor(c(0, 1, 2)),
                       sub = 0.25,
-                      letters = c('a', 'b', 'ab'))
+                      letters = c('a', 'a', 'a'))
 
 model.table <- model.contrast[[1]] %>%
-  mutate(letters = c('a', 'b', 'ab'),
+  mutate(letters = c('a', 'a', 'a'),
          karst = factor(ifelse(karst == 0,
-                        'Undisturbed',
+                        'Non-Thermokarst',
                         ifelse(karst == 1,
                                'Thermokarst Center',
                                'Thermokarst Edge')),
-                        levels = c('Undisturbed', 'Thermokarst Edge', 'Thermokarst Center'))) %>%
+                        levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center'))) %>%
   rename(Class = karst, Mean = emmean, `Lower CI` = lower.CL, `Upper CI` = upper.CL, Group = letters) %>%
   select(Class, Group, Mean, `Lower CI`, `Upper CI`, SE, df)
 # write.csv(model.table,
@@ -1066,9 +976,9 @@ points_plot <- ggplot(model.table, aes(x = Class, y = Mean)) +
   geom_point(size = 3) +
   geom_errorbar(aes(ymin =`Lower CI`, ymax = `Upper CI`),
                 width = 0.1) +
-  geom_text(aes(y = -0.08, label = Group)) +
+  geom_text(aes(y = -0.06, label = Group)) +
   scale_y_continuous(name = expression(Delta ~ "Elevation"),
-                     limits = c(-0.08, 0)) +
+                     limits = c(-0.06, 0.02)) +
   theme_bw() +
   theme(axis.title.x = element_blank())
 points_plot
@@ -1162,8 +1072,6 @@ points_plot_2
 #        points_plot_2,
 #        height = 4,
 #        width = 5)
-
-
 ########################################################################################################################
 
 
