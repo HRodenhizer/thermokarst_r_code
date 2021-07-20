@@ -788,6 +788,7 @@ for (i in 1:nlayers(karst_na)) {
   karst_na[[i]][karst_na[[i]] == 0] <- NA
 }
 
+# inner
 edges <- brick(boundaries(karst_na[[1]]),
                boundaries(karst_na[[2]]),
                boundaries(karst_na[[3]]))
@@ -796,6 +797,16 @@ edges_0 <- edges
 for (i in 1:nlayers(edges_0)) {
   edges_0[[i]][is.na(edges_0[[i]])] <- 0
 }
+# outer
+edges_outer <- brick(boundaries(karst_na[[1]], type = 'outer'),
+                     boundaries(karst_na[[2]], type = 'outer'),
+                     boundaries(karst_na[[3]], type = 'outer'))
+
+edges_0_outer <- edges_outer
+for (i in 1:nlayers(edges_0_outer)) {
+  edges_0_outer[[i]][is.na(edges_0_outer[[i]])] <- 0
+  edges_0_outer[[i]][edges_0_outer[[i]] == 1] <- 2
+}
 
 karst_1_0 <- karst_1
 for (i in 1:nlayers(karst_1_0)) {
@@ -803,8 +814,6 @@ for (i in 1:nlayers(karst_1_0)) {
 }
 
 
-# combine edges with thermokarst classification (1 = thermokarst, 2 = thermokarst edge)
-# and then extract thermokarst values from that
 karst_edges <- brick(karst_1_0[[1]] + edges_0[[1]],
                      karst_1_0[[2]] + edges_0[[2]],
                      karst_1_0[[3]] + edges_0[[3]])
@@ -816,6 +825,20 @@ plot(karst_edges[[3]])
 # writeRaster(karst_edges[[1]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_1.tif')
 # writeRaster(karst_edges[[2]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_2.tif')
 # writeRaster(karst_edges[[3]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_3.tif')
+
+# combine edges with thermokarst classification (1 = thermokarst, 2 = thermokarst edge)
+# and then extract thermokarst values from that
+karst_edges_outer <- brick(karst_1_0[[1]] + edges_0_outer[[1]],
+                           karst_1_0[[2]] + edges_0_outer[[2]],
+                           karst_1_0[[3]] + edges_0_outer[[3]])
+
+plot(karst_edges_outer[[1]])
+plot(karst_edges_outer[[2]])
+plot(karst_edges_outer[[3]])
+
+# writeRaster(karst_edges_outer[[1]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_outer_1.tif')
+# writeRaster(karst_edges_outer[[2]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_outer_2.tif')
+# writeRaster(karst_edges_outer[[3]], '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_outer_3.tif')
 ########################################################################################################################
 
 ### Landform Classification ############################################################################################
@@ -855,78 +878,135 @@ st_write(landclasses, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensin
 ########################################################################################################################
 
 ### Mixed Effects Model of Subsidence by Thermokarst Class #############################################################
-karst_edges <- brick(stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_1.tif',
-                           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_2.tif',
-                           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_3.tif'))
+# ### Test using unfilled thermokarst raster (worried about filling resulting in unrealistic subsidence values)
+# # Doesn't seem to change anything
+# karst15 <- brick(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst15_9km_1.tif'),
+#                  raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst15_9km_2.tif'),
+#                  raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst15_9km_3.tif'))
+# karst25 <- brick(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst25_9km_1.tif'),
+#                  raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst25_9km_2.tif'),
+#                  raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst25_9km_3.tif'))
+# karst35 <- brick(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst35_9km_1.tif'),
+#                  raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst35_9km_2.tif'),
+#                  raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/karst35_9km_3.tif'))
+# filter <- raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/int_output/filter_18_w_slope_buffer.tif')
+# 
+# karst15.filter <- karst15 - filter
+# karst25.filter <- karst25 - filter
+# karst35.filter <- karst35 - filter
+# 
+# karst.filter <- reclassify(karst15 + karst25 + karst35,
+#                            rcl = matrix(c(0,0,0, 0,Inf,1), ncol = 3, byrow = TRUE))
+# 
+# karst_na <- karst.filter
+# for (i in 1:nlayers(karst_na)) {
+#   karst_na[[i]][karst_na[[i]] == 0] <- NA
+# }
+# 
+# edges <- brick(boundaries(karst_na[[1]]),
+#                boundaries(karst_na[[2]]),
+#                boundaries(karst_na[[3]]))
+# 
+# edges_0 <- edges
+# for (i in 1:nlayers(edges_0)) {
+#   edges_0[[i]][is.na(edges_0[[i]])] <- 0
+# }
+# 
+# karst_1_0 <- karst.filter
+# for (i in 1:nlayers(karst_1_0)) {
+#   karst_1_0[[i]][is.na(karst_1_0)[[i]]] <- 0
+# }
+# 
+# 
+# # combine edges with thermokarst classification (1 = thermokarst, 2 = thermokarst edge)
+# # and then extract thermokarst values from that
+# karst_edges <- brick(karst_1_0[[1]] + edges_0[[1]],
+#                      karst_1_0[[2]] + edges_0[[2]],
+#                      karst_1_0[[3]] + edges_0[[3]])
+# writeRaster(karst_edges,
+#             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_no_fill.tif')
+#
+# karst_edges <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_no_fill.tif')
+
+### Using filled karst edges
+# karst_edges <- brick(stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_1.tif',
+#                            '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_2.tif',
+#                            '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_3.tif'))
+### Using outer edges rather than inner edges seems to capture the edges better
+karst_edges <- brick(stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_outer_1.tif',
+                           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_outer_2.tif',
+                           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_edges_outer_3.tif'))
 # create mask of karst_edges
 karst_edges_mask <- mask(crop(karst_edges, sub), sub)
-  
-# # take stratified random sample of cells (currently set up for non-thermokarst, thermokarst center and thermokarst edges)
-# set.seed(333)
-# samples <- st_as_sf(sampleStratified(karst_edges_mask[[1]], 
-#                                      size = 500, 
-#                                      xy = TRUE, 
-#                                      sp = TRUE)) %>%
-#   select(-4) %>%
-#   mutate(ID = seq(1, 1500))
-# ggplot(samples, aes(x = x, y = y)) +
-#   geom_point() +
-#   coord_fixed()
-# 
-# # st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
-# samples <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
-# 
-# # extract values from subsidence brick
-# sub_extract <- raster::extract(sub, as(samples, 'Spatial'), cellnumbers = TRUE, df = TRUE) %>%
-#   as.data.frame() %>%
-#   rename(cell = cells,
-#          sub = 3) %>%
-#   arrange(ID)
-# 
-# # write.csv(sub_extract,
-# #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_neon_500.csv',
-# #           row.names = FALSE)
-# sub_extract <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_neon_500.csv')
-# 
-# # extract values from thermokarst classification brick
-# # no buffer so that this dataset can be used to identify the cells which samples are from
-# # the buffers when joined with the buffered extracted sub and karst
-# karst_extract <- raster::extract(karst_edges, as(samples, 'Spatial'),
-#                                  layer = 1,
-#                                  nl = 3,
-#                                  cellnumbers = TRUE,
-#                                  df = TRUE) %>%
-#   rename(cell = cells,
-#          karst.2017 = 3,
-#          karst.2018 = 4,
-#          karst.2019 = 5) %>%
-#   gather(key = year, value = karst, karst.2017:karst.2019) %>%
-#   group_by(ID, cell) %>%
-#   summarise(karst = factor(ifelse(any(karst == 2),
-#                                   2,
-#                                   ifelse(any(karst == 1),
-#                                          1,
-#                                          0)),
-#                            levels = c(0, 1, 2))) %>%
-#   arrange(ID)
-# 
-# sub_karst_summary <- karst_extract %>%
-#   full_join(sub_extract, by = c('ID', 'cell'))
-# # write.csv(sub_karst_summary,
-# #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_summary_500.csv',
-# #           row.names = FALSE)
+
+# take stratified random sample of cells (currently set up for non-thermokarst, thermokarst center and thermokarst edges)
+set.seed(333)
+samples <- st_as_sf(sampleStratified(karst_edges_mask[[1]],
+                                     size = 500,
+                                     xy = TRUE,
+                                     sp = TRUE)) %>%
+  select(-4) %>%
+  mutate(ID = seq(1, 1500))
+ggplot(samples, aes(x = x, y = y)) +
+  geom_point() +
+  coord_fixed()
+
+# st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
+samples <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
+
+# extract values from subsidence brick
+sub_extract <- raster::extract(sub, as(samples, 'Spatial'), cellnumbers = TRUE, df = TRUE) %>%
+  as.data.frame() %>%
+  rename(cell = cells,
+         sub = 3) %>%
+  arrange(ID)
+
+# write.csv(sub_extract,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_neon_500.csv',
+#           row.names = FALSE)
+sub_extract <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_extract_neon_500.csv')
+
+# extract values from thermokarst classification brick
+# no buffer so that this dataset can be used to identify the cells which samples are from
+# the buffers when joined with the buffered extracted sub and karst
+karst_extract <- raster::extract(karst_edges, as(samples, 'Spatial'),
+                                 layer = 1,
+                                 nl = 3,
+                                 cellnumbers = TRUE,
+                                 df = TRUE) %>%
+  rename(cell = cells,
+         karst.2017 = 3,
+         karst.2018 = 4,
+         karst.2019 = 5) %>%
+  gather(key = year, value = karst, karst.2017:karst.2019) %>%
+  group_by(ID, cell) %>%
+  summarise(karst = factor(ifelse(any(karst == 2),
+                                  2,
+                                  ifelse(any(karst == 1),
+                                         1,
+                                         0)),
+                           levels = c(0, 1, 2))) %>%
+  arrange(ID)
+
+sub_karst_summary <- karst_extract %>%
+  full_join(sub_extract, by = c('ID', 'cell'))
+# write.csv(sub_karst_summary,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_summary_500.csv',
+#           row.names = FALSE)
 
 ### Model subsidence by thermokarst class
 # sub_karst_summary <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_summary_500.csv') %>%
 #   mutate(karst = factor(karst, levels = c(0, 1, 2)))
 # 
-# model <- lm(sub ~ karst, sub_karst_summary)
+model <- lm(sub ~ karst, sub_karst_summary)
 # saveRDS(model, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500.rds')
 model <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500.rds')
 summary(model)
 # model.contrast <- emmeans(model, specs= pairwise~karst) %>%
 #   summary(level=0.90)
-# write.csv(model.contrast, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500_contrast.csv')
+# write.csv(model.contrast, 
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500_contrast.csv', 
+#           row.names = FALSE)
 model.contrast <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_500_contrast.csv')
 model.contrast
 
@@ -934,16 +1014,18 @@ letters <- data.frame(karst = factor(c(0, 1, 2)),
                       sub = 0.25,
                       letters = c('a', 'a', 'a'))
 
-model.table <- model.contrast[[1]] %>%
+model.table <- model.contrast %>%
+  select(matches('^emmeans')) %>%
   mutate(letters = c('a', 'a', 'a'),
-         karst = factor(ifelse(karst == 0,
+         emmeans.karst = factor(ifelse(emmeans.karst == 0,
                         'Non-Thermokarst',
-                        ifelse(karst == 1,
+                        ifelse(emmeans.karst == 1,
                                'Thermokarst Center',
                                'Thermokarst Edge')),
                         levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center'))) %>%
-  rename(Class = karst, Mean = emmean, `Lower CI` = lower.CL, `Upper CI` = upper.CL, Group = letters) %>%
-  select(Class, Group, Mean, `Lower CI`, `Upper CI`, SE, df)
+  select(Class = emmeans.karst, Group = letters, Mean = emmeans.emmean, 
+         `Lower CI` = emmeans.lower.CL, `Upper CI` = emmeans.upper.CL, 
+         SE = emmeans.SE, df = emmeans.df)
 # write.csv(model.table,
 #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_model.csv',
 #           row.names = FALSE)
@@ -998,7 +1080,7 @@ elev.cip <- list(brick('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/Kriged_S
 
 sub.gps <- list()
 for (i in 1:3) {
-  sub.gps[[i]] <- elev.cip[[i]][[7]] - elev.cip[[i]][[5]]
+  sub.gps[[i]] <- elev.cip[[i]][[8]] - elev.cip[[i]][[6]] # 2019 - 2017
 }
 
 sub.gps <- map_dfr(sub.gps,
@@ -1009,12 +1091,12 @@ sub.gps <- map_dfr(sub.gps,
 +no_defs ') %>%
   st_transform(crs = crs(karst_edges))
 
-gps.sub.extract <- raster::extract(karst_edges, as(sub.gps, 'Spatial'),
+gps.karst.extract <- raster::extract(karst_edges, as(sub.gps, 'Spatial'),
                                         cellnumbers = TRUE,
                                         df = TRUE) %>%
   as.data.frame()
 
-sub.gps.summary <- gps.sub.extract %>%
+sub.gps <- gps.karst.extract %>%
   pivot_longer(karst_edges_1:karst_edges_3, names_to = 'year', values_to = 'karst') %>%
   group_by(ID, cells) %>%
   summarise(karst = ifelse(any(karst == 2),
@@ -1023,10 +1105,12 @@ sub.gps.summary <- gps.sub.extract %>%
                                       1,
                                       0))) %>%
   cbind.data.frame(sub.gps) %>%
-  select(-c(ID, cells, geometry)) %>%
+  select(-c(ID, cells, geometry))
+sub.gps.summary <- sub.gps
   group_by(karst) %>%
   summarise(mean.sub = mean(sub, na.rm = TRUE),
-            se.sub = sd(sub, na.rm = TRUE)) %>%
+            se.sub = sd(sub, na.rm = TRUE)/sqrt(n()),
+            n = n()) %>%
   mutate(`Lower CI` = mean.sub - se.sub,
          `Upper CI` = mean.sub + se.sub,
          karst = factor(ifelse(karst == 0,
@@ -1036,33 +1120,145 @@ sub.gps.summary <- gps.sub.extract %>%
                                       'Thermokarst Edge')),
                         levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center')))
 
+### Test LiDAR subsidence at same points as GPS
+template <- list()
+for (i in 1:length(elev.cip)) {
+  template[[i]] <- projectRaster(elev.cip[[i]], karst_edges[[1]], 
+                                 alignOnly = TRUE)
+}
+elev.cip.aligned <- list()
+for (i in 1:length(elev.cip)) {
+  elev.cip.aligned[[i]] <- projectRaster(elev.cip[[i]], template[[i]])
+}
+
+elev.cip.aligned <- merge(elev.cip.aligned[[1]],
+                          elev.cip.aligned[[2]],
+                          elev.cip.aligned[[3]])
+
+karst_edges_gps_aligned <- mask(crop(karst_edges, elev.cip[[1]]), elev.cip[[1]]) %>%
+  as.data.frame(xy = TRUE) %>%
+  filter(!(is.na(karst_edges_1) & is.na(karst_edges_2) & is.na(karst_edges_3))) %>%
+  mutate(karst = factor(ifelse(karst_edges_1 == 2 | karst_edges_2 == 2 | karst_edges_3 == 2,
+                               'Thermokarst Edge',
+                               ifelse(karst_edges_1 == 1 | karst_edges_2 == 1 | karst_edges_3 == 1,
+                                      'Thermokarst Center',
+                                      'Non-Thermokarst')),
+                        levels = c('Non-Thermokarst', 
+                                   'Thermokarst Edge', 
+                                   'Thermokarst Center'))) %>%
+  select(x, y, karst)
+
+neon.sub.extract.gps <- raster::extract(sub, 
+                                        as(sub.gps, 'Spatial'),
+                                        cellnumbers = TRUE,
+                                        df = TRUE) %>%
+  as.data.frame()
+
+lidar_sub_karst <- neon.sub.extract.gps %>%
+  full_join(gps.karst.extract, by = c('ID', 'cells')) %>%
+  mutate(karst = factor(ifelse(karst_edges_1 == 2 | karst_edges_2 == 2 | karst_edges_3 == 2,
+                               'Thermokarst Edge',
+                               ifelse(karst_edges_1 == 1 | karst_edges_2 == 1 | karst_edges_3 == 1,
+                                      'Thermokarst Center',
+                                      'Non-Thermokarst')),
+                        levels = c('Non-Thermokarst', 
+                                   'Thermokarst Edge', 
+                                   'Thermokarst Center'))) %>%
+  select(subsidence_2017_2019, karst)
+n.samples <- lidar_sub_karst %>%
+  group_by(karst) %>%
+  summarise(n = n())
+model.gps.aligned <- lm(subsidence_2017_2019 ~ karst, data = lidar_sub_karst)
+# saveRDS(model.gps.aligned, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_gps_footprint.rds')
+model.gps.aligned <- readRDS('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_gps_footprint.rds')
+summary(model.gps.aligned)
+model.contrast.gps.aligned <- emmeans(model, specs= pairwise~karst) %>%
+  summary(level=0.90)
+# write.csv(model.contrast.gps.aligned,
+#           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_gps_footprint_contrast.csv',
+#           row.names = FALSE)
+model.contrast.gps.aligned <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/sub_karst_anova_gps_footprint_contrast.csv')
+model.contrast.gps.aligned
+
+letters.gps.aligned <- data.frame(karst = factor(c(0, 1, 2)),
+                                  sub = 0.25,
+                                  letters = c('a', 'b', 'b'))
+
+model.table.gps.aligned <- model.contrast %>%
+  select(matches('^emmeans')) %>%
+  mutate(letters = c('a', 'b', 'b'),
+         emmeans.karst = factor(ifelse(emmeans.karst == 'Non-Thermokarst',
+                                       'Non-Thermokarst',
+                                       ifelse(emmeans.karst == 'Thermokarst Center',
+                                              'Thermokarst Center',
+                                              'Thermokarst Edge')),
+                                levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center'))) %>%
+  select(Class = emmeans.karst, Group = letters, Mean = emmeans.emmean, 
+         `Lower CI` = emmeans.lower.CL, `Upper CI` = emmeans.upper.CL, 
+         SE = emmeans.SE, df = emmeans.df)
+
+# test difference between sub and lidar at CiPEHR
+gps.lidar.sub <- sub.gps %>%
+  mutate(karst = factor(ifelse(karst == 0,
+                       'Non-Thermokarst',
+                       ifelse(karst == 1,
+                              'Thermokarst Center',
+                              'Thermokarst Edge')),
+                levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center')),
+         method = 'GPS') %>%
+  rbind.data.frame(lidar_sub_karst %>%
+                     rename(sub = subsidence_2017_2019) %>%
+                     mutate(method = 'LIDAR'))
+  
+model <- lm(sub ~ method + karst, data = gps.lidar.sub)
+summary(model)
+model.contrast <- emmeans(model, specs = pairwise ~ method)
+model.contrast
+
 # plot mean lidar sub with mean gps sub
-points_plot_2 <- ggplot(model.table, aes(x = Class, y = Mean)) +
+points_plot_2 <- ggplot(model.table.gps.aligned, aes(x = Class, y = Mean)) +
   geom_hline(yintercept = 0, linetype = 2) +
   geom_point(data = sub.gps.summary,
              aes(x = karst, y = mean.sub, color = 'GPS'),
              size = 2,
              inherit.aes = FALSE,
-             position = position_nudge(x = 0.05)) +
+             position = position_nudge(x = -0.1)) +
   geom_errorbar(data = sub.gps.summary,
                 aes(x = karst, ymin = `Lower CI`, ymax = `Upper CI`, color = 'GPS'),
                 inherit.aes = FALSE,
+                width = 0.05,
+                position = position_nudge(x = -0.1)) +
+  geom_point(size = 2, aes(color = 'LiDAR\n(GPS Locations)'),
+             position = position_nudge(x = 0)) +
+  geom_errorbar(aes(ymin =`Lower CI`, ymax = `Upper CI`, color = 'LiDAR\n(GPS Locations)'),
+                width = 0.05,
+                position = position_nudge(x = 0)) +
+  geom_point(data = model.table, 
+             aes(x = Class, y = Mean, color = 'LiDAR\n(Study Extent)'),
+             inherit.aes = FALSE,
+             size = 3, 
+             position = position_nudge(x = 0.1)) +
+  geom_errorbar(data = model.table, 
+                aes(x = Class, ymin =`Lower CI`, ymax = `Upper CI`, 
+                    color = 'LiDAR\n(Study Extent)'),
+                inherit.aes = FALSE,
                 width = 0.1,
-                position = position_nudge(x = 0.05)) +
-  geom_point(size = 3, aes(color = 'LiDAR'),
-             position = position_nudge(x = -0.05)) +
-  geom_errorbar(aes(ymin =`Lower CI`, ymax = `Upper CI`, color = 'LiDAR'),
-                width = 0.1,
-                position = position_nudge(x = -0.05)) +
-  geom_text(aes(y = -0.14, label = Group)) +
-  scale_y_continuous(name = expression(Delta ~ "Elevation"),
+                position = position_nudge(x = 0.1)) +
+  geom_text(data = model.table, 
+            aes(x = Class, y = -0.14, label = Group),
+            inherit.aes = FALSE,
+            position = position_nudge(x = 0.1)) +
+  scale_y_continuous(name = expression(Delta ~ "Elevation (m)"),
                      limits = c(-0.15, 0.05)) +
-  scale_color_manual(breaks = c('GPS', 'LiDAR'),
-                     values = c('gray', 'black'),
+  scale_x_discrete(labels = c('Non-\nThermokarst', 'Thermokarst\nEdge', 
+                              'Thermokarst\nCenter')) +
+  scale_color_manual(breaks = c('GPS', 'LiDAR\n(GPS Locations)', 'LiDAR\n(Study Extent)'),
+                     values = c('gray80', 'gray40', 'black'),
                      guide = guide_legend(reverse = TRUE)) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
-        legend.title = element_blank())
+        legend.title = element_blank(),
+        legend.key.height = unit(1.5, 'lines'))
 points_plot_2
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_points_w_gps.jpg',
 #        points_plot_2,
