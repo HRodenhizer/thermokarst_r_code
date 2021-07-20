@@ -50,6 +50,8 @@ thermokarst.brick <- brick(raster('/home/heidi/Documents/School/NAU/Schuur Lab/R
                            raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_2.tif'),
                            raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_3.tif'))
 thermokarst <- calc(thermokarst.brick, max)
+cipehr <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/All_Points/Site_Summary_Shapefiles/EML_Sites.shp') %>%
+  filter(str_detect(Name, 'CiPEHR'))
 ##############################################################################################################
 
 ### Possible to plot RGB data with ggplot? ###################################################################
@@ -275,13 +277,14 @@ tk.depth.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
                      option = 'C',
                      limits = c(0, 1)^(stretch.factor),
                      breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
-                     labels = c(seq(0, 1, by = 0.1)),
+                     labels = c(seq(0, 0.9, by = 0.1), '1+'),
                      oob = squish,
                      direction = -1) +
   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
   # geom_text(data = labels, 
   #           aes(x = x, y = y, label = labels),
   #           hjust = 0,
@@ -317,7 +320,7 @@ tk.depth.elev.map <- ggplot(emldtm5.df, aes(x = x, y = y, fill = elevation)) +
                      option = 'C',
                      limits = c(0, 1)^(stretch.factor),
                      breaks = c(seq(0, 1, by = 0.2)^(stretch.factor)),
-                     labels = c(seq(0, 1, by = 0.2)),
+                     labels = c(seq(0, 0.9, by = 0.2), '1+'),
                      oob = squish,
                      direction = -1) +
   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
