@@ -535,7 +535,7 @@ size_plot <- ggarrange(size_prevalence_plot,
                        size_cover_plot,
                        size_volume_plot,
                        size_depth_plot,
-                       labels = c('a', 'b', 'c', 'd'),
+                       labels = c('A', 'B', 'C', 'D'),
                        ncol = 1,
                        nrow = 4)
 size_plot
@@ -700,7 +700,7 @@ morphology_plot <- ggarrange(shape_prevalence_plot,
                              shape_cover_plot,
                              shape_volume_plot,
                              shape_depth_plot,
-                             labels = c('a', 'b', 'c', 'd'),
+                             labels = c('A', 'B', 'C', 'D'),
                              ncol = 1,
                              nrow = 4)
 morphology_plot
@@ -723,7 +723,10 @@ size_morph_plot <- ggarrange(size_prevalence_plot,
                              size_depth_plot,
                              shape_depth_plot,
                              ncol = 2,
-                             nrow = 4)
+                             nrow = 4,
+                             labels = c('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'),
+                             font.label = list(size = 12),
+                             vjust = 1)
 size_morph_plot
 
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/size_morphology.jpg',
@@ -1874,14 +1877,18 @@ mtopo.change.plot <- ggplot(mtopo_ec_df, aes(x = x, y = y)) +
   theme_bw() +
   coord_sf(clip = "off",
            datum = st_crs(circle_sf),
-           expand = FALSE) +
+           expand = FALSE,
+           xlim = c(min(mtopo_ec_df$x), max(mtopo_ec_df$x)),
+           ylim = c(min(mtopo_ec_df$y), max(mtopo_ec_df$y))) +
   theme(axis.title = element_blank(),
         legend.justification = 'top') +
   annotation_custom(mtopo.change.boxplot,
                     xmin = 389660,
                     xmax = 389875,
                     ymin = 7085350,
-                    ymax = 7085600)
+                    ymax = 7085600) +
+  geom_text(aes(x = 389100, y = 7085825, label = 'A')) +
+  geom_text(aes(x = 389650, y = 7085600, label = 'B'))
 mtopo.change.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/microtopgraphy_map.jpg',
 #        mtopo.change.plot,
@@ -2049,7 +2056,10 @@ ggplot(karst_mtopo_sf) +
 
 ec_karst_plot <- ggplot() +
   geom_sf(data = karst_mtopo_sf, aes(color = percent.thermokarst, fill = percent.thermokarst)) +
-  coord_sf(datum = st_crs(32606)) +
+  coord_sf(clip = 'off',
+           datum = st_crs(32606),
+           xlim = c(extent(karst_mtopo_sf)@xmin, extent(karst_mtopo_sf)@xmax),
+           ylim = c(extent(karst_mtopo_sf)@ymin, extent(karst_mtopo_sf)@ymax)) +
   scale_x_continuous(name = 'Longitude (m)',
                      breaks = c(389200, 389400, 389600)) +
   scale_y_continuous(name = 'Latitude (m)',
@@ -2059,12 +2069,16 @@ ec_karst_plot <- ggplot() +
   scale_fill_viridis(name = 'Thermokarst (%)',
                      direction = -1) +
   theme_bw() +
-  theme(legend.position = 'bottom')
+  theme(legend.position = 'bottom') +
+  geom_text(aes(x = 388995, y = 7085830, label = 'A'))
 ec_karst_plot
 
 ec_mtopo_plot <- ggplot() +
   geom_sf(data = karst_mtopo_sf, aes(color = mtopo15.sd, fill = mtopo15.sd)) +
-  coord_sf(datum = st_crs(32606)) +
+  coord_sf(clip = 'off',
+           datum = st_crs(32606),
+           xlim = c(extent(karst_mtopo_sf)@xmin, extent(karst_mtopo_sf)@xmax),
+           ylim = c(extent(karst_mtopo_sf)@ymin, extent(karst_mtopo_sf)@ymax)) +
   scale_x_continuous(name = 'Longitude (m)',
                      breaks = c(389200, 389400, 389600)) +
   scale_y_continuous(name = 'Latitude (m)',
@@ -2074,7 +2088,8 @@ ec_mtopo_plot <- ggplot() +
   scale_fill_viridis(name = 'Roughness (m)',
                      direction = -1) +
   theme_bw() +
-  theme(legend.position = 'bottom')
+  theme(legend.position = 'bottom') +
+  geom_text(aes(x = 388995, y = 7085830, label = 'B'))
 ec_mtopo_plot
 
 ec_karst_mtopo_class <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = mtopo15.sd)) +
@@ -2097,14 +2112,21 @@ ec_karst_mtopo_cont <- ggplot(karst_mtopo_sf, aes(x = percent.thermokarst, y = m
   scale_color_gradient(name = "Direction",
                        low = '#CCCCCC',
                        high = '#000000') +
-  theme_bw()
+  theme_bw() +
+  coord_cartesian(clip = 'off',
+                  xlim = c(min(karst_mtopo_sf$percent.thermokarst), 
+                           max(karst_mtopo_sf$percent.thermokarst)),
+                  ylim = c(min(karst_mtopo_sf$mtopo15.sd), 
+                           max(karst_mtopo_sf$mtopo15.sd))) +
+  geom_text(aes(x = -0.07, y = 0.21, label = 'C'))
 ec_karst_mtopo_cont
 
 karst_mtopo <- grid.arrange(ec_karst_plot,
                             ec_mtopo_plot,
                             ec_karst_mtopo_cont,
                             layout_matrix = rbind(c(1, 2),
-                                                  c(3, 3)))
+                                                  c(3, 3)),
+                            heights = c(1, 0.8))
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_roughness.jpg',
 #        karst_mtopo,
 #        height = 6.5,
@@ -2121,6 +2143,45 @@ karst_mtopo <- grid.arrange(ec_karst_plot,
 ########################################################################################################################
 
 ### CO2 Analysis
+######################## DEFINE FUNCTIONS TO EXTRACT AND GRAPH CI #########################
+#Extract the coefficients for the fixed effects from your model, make a dataframe with them called model
+extract_ci <- function(x) {coefs<-fixef(x) 
+modeldf<-as.data.frame(coefs)
+#calculate confidence intervals; merge fixed effects and ci into one dataframe
+ci <- confint(x,method="boot",boot.type="norm",level=0.95,nsim=1000)
+modelci<-merge(ci,modeldf,by="row.names",all.x=F)
+#rename colnames so that they make sense and remove symbols
+colnames(modelci)<-c("term","min","max","coefs")
+return (modelci)}
+
+extract_ci_lm <- function(x) {
+  coefs<-coef(x) 
+  modeldf<-as.data.frame(coefs)
+  #calculate confidence intervals; merge fixed effects and ci into one dataframe
+  ci <- confint(x,method="boot",boot.type="norm",level=0.95,nsim=1000)
+  modelci<-merge(ci,modeldf,by="row.names",all.x=F)
+  #rename colnames so that they make sense and remove symbols
+  colnames(modelci)<-c("term","min","max","coefs")
+  return (modelci)
+}
+
+# graph CI
+graph_ci <- function(ci,figtitle,model) {ggplot(ci,aes(x=names,y=coefs))+
+    geom_errorbar(aes(ymin=min,ymax=max),width=0,size=1)+
+    geom_point(aes(size=2))+
+    labs (title = paste(figtitle, ", AIC:", round(AIC(model),2), sep =" ") , x = "Fixed effect", y = "Effect size and 95% CI") +
+    guides(size=F,shape=F)+
+    theme_bw()+
+    theme(axis.text.x=element_text(size=18),
+          axis.title.x=element_text(size=26),
+          axis.title.y=element_text(size=26,vjust=1),
+          axis.text.y=element_text(size=22),
+          panel.grid.minor=element_blank(),
+          panel.grid.major.x=element_blank())+
+    geom_hline(yintercept=0)+
+    coord_flip() } 
+########################################################################################################################
+
 ### Prep Data ##########################################################################################################
 # use data that we have processed and filtered as we want rather than as Ameriflux wants
 load('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Gradient/Eddy/2017-2018/AK17_CO2&CH4_30Apr2019.Rdata')
@@ -3482,7 +3543,7 @@ effect.size.plot <- ggplot(filter(co2.model.summary, Predictor == 'Thermokarst')
   scale_x_continuous(breaks = seq(1:12),
                      labels = str_sub(month.name[1:12], start = 1, end = 3)) +
   scale_color_manual(name = element_blank(),
-                     values = c('gray', 'black')) +
+                     values = c('gray50', 'black')) +
   scale_fill_manual(name = element_blank(),
                     breaks = c('a', 'b'),
                     values = c('#99CC33', '#CC3300'),
@@ -3730,9 +3791,8 @@ hist(filter(ch4.model.data, spike == 'uptake spike')$ch4.flux.hh)
 
 ch4.no.spike <- ch4.model.data %>%
   filter(spike == 'non-spike') %>%
-  select(ch4.flux.hh, ch4.hyp.sine, month.factor, percent.thermokarst.ffp, wind_speed_filter, mean.swc, mean.ts.10) %>%
-  mutate(ch4.scale = scale(ch4.hyp.sine),
-         percent.thermokarst.scale = scale(percent.thermokarst.ffp),
+  select(ch4.flux.hh, month.factor, percent.thermokarst.ffp, wind_speed_filter, mean.swc, mean.ts.10) %>%
+  mutate(percent.thermokarst.scale = scale(percent.thermokarst.ffp),
          wind.speed.scale = scale(wind_speed_filter),
          mean.swc.scale = scale(mean.swc),
          mean.ts.10.scale = scale(mean.ts.10))
@@ -4166,7 +4226,8 @@ ch4.intercepts <- slice(ch4.model.table, 1:12) %>%
   select(3:6) %>%
   mutate(month = seq(1:12),
          coefficient = 'Intercept')
-ch4.coefficients <- rbind(ch4.intercepts, ch4.slopes)
+ch4.coefficients <- rbind(ch4.intercepts, ch4.slopes) %>%
+  mutate(measurement = 'Methane')
 text <- data.frame(x = 12,
                    y = -0.0225,
                    label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', ch4.model.table$R2[1]))
@@ -4199,12 +4260,13 @@ ch4.coefficients.plot <- ggplot(ch4.coefficients,
                      minor_breaks = NULL) +
   scale_y_continuous(name = 'Coefficient') +
   scale_color_manual(name = element_blank(),
-                     values = c('gray', 'black')) +
+                     values = c('gray50', 'black')) +
   scale_fill_manual(name = element_blank(),
                     breaks = c('a', 'b'),
                     values = c('#99CC33', '#CC3300'),
                     labels = c('Sink',
                                'Source')) +
+  facet_grid(.~measurement) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))

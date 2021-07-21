@@ -358,8 +358,11 @@ tk.elev.map <- ggplot(emldtm5.df, aes(x = x, y = y, fill = elevation)) +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
-  coord_sf(datum = st_crs(ec_sf),
-           expand = FALSE) +
+  coord_sf(clip = "off",
+           datum = st_crs(ec_sf),
+           expand = FALSE,
+           xlim = c(min(emldtm5.df$x), max(emldtm5.df$x)),
+           ylim = c(min(emldtm5.df$y), max(emldtm5.df$y))) +
   theme_bw() +
   theme(axis.text = element_blank(),
         axis.title = element_blank(),
@@ -367,7 +370,8 @@ tk.elev.map <- ggplot(emldtm5.df, aes(x = x, y = y, fill = elevation)) +
         legend.key.width = unit(0.1, 'inches'),
         legend.title = element_text(size = 8),
         legend.text = element_text(size = 8),
-        legend.position = 'bottom')
+        legend.position = 'bottom') +
+  geom_text(aes(x = 385500, y = 7091000, label = 'B'))
 tk.elev.map
 
 tk.depth.elev.rgb <- tk.depth.map +
@@ -387,4 +391,84 @@ tk.depth.elev.rgb
 #        tk.depth.elev.rgb,
 #        height = 4.75,
 #        width = 6.5)
+##############################################################################################################
+
+### Map of Shape #############################################################################################
+karst_1_stats_sf <- read_sf('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp') %>%
+  rename(min.depth = min_d,
+         mean.depth = mean_d,
+         median.depth = med_d,
+         max.depth = max_d,
+         sd.depth = sd_d,
+         se.depth = se_d,
+         min.depth.clean = min_d_c,
+         mean.depth.clean = mean_d_c,
+         median.depth.clean = med_d_c,
+         max.depth.clean = max_d_c,
+         sd.depth.clean = sd_d_c,
+         se.depth.clean= se_d_c) %>%
+  mutate(volume = size*mean.depth,
+         shape = as.numeric(4*pi*st_area(karst_1_stats_sf)/st_perimeter(karst_1_stats_sf)^2))
+
+tk.shape.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
+  geom_raster() +
+  scale_fill_gradient(low = '#000000', high = '#FFFFFF',
+                      guide = FALSE) +
+  new_scale('fill') +
+  geom_raster(data = emlrgb18.df, 
+              aes(x = x, y = y, fill = color.hex), 
+              inherit.aes = FALSE, 
+              alpha = 0.8) +
+  scale_fill_manual(values = levels(emlrgb18.df$color.hex),
+                    guide = FALSE) +
+  new_scale('fill') +
+  geom_sf(data = filter(karst_1_stats_sf, year == 2018),
+              aes(color = shape, fill = shape),
+              inherit.aes = FALSE) +
+  scale_fill_viridis(name = 'Thermokarst\nShape',
+                     option = 'C') +
+  scale_color_viridis(name = 'Thermokarst\nShape',
+                     option = 'C') +
+  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
+  geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  coord_sf(clip = "off",
+           datum = st_crs(ec_sf),
+           expand = FALSE,
+           xlim = c(min(emlhillshd.df$x), max(emlhillshd.df$x))) +
+  theme_bw() +
+  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970)) +
+  geom_text(aes(x = 385000, y = 7089990, label = 'A'))
+tk.shape.map
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_shape_map_2018.jpg',
+#        tk.shape.map,
+#        height = 6,
+#        width = 7.5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_shape_map_2018.pdf',
+#        tk.shape.map,
+#        height = 6,
+#        width = 7.5)
+
+tk.shape.elev.rgb <- tk.shape.map +
+  theme(legend.justification = 'top') +
+  annotation_custom(ggplotGrob(tk.elev.map),
+                    xmin = 396510,
+                    xmax = 399500,
+                    ymin = 7080010,
+                    ymax = 7084000)
+
+tk.shape.elev.rgb
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_shape_elev_map_2018.jpg',
+#        tk.shape.elev.rgb,
+#        height = 4.75,
+#        width = 6.5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_shape_elev_map_2018.pdf',
+#        tk.shape.elev.rgb,
+#        height = 4.75,
+#        width = 6.5)
+
 ##############################################################################################################
