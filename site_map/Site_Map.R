@@ -5,6 +5,7 @@
 
 ### Load Libraries ###########################################################################################
 library(sf)
+library(lwgeom)
 library(raster)
 library(ggmap)
 library(ggthemes)
@@ -393,27 +394,139 @@ tk.depth.elev.rgb
 #        width = 6.5)
 ##############################################################################################################
 
+### Map of Mean Depth ########################################################################################
+# karst_1_stats_sf <- read_sf('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp') %>%
+#   rename(min.depth = min_d,
+#          mean.depth = mean_d,
+#          median.depth = med_d,
+#          max.depth = max_d,
+#          sd.depth = sd_d,
+#          se.depth = se_d,
+#          min.depth.clean = min_d_c,
+#          mean.depth.clean = mean_d_c,
+#          median.depth.clean = med_d_c,
+#          max.depth.clean = max_d_c,
+#          sd.depth.clean = sd_d_c,
+#          se.depth.clean= se_d_c)
+# karst_1_stats_sf <- karst_1_stats_sf %>%
+#   mutate(volume = size*mean.depth,
+#          shape = as.numeric(4*pi*st_area(karst_1_stats_sf)/st_perimeter(karst_1_stats_sf)^2))
+# 
+# karst_depth_sf <- karst_1_stats_sf %>%
+#   select(year, mean.depth)
+# tk.mean.depth <- brick(rasterize(as(filter(karst_depth_sf, year == 2017), 'Spatial'),
+#                                  emldtm5,
+#                                  field = 'mean.depth'),
+#                        rasterize(as(filter(karst_depth_sf, year == 2018), 'Spatial'),
+#                                  emldtm5,
+#                                  field = 'mean.depth'),
+#                        rasterize(as(filter(karst_depth_sf, year == 2019), 'Spatial'),
+#                                  emldtm5,
+#                                  field = 'mean.depth'))
+# writeRaster(tk.mean.depth,
+#             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_mean_depth.tif')
+tk.mean.depth <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_mean_depth.tif')
+tk.mean.depth.mean <- calc(tk.mean.depth, mean, na.rm = TRUE)
+tk.mean.depth.df <- tk.mean.depth.mean %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(mean.depth = 3) %>%
+  mutate(mean.depth = ifelse(is.nan(mean.depth),
+                             NA,
+                             ifelse(mean.depth > 0,
+                                    0, 
+                                    mean.depth*-1))) %>%
+  filter(!is.na(mean.depth))
+
+labels <- data.frame(x = c(387000),
+                     y = c(7089500),
+                     labels = c('Study Extent'))
+
+stretch.factor <- 1/2
+tk.depth.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
+  geom_raster() +
+  scale_fill_gradient(low = '#000000', high = '#FFFFFF',
+                      guide = FALSE) +
+  new_scale('fill') +
+  geom_raster(data = emlrgb18.df, 
+              aes(x = x, y = y, fill = color.hex), 
+              inherit.aes = FALSE, 
+              alpha = 0.8) +
+  scale_fill_manual(values = levels(emlrgb18.df$color.hex),
+                    guide = FALSE) +
+  new_scale('fill') +
+  geom_raster(data = tk.mean.depth.df,
+              aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
+              inherit.aes = FALSE) +
+  scale_fill_viridis(name = 'Thermokarst\nMean Depth\n(m)',
+                     option = 'C',
+                     limits = c(0, 1)^(stretch.factor),
+                     breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+                     labels = c(seq(0, 0.9, by = 0.1), '1+'),
+                     oob = squish,
+                     direction = -1) +
+  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
+  geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  coord_sf(clip = "off",
+           datum = st_crs(ec_sf),
+           expand = FALSE) +
+  theme_bw() +
+  theme(legend.key.height = unit(2, 'lines')) +
+  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970))
+tk.depth.map
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map.jpg',
+#        tk.depth.map,
+#        height = 6,
+#        width = 7.5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map.pdf',
+#        tk.depth.map,
+#        height = 6,
+#        width = 7.5)
+
+tk.depth.elev.rgb <- tk.depth.map +
+  theme(legend.justification = 'top') +
+  annotation_custom(ggplotGrob(tk.elev.map),
+                    xmin = 396510,
+                    xmax = 399500,
+                    ymin = 7080010,
+                    ymax = 7084000)
+
+tk.depth.elev.rgb
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_elev_map.jpg',
+#        tk.depth.elev.rgb,
+#        height = 4.75,
+#        width = 6.5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_elev_map.pdf',
+#        tk.depth.elev.rgb,
+#        height = 4.75,
+#        width = 6.5)
+##############################################################################################################
+
 ### Map of Shape #############################################################################################
-karst_1_stats_sf <- read_sf('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp') %>%
-  rename(min.depth = min_d,
-         mean.depth = mean_d,
-         median.depth = med_d,
-         max.depth = max_d,
-         sd.depth = sd_d,
-         se.depth = se_d,
-         min.depth.clean = min_d_c,
-         mean.depth.clean = mean_d_c,
-         median.depth.clean = med_d_c,
-         max.depth.clean = max_d_c,
-         sd.depth.clean = sd_d_c,
-         se.depth.clean= se_d_c) %>%
-  mutate(volume = size*mean.depth,
-         shape = as.numeric(4*pi*st_area(karst_1_stats_sf)/st_perimeter(karst_1_stats_sf)^2))
+# karst_shape_sf <- karst_1_stats_sf %>%
+#   select(year, shape)
+# tk.shape <- brick(rasterize(as(filter(karst_shape_sf, year == 2017), 'Spatial'),
+#                                  emldtm5,
+#                                  field = 'shape'),
+#                        rasterize(as(filter(karst_depth_sf, year == 2018), 'Spatial'),
+#                                  emldtm5,
+#                                  field = 'shape'),
+#                        rasterize(as(filter(karst_depth_sf, year == 2019), 'Spatial'),
+#                                  emldtm5,
+#                                  field = 'shape'))
+# writeRaster(tk.shape,
+#             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_shape.tif')
+tk.shape <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_shape.tif')
 
 tk.shape.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_raster() +
   scale_fill_gradient(low = '#000000', high = '#FFFFFF',
-                      guide = FALSE) +
+                      guide = FALSE) +.
+
   new_scale('fill') +
   geom_raster(data = emlrgb18.df, 
               aes(x = x, y = y, fill = color.hex), 
@@ -471,4 +584,68 @@ tk.shape.elev.rgb
 #        height = 4.75,
 #        width = 6.5)
 
+tk.mean.depth.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
+  geom_raster() +
+  scale_fill_gradient(low = '#000000', high = '#FFFFFF',
+                      guide = FALSE) +
+  new_scale('fill') +
+  geom_raster(data = emlrgb18.df, 
+              aes(x = x, y = y, fill = color.hex), 
+              inherit.aes = FALSE, 
+              alpha = 0.8) +
+  scale_fill_manual(values = levels(emlrgb18.df$color.hex),
+                    guide = FALSE) +
+  new_scale('fill') +
+  geom_sf(data = filter(karst_1_stats_sf, year == 2018),
+          aes(color = mean.depth, fill = mean.depth),
+          inherit.aes = FALSE) +
+  scale_fill_viridis(name = 'Thermokarst\nmean.depth',
+                     option = 'C',
+                     limits = c(min(karst_1_stats_sf$mean.depth), 0),
+                     oob = squish) +
+  scale_color_viridis(name = 'Thermokarst\nmean.depth',
+                     option = 'C',
+                     limits = c(min(karst_1_stats_sf$mean.depth), 0),
+                     oob = squish) +
+  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
+  geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
+  scale_x_continuous(name = 'Longitude (m)') +
+  scale_y_continuous(name = 'Latitude (m)') +
+  coord_sf(clip = "off",
+           datum = st_crs(ec_sf),
+           expand = FALSE,
+           xlim = c(min(emlhillshd.df$x), max(emlhillshd.df$x))) +
+  theme_bw() +
+  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970)) +
+  geom_text(aes(x = 385000, y = 7089990, label = 'A'))
+tk.mean.depth.map
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map_2018.jpg',
+#        tk.mean.depth.map,
+#        height = 6,
+#        width = 7.5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map_2018.pdf',
+#        tk.mean.depth.map,
+#        height = 6,
+#        width = 7.5)
+
+tk.mean.depth.elev.rgb <- tk.mean.depth.map +
+  theme(legend.justification = 'top') +
+  annotation_custom(ggplotGrob(tk.elev.map),
+                    xmin = 396510,
+                    xmax = 399500,
+                    ymin = 7080010,
+                    ymax = 7084000)
+
+tk.mean.depth.elev.rgb
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_elev_map_2018.jpg',
+#        tk.mean.depth.elev.rgb,
+#        height = 4.75,
+#        width = 6.5)
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_elev_map_2018.pdf',
+#        tk.mean.depth.elev.rgb,
+#        height = 4.75,
+#        width = 6.5)
 ##############################################################################################################
