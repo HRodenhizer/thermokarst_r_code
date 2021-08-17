@@ -35,8 +35,6 @@ extent_sf <- data.frame(x = c(387000, 387000, 396000, 396000),
 emlrgb18 <- crop(projectRaster(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/QA/Camera/2018_HEAL_2_all_5m_ll_geo.tif'),
                              crs = crs(emldtm)),
                y = crop_extent_final)
-emlrgb18_full <- projectRaster(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/QA/Camera/2018_HEAL_2_all_5m_ll_geo.tif'),
-                               crs = crs(emldtm))
 # emlrgb19 <- crop(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2019_HEAL_RGB/2019_HEAL_3_all_1m_UTM_geo.tif'),
 #                  y = crop_extent_final)
 # emlrgb19 <- emlrgb19 <- aggregate(emlrgb19, fact = 5)
@@ -372,7 +370,7 @@ tk.elev.map <- ggplot(emldtm5.df, aes(x = x, y = y, fill = elevation)) +
         legend.title = element_text(size = 8),
         legend.text = element_text(size = 8),
         legend.position = 'bottom') +
-  geom_text(aes(x = 385500, y = 7091000, label = 'B'))
+  geom_text(aes(x = 385000, y = 7090000, label = 'B'))
 tk.elev.map
 
 tk.depth.elev.rgb <- tk.depth.map +
@@ -457,7 +455,7 @@ tk.depth.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_raster(data = tk.mean.depth.df,
               aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
               inherit.aes = FALSE) +
-  scale_fill_viridis(name = 'Thermokarst\nMean Depth\n(m)',
+  scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
                      option = 'C',
                      limits = c(0, 1)^(stretch.factor),
                      breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
@@ -473,10 +471,13 @@ tk.depth.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   scale_y_continuous(name = 'Latitude (m)') +
   coord_sf(clip = "off",
            datum = st_crs(ec_sf),
-           expand = FALSE) +
+           expand = FALSE,
+           xlim = c(min(emlrgb18.df$x), max(emlrgb18.df$x)),
+           ylim = c(min(emlrgb18.df$y), max(emlrgb18.df$y))) +
   theme_bw() +
   theme(legend.key.height = unit(2, 'lines')) +
-  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970))
+  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970)) +
+  geom_text(aes(x = 385000, y = 7090000, label = 'A'))
 tk.depth.map
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map.jpg',
 #        tk.depth.map,
