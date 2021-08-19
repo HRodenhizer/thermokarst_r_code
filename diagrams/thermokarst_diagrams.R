@@ -236,7 +236,7 @@ main_labels <- c('Digital Terrain Model\n(Floating Point)',
                  'Thermokarst Polygons\n(Vector)')
 # node labels for the landscape features filter
 filter_labels <- c('Slope Filter\n(Binary)',
-                   'Stream Filter\n(Binary)',
+                   'River Filter\n(Binary)',
                    'Non-Thermokarst Lakes\n(Binary)',
                    'Filter\n(Binary)')
 # combine all node labels into one
@@ -278,7 +278,7 @@ edges_from <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n(Floating 
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n(Floating Point)')],
                 nodes$id[which(nodes$label == 'Slope Filter\n(Binary)')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n(Floating Point)')],
-                nodes$id[which(nodes$label == 'Stream Filter\n(Binary)')],
+                nodes$id[which(nodes$label == 'River Filter\n(Binary)')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n(Floating Point)')],
                 nodes$id[which(nodes$label == 'Non-Thermokarst Lakes\n(Binary)')],
                 nodes$id[which(nodes$label == 'Filter\n(Binary)')])
@@ -291,7 +291,7 @@ edges_to <- c(nodes$id[which(nodes$label == 'Microtopography\n(Floating Point)')
               nodes$id[which(nodes$label == 'Thermokarst Polygons\n(Vector)')],
               nodes$id[which(nodes$label == 'Slope Filter\n(Binary)')],
               nodes$id[which(nodes$label == 'Filter\n(Binary)')],
-              nodes$id[which(nodes$label == 'Stream Filter\n(Binary)')],
+              nodes$id[which(nodes$label == 'River Filter\n(Binary)')],
               nodes$id[which(nodes$label == 'Filter\n(Binary)')],
               nodes$id[which(nodes$label == 'Non-Thermokarst Lakes\n(Binary)')],
               nodes$id[which(nodes$label == 'Filter\n(Binary)')],
