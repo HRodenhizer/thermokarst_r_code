@@ -508,20 +508,17 @@ tk.depth.elev.rgb
 ##############################################################################################################
 
 ### Map of Shape #############################################################################################
-### Retry this by calculating the shape on the mean thermokarst shapefile
-### (if a shapefile of the mean thermokarst already exists?)
-
 # karst_shape_sf <- karst_1_stats_sf %>%
 #   select(year, shape)
 # tk.shape <- brick(rasterize(as(filter(karst_shape_sf, year == 2017), 'Spatial'),
-#                                  emldtm5,
-#                                  field = 'shape'),
-#                        rasterize(as(filter(karst_depth_sf, year == 2018), 'Spatial'),
-#                                  emldtm5,
-#                                  field = 'shape'),
-#                        rasterize(as(filter(karst_depth_sf, year == 2019), 'Spatial'),
-#                                  emldtm5,
-#                                  field = 'shape'))
+#                             emldtm5,
+#                             field = 'shape'),
+#                   rasterize(as(filter(karst_shape_sf, year == 2018), 'Spatial'),
+#                             emldtm5,
+#                             field = 'shape'),
+#                   rasterize(as(filter(karst_shape_sf, year == 2019), 'Spatial'),
+#                             emldtm5,
+#                             field = 'shape'))
 # writeRaster(tk.shape,
 #             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_shape.tif')
 tk.shape <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_shape.tif')
@@ -535,7 +532,8 @@ tk.mean.shape.df <- tk.mean.shape %>%
                              mean.shape)) %>%
   filter(!is.na(mean.shape))
 
-tk.shape.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
+stretch.factor <- 1/3
+tk.mean.shape.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_raster() +
   scale_fill_gradient(low = '#000000', high = '#FFFFFF',
                       guide = FALSE) +
@@ -548,10 +546,15 @@ tk.shape.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
                     guide = FALSE) +
   new_scale('fill') +
   geom_raster(data = tk.mean.shape.df,
-              aes(x = x, y = y, fill = mean.shape),
+              aes(x = x, y = y, fill = mean.shape^(stretch.factor)),
               inherit.aes = FALSE) +
-  scale_fill_viridis(name = 'Thermokarst\nMean Shape (m)',
-                     option = 'C') +
+  scale_fill_viridis(name = 'Thermokarst\nMean Shape',
+                     option = 'C',
+                     limits = c(0, 
+                                max(tk.mean.shape.df$mean.shape))^(stretch.factor),
+                     breaks = c(seq(0, 0.7, by = 0.1)^(stretch.factor)),
+                     labels = seq(0, 0.7, by = 0.1),
+                     direction = -1) +
   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
@@ -566,15 +569,15 @@ tk.shape.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
            ylim = c(min(emlrgb18.df$y), max(emlrgb18.df$y))) +
   theme_bw() +
   theme(legend.key.height = unit(2, 'lines')) +
-  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970)) +
-  geom_text(aes(x = 385000, y = 7090000, label = 'A'))
-tk.shape.map
+  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970))# +
+  # geom_text(aes(x = 385000, y = 7090000, label = 'A'))
+tk.mean.shape.map
 
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_shape_map_2018.jpg',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_shape_map.jpg',
 #        tk.mean.shape.map,
 #        height = 6,
 #        width = 7.5)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_shape_map_2018.pdf',
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_shape_map.pdf',
 #        tk.mean.shape.map,
 #        height = 6,
 #        width = 7.5)
