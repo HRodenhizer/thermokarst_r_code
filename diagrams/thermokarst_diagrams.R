@@ -229,9 +229,9 @@ graph %>% export_graph(file_name = '/home/heidi/Documents/School/NAU/Schuur Lab/
 ### list of node labels
 # node labels for the main classification flow
 main_labels <- c('Digital Terrain Model\n(Floating Point)',
-                 'Median Elevation\n(Floating Point)',
-                 'Microtopography\n(Floating Point)',
-                 'Elevation Minima\n(Binary)',
+                 '1. Median Elevation\n(Floating Point)',
+                 '2. Microtopography\n(Floating Point)',
+                 '3. Elevation Minima\n(Binary)',
                  'Thermokarst Classification\n(Binary)',
                  'Thermokarst Polygons\n(Vector)')
 # node labels for the landscape features filter
@@ -271,9 +271,9 @@ nodes <- create_node_df(n = length(node_labels),
 # from and to nodes
 edges_from <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n(Floating Point)')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n(Floating Point)')],
-                nodes$id[which(nodes$label == 'Median Elevation\n(Floating Point)')],
-                nodes$id[which(nodes$label == 'Microtopography\n(Floating Point)')],
-                nodes$id[which(nodes$label == 'Elevation Minima\n(Binary)')],
+                nodes$id[which(nodes$label == '1. Median Elevation\n(Floating Point)')],
+                nodes$id[which(nodes$label == '2. Microtopography\n(Floating Point)')],
+                nodes$id[which(nodes$label == '3. Elevation Minima\n(Binary)')],
                 nodes$id[which(nodes$label == 'Thermokarst Classification\n(Binary)')],
                 nodes$id[which(nodes$label == 'Digital Terrain Model\n(Floating Point)')],
                 nodes$id[which(nodes$label == 'Slope Filter\n(Binary)')],
@@ -283,10 +283,10 @@ edges_from <- c(nodes$id[which(nodes$label == 'Digital Terrain Model\n(Floating 
                 nodes$id[which(nodes$label == 'Non-Thermokarst Lakes\n(Binary)')],
                 nodes$id[which(nodes$label == 'Filter\n(Binary)')])
 
-edges_to <- c(nodes$id[which(nodes$label == 'Microtopography\n(Floating Point)')],
-              nodes$id[which(nodes$label == 'Median Elevation\n(Floating Point)')],
-              nodes$id[which(nodes$label == 'Microtopography\n(Floating Point)')],
-              nodes$id[which(nodes$label == 'Elevation Minima\n(Binary)')],
+edges_to <- c(nodes$id[which(nodes$label == '2. Microtopography\n(Floating Point)')],
+              nodes$id[which(nodes$label == '1. Median Elevation\n(Floating Point)')],
+              nodes$id[which(nodes$label == '2. Microtopography\n(Floating Point)')],
+              nodes$id[which(nodes$label == '3. Elevation Minima\n(Binary)')],
               nodes$id[which(nodes$label == 'Thermokarst Classification\n(Binary)')],
               nodes$id[which(nodes$label == 'Thermokarst Polygons\n(Vector)')],
               nodes$id[which(nodes$label == 'Slope Filter\n(Binary)')],
