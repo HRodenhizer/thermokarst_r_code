@@ -467,17 +467,18 @@ tk.depth.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
-  scale_x_continuous(name = 'Longitude (m)') +
-  scale_y_continuous(name = 'Latitude (m)') +
+  # scale_x_continuous(name = 'Longitude (m)') +
+  # scale_y_continuous(name = 'Latitude (m)') +
   coord_sf(clip = "off",
-           datum = st_crs(ec_sf),
+           # datum = st_crs(ec_sf),
            expand = FALSE,
            xlim = c(min(emlrgb18.df$x), max(emlrgb18.df$x)),
            ylim = c(min(emlrgb18.df$y), max(emlrgb18.df$y))) +
   theme_bw() +
   theme(legend.key.height = unit(2, 'lines')) +
-  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970)) +
-  geom_text(aes(x = 385000, y = 7090000, label = 'A'))
+  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089900)) +
+  geom_text(aes(x = 3964700, y = 7089970, label = 'N'))# +
+  # geom_text(aes(x = 385000, y = 7090000, label = 'A'))
 tk.depth.map
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map.jpg',
 #        tk.depth.map,
