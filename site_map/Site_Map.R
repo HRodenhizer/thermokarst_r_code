@@ -22,8 +22,8 @@ library(tidyverse)
 # buffered extent for RGB imagery and hillshade
 crop_extent_final <- extent(matrix(c(386500, 396500, 7080000, 7090000), 
                                    nrow = 2, byrow = TRUE))
-# emldtm <- crop(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/DTM/NEON_DTM_2017.tif'),
-#                y = crop_extent_final)
+emldtm <- crop(raster('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/DTM/NEON_DTM_2017.tif'),
+               y = crop_extent_final)
 
 # study extent for plotting
 extent_sf <- data.frame(x = c(387000, 387000, 396000, 396000),
@@ -49,10 +49,10 @@ rm(ec, circle)
 eml_wtrshd <- st_read("/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/Heidi_Thermokarst_Data/eml_bnd/boundry_poly3.shp")
 
 # thermokarst classification
-# thermokarst.brick <- brick(raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_1.tif'),
-#                            raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_2.tif'),
-#                            raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_3.tif'))
-# thermokarst <- calc(thermokarst.brick, max)
+thermokarst.brick <- brick(raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_1.tif'),
+                           raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_2.tif'),
+                           raster('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/output/karst_combined_1_raster_final_3.tif'))
+thermokarst <- calc(thermokarst.brick, max)
 
 # cipehr
 cipehr <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/GPS/All_Points/Site_Summary_Shapefiles/EML_Sites.shp') %>%
@@ -74,17 +74,18 @@ emlrgb18.df <- as.data.frame(emlrgb18.stretch,
   filter(!(is.na(r) | is.na(g) | is.na(b))) %>%
   mutate(color.hex = factor(rgb(r, g, b, maxColorValue = 255)))
 
-# get RGB imagery for zoomed in plots
-# pond (x > 389100 & x < 390100) & (y > 7088500 & y < 7089500)
-pond.extent <- extent(matrix(c(389100, 390100, 7088500, 7089500), 
+# # get RGB imagery for zoomed in plots
+# # pond (x > 389100 & x < 390100) & (y > 7088500 & y < 7089500)
+pond.extent <- extent(matrix(c(389100, 390100, 7088500, 7089500),
                              nrow = 2, byrow = TRUE))
-rgb.pond <- crop(merge(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7088000_image.tif'),
-                       brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_390000_7088000_image.tif'),
-                       brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7089000_image.tif'),
-                       brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_390000_7089000_image.tif')), 
-                 pond.extent)
-writeRaster(rgb.pond,
-             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/pond_rgb.tif')
+# rgb.pond <- crop(merge(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7088000_image.tif'),
+#                        brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_390000_7088000_image.tif'),
+#                        brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7089000_image.tif'),
+#                        brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_390000_7089000_image.tif')), 
+#                  pond.extent)
+# writeRaster(rgb.pond,
+#              '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/pond_rgb.tif')
+rgb.pond <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/pond_rgb.tif')
 
 # stretch raster before conversion to df
 rgb.pond.stretch <- stretch(rgb.pond,
@@ -92,6 +93,7 @@ rgb.pond.stretch <- stretch(rgb.pond,
                             maxv = 255,
                             minq = 0.01,
                             maxq = 1)
+rgb.pond.stretch <- aggregate(rgb.pond.stretch, fact = 5)
 
 # convert decimal to hexadecimal
 rgb.pond.df <- as.data.frame(rgb.pond.stretch,
@@ -100,16 +102,17 @@ rgb.pond.df <- as.data.frame(rgb.pond.stretch,
   filter(!(is.na(r) | is.na(g) | is.na(b))) %>%
   mutate(color.hex = factor(rgb(r, g, b, maxColorValue = 255)))
 
-# moraine and cipehr (x > 389900 & x < 390900) & (y > 7085500 & y < 7086500)
-moraine.extent <- extent(matrix(c(389900, 390900, 7085500, 7086500), 
+# # moraine and cipehr (x > 389900 & x < 390900) & (y > 7085500 & y < 7086500)
+moraine.extent <- extent(matrix(c(389900, 390900, 7085500, 7086500),
                                 nrow = 2, byrow = TRUE))
-rgb.moraine <- crop(merge(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7085000_image.tif'),
-                          brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_390000_7085000_image.tif'),
-                          brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7086000_image.tif'),
-                          brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_390000_7086000_image.tif')), 
-                    moraine.extent)
-writeRaster(rgb.moraine,
-            '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/moraine_rgb.tif')
+# rgb.moraine <- crop(merge(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7085000_image.tif'),
+#                           brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_390000_7085000_image.tif'),
+#                           brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7086000_image.tif'),
+#                           brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_390000_7086000_image.tif')), 
+#                     moraine.extent)
+# writeRaster(rgb.moraine,
+#             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/moraine_rgb.tif')
+rgb.moraine <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/moraine_rgb.tif')
 
 # stretch raster before conversion to df
 rgb.moraine.stretch <- stretch(rgb.moraine,
@@ -117,6 +120,7 @@ rgb.moraine.stretch <- stretch(rgb.moraine,
                                maxv = 255,
                                minq = 0.01,
                                maxq = 1)
+rgb.moraine.stretch <- aggregate(rgb.moraine.stretch, fact = 5)
 
 # convert decimal to hexadecimal
 rgb.moraine.df <- as.data.frame(rgb.moraine.stretch,
@@ -125,16 +129,17 @@ rgb.moraine.df <- as.data.frame(rgb.moraine.stretch,
   filter(!(is.na(r) | is.na(g) | is.na(b))) %>%
   mutate(color.hex = factor(rgb(r, g, b, maxColorValue = 255)))
 
-# gradient (x > 388900 & x < 389900) & (y > 7085250 & y < 7086250)
-gradient.extent <- extent(matrix(c(388900, 389900, 7085250, 7086250), 
+# # gradient (x > 388900 & x < 389900) & (y > 7085250 & y < 7086250)
+gradient.extent <- extent(matrix(c(388900, 389900, 7085250, 7086250),
                                  nrow = 2, byrow = TRUE))
-rgb.gradient <- crop(merge(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_388000_7085000_image.tif'),
-                           brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7085000_image.tif'),
-                           brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_388000_7086000_image.tif'),
-                           brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7086000_image.tif')), 
-                     gradient.extent)
-writeRaster(rgb.gradient,
-            '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gradient_rgb.tif')
+# rgb.gradient <- crop(merge(brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_388000_7085000_image.tif'),
+#                            brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7085000_image.tif'),
+#                            brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_388000_7086000_image.tif'),
+#                            brick('/home/heidi/ecoss_server/Schuur Lab/2020 New_Shared_Files/DATA/Remote Sensing/NEON/RGB/2018_HEAL_RGB/L3/Camera/Mosaic/V01/2018_HEAL_2_389000_7086000_image.tif')), 
+#                      gradient.extent)
+# writeRaster(rgb.gradient,
+#             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gradient_rgb.tif')
+rgb.gradient <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/gradient_rgb.tif')
 
 # stretch raster before conversion to df
 rgb.gradient.stretch <- stretch(rgb.gradient,
@@ -142,6 +147,7 @@ rgb.gradient.stretch <- stretch(rgb.gradient,
                                 maxv = 255,
                                 minq = 0.01,
                                 maxq = 1)
+rgb.gradient.stretch <- aggregate(rgb.gradient.stretch, fact = 5)
 
 # convert decimal to hexadecimal
 rgb.gradient.df <- as.data.frame(rgb.gradient.stretch,
@@ -244,9 +250,253 @@ tk.mean.depth.df <- tk.mean.depth.mean %>%
                                     0, 
                                     mean.depth*-1))) %>%
   filter(!is.na(mean.depth))
+
+# # High-res for zoomed in sections
+# # average depth by feature
+# karst_1_stats_sf <- read_sf('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/karst_1_stats.shp') %>%
+#   rename(min.depth = min_d,
+#          mean.depth = mean_d,
+#          median.depth = med_d,
+#          max.depth = max_d,
+#          sd.depth = sd_d,
+#          se.depth = se_d,
+#          min.depth.clean = min_d_c,
+#          mean.depth.clean = mean_d_c,
+#          median.depth.clean = med_d_c,
+#          max.depth.clean = max_d_c,
+#          sd.depth.clean = sd_d_c,
+#          se.depth.clean= se_d_c)
+# karst_1_stats_sf <- karst_1_stats_sf %>%
+#   mutate(volume = size*mean.depth,
+#          shape = as.numeric(4*pi*st_area(karst_1_stats_sf)/st_perimeter(karst_1_stats_sf)^2))
+# 
+# ### pond
+# karst.depth.pond <- karst_1_stats_sf %>%
+#   st_intersection(st_as_sf(data.frame(x = c(rep(pond.extent@xmin, 2),
+#                                             rep(pond.extent@xmax, 2),
+#                                             pond.extent@xmin),
+#                                       y = c(pond.extent@ymin,
+#                                             rep(pond.extent@ymax, 2),
+#                                             rep(pond.extent@ymin, 2))) %>%
+#                              st_as_sf(coords = c(1, 2), crs = st_crs(karst.depth.pond)) %>%
+#                              summarise(geometry = st_combine(geometry)) %>%
+#                              st_cast("POLYGON")),
+#                   s2_options(dimensions = c('polygon'))) %>%
+#   select(year, mean.depth)
+# types <- vapply(sf::st_geometry(karst.depth.pond), function(x) {
+#   class(x)[2]
+# }, "")
+# type.levels <- unique(types)
+# 
+# # extract polygons, not lines
+# polys <- karst.depth.pond[str_detect(types, "POLYGON"), ]
+# # geometry collections contain some polygons some lines
+# geo.coll <- karst.depth.pond[str_detect(types, "GEOMETRY"), ]
+# geoms <- lapply(geo.coll$geometry, `[` )
+# for (i in 1:length(geoms)) {
+#   # copy current geometry data
+#   data <- geoms[[i]]
+#   # overwrite current geometry data
+#   geoms[[i]] <- list()
+#   # create an index to replace empty geometry with only polygons
+#   idx <- 1
+#   
+#   for (j in 1:length(data)) {
+#     if(any(str_detect(class(data[[j]]), 'POLYGON'))) {
+#       geoms[[i]][[idx]] <- data[[j]]
+#       idx <- idx + 1
+#     }
+#   }
+#   
+#   if (length(geoms[[i]]) == 1) {
+#     geoms[[i]] <- st_polygon(geoms[[i]][[1]])
+#   } else if (length(geoms[[i]]) > 1) {
+#     geoms[[i]] <- st_multipolygon(geoms[[i]])
+#   }
+#   
+# }
+# 
+# st_geometry(geo.coll) <- st_sfc(geoms, crs = st_crs(karst.depth.pond))
+# 
+# karst.depth.pond <- rbind.data.frame(polys, geo.coll)
+# 
+# # crop eml dtm
+# emldtm.pond <- crop(emldtm, pond.extent)
+# tk.mean.depth.pond <- brick(rasterize(as(filter(karst.depth.pond, year == 2017), 'Spatial'),
+#                                  emldtm.pond,
+#                                  field = 'mean.depth'),
+#                        rasterize(as(filter(karst.depth.pond, year == 2018), 'Spatial'),
+#                                  emldtm.pond,
+#                                  field = 'mean.depth'),
+#                        rasterize(as(filter(karst.depth.pond, year == 2019), 'Spatial'),
+#                                  emldtm.pond,
+#                                  field = 'mean.depth'))
+# writeRaster(tk.mean.depth.pond,
+#             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_mean_depth_pond.tif')
+tk.mean.depth.pond <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_mean_depth_pond.tif')
+tk.mean.depth.pond <- calc(tk.mean.depth.pond, mean, na.rm = TRUE)
+tk.mean.depth.pond.df <- tk.mean.depth.pond %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(mean.depth = 3) %>%
+  mutate(mean.depth = ifelse(is.nan(mean.depth),
+                             NA,
+                             ifelse(mean.depth > 0,
+                                    0, 
+                                    mean.depth*-1))) %>%
+  filter(!is.na(mean.depth))
+
+# ### moraine
+# karst.depth.moraine <- karst_1_stats_sf %>%
+#   st_intersection(st_as_sf(data.frame(x = c(rep(moraine.extent@xmin, 2),
+#                                             rep(moraine.extent@xmax, 2),
+#                                             moraine.extent@xmin),
+#                                       y = c(moraine.extent@ymin,
+#                                             rep(moraine.extent@ymax, 2),
+#                                             rep(moraine.extent@ymin, 2))) %>%
+#                              st_as_sf(coords = c(1, 2), crs = st_crs(karst_1_stats_sf)) %>%
+#                              summarise(geometry = st_combine(geometry)) %>%
+#                              st_cast("POLYGON")),
+#                   s2_options(dimensions = c('polygon'))) %>%
+#   select(year, mean.depth)
+# types <- vapply(sf::st_geometry(karst.depth.moraine), function(x) {
+#   class(x)[2]
+# }, "")
+# type.levels <- unique(types)
+# 
+# # extract polygons, not lines
+# polys <- karst.depth.moraine[str_detect(types, "POLYGON"), ]
+# # geometry collections contain some polygons some lines
+# geo.coll <- karst.depth.moraine[str_detect(types, "GEOMETRY"), ]
+# geoms <- lapply(geo.coll$geometry, `[` )
+# for (i in 1:length(geoms)) {
+#   # copy current geometry data
+#   data <- geoms[[i]]
+#   # overwrite current geometry data
+#   geoms[[i]] <- list()
+#   # create an index to replace empty geometry with only polygons
+#   idx <- 1
+# 
+#   for (j in 1:length(data)) {
+#     if(any(str_detect(class(data[[j]]), 'POLYGON'))) {
+#       geoms[[i]][[idx]] <- data[[j]]
+#       idx <- idx + 1
+#     }
+#   }
+# 
+#   if (length(geoms[[i]]) == 1) {
+#     geoms[[i]] <- st_polygon(geoms[[i]][[1]])
+#   } else if (length(geoms[[i]]) > 1) {
+#     geoms[[i]] <- st_multipolygon(geoms[[i]])
+#   }
+# 
+# }
+# 
+# st_geometry(geo.coll) <- st_sfc(geoms, crs = st_crs(karst.depth.moraine))
+# 
+# karst.depth.moraine <- rbind.data.frame(polys, geo.coll)
+# 
+# # crop eml dtm
+# emldtm.moraine <- crop(emldtm, moraine.extent)
+# tk.mean.depth.moraine <- brick(rasterize(as(filter(karst.depth.moraine, year == 2017), 'Spatial'),
+#                                  emldtm.moraine,
+#                                  field = 'mean.depth'),
+#                        rasterize(as(filter(karst.depth.moraine, year == 2018), 'Spatial'),
+#                                  emldtm.moraine,
+#                                  field = 'mean.depth'),
+#                        rasterize(as(filter(karst.depth.moraine, year == 2019), 'Spatial'),
+#                                  emldtm.moraine,
+#                                  field = 'mean.depth'))
+# writeRaster(tk.mean.depth.moraine,
+#             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_mean_depth_moraine.tif')
+tk.mean.depth.moraine <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_mean_depth_moraine.tif')
+tk.mean.depth.moraine <- calc(tk.mean.depth.moraine, mean, na.rm = TRUE)
+tk.mean.depth.moraine.df <- tk.mean.depth.moraine %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(mean.depth = 3) %>%
+  mutate(mean.depth = ifelse(is.nan(mean.depth),
+                             NA,
+                             ifelse(mean.depth > 0,
+                                    0, 
+                                    mean.depth*-1))) %>%
+  filter(!is.na(mean.depth))
+
+# ### gradient
+# karst.depth.gradient <- karst_1_stats_sf %>%
+#   st_intersection(st_as_sf(data.frame(x = c(rep(gradient.extent@xmin, 2),
+#                                             rep(gradient.extent@xmax, 2),
+#                                             gradient.extent@xmin),
+#                                       y = c(gradient.extent@ymin,
+#                                             rep(gradient.extent@ymax, 2),
+#                                             rep(gradient.extent@ymin, 2))) %>%
+#                              st_as_sf(coords = c(1, 2), crs = st_crs(karst_1_stats_sf)) %>%
+#                              summarise(geometry = st_combine(geometry)) %>%
+#                              st_cast("POLYGON")),
+#                   s2_options(dimensions = c('polygon'))) %>%
+#   select(year, mean.depth)
+# types <- vapply(sf::st_geometry(karst.depth.gradient), function(x) {
+#   class(x)[2]
+# }, "")
+# type.levels <- unique(types)
+# 
+# # extract polygons, not lines
+# polys <- karst.depth.gradient[str_detect(types, "POLYGON"), ]
+# # geometry collections contain some polygons some lines
+# geo.coll <- karst.depth.gradient[str_detect(types, "GEOMETRY"), ]
+# geoms <- lapply(geo.coll$geometry, `[` )
+# for (i in 1:length(geoms)) {
+#   # copy current geometry data
+#   data <- geoms[[i]]
+#   # overwrite current geometry data
+#   geoms[[i]] <- list()
+#   # create an index to replace empty geometry with only polygons
+#   idx <- 1
+# 
+#   for (j in 1:length(data)) {
+#     if(any(str_detect(class(data[[j]]), 'POLYGON'))) {
+#       geoms[[i]][[idx]] <- data[[j]]
+#       idx <- idx + 1
+#     }
+#   }
+# 
+#   if (length(geoms[[i]]) == 1) {
+#     geoms[[i]] <- st_polygon(geoms[[i]][[1]])
+#   } else if (length(geoms[[i]]) > 1) {
+#     geoms[[i]] <- st_multipolygon(geoms[[i]])
+#   }
+# 
+# }
+# 
+# st_geometry(geo.coll) <- st_sfc(geoms, crs = st_crs(karst.depth.gradient))
+# 
+# karst.depth.gradient <- rbind.data.frame(polys, geo.coll)
+# 
+# # crop eml dtm
+# emldtm.gradient <- crop(emldtm, gradient.extent)
+# tk.mean.depth.gradient <- brick(rasterize(as(filter(karst.depth.gradient, year == 2017), 'Spatial'),
+#                                  emldtm.gradient,
+#                                  field = 'mean.depth'),
+#                        rasterize(as(filter(karst.depth.gradient, year == 2018), 'Spatial'),
+#                                  emldtm.gradient,
+#                                  field = 'mean.depth'),
+#                        rasterize(as(filter(karst.depth.gradient, year == 2019), 'Spatial'),
+#                                  emldtm.gradient,
+#                                  field = 'mean.depth'))
+# writeRaster(tk.mean.depth.gradient,
+#             '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_mean_depth_gradient.tif')
+tk.mean.depth.gradient <- brick('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/thermokarst_mean_depth_gradient.tif')
+tk.mean.depth.gradient <- calc(tk.mean.depth.gradient, mean, na.rm = TRUE)
+tk.mean.depth.gradient.df <- tk.mean.depth.gradient %>%
+  as.data.frame(xy = TRUE) %>%
+  rename(mean.depth = 3) %>%
+  mutate(mean.depth = ifelse(is.nan(mean.depth),
+                             NA,
+                             ifelse(mean.depth > 0,
+                                    0, 
+                                    mean.depth*-1))) %>%
+  filter(!is.na(mean.depth))
 ##############################################################################################################
 
-### Plot with Hillshade and RGB ##############################################################################
+### Site Map #################################################################################################
 site.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
   geom_raster() +
   scale_fill_gradient(low = '#000000', high = '#FFFFFF') +
@@ -460,15 +710,13 @@ labels <- data.frame(x = c(387000),
                      labels = c('Study Extent'))
 
 stretch.factor <- 1/2
-tk.depth.map <- ggplot(data = emlhillshd.df, aes(x = x, y = y)) +
-  geom_raster(aes(fill = hillshd)) +
-  scale_fill_gradient(low = '#000000', high = '#FFFFFF',
-                      guide = FALSE) +
-  new_scale('fill') +
-  geom_raster(data = emlrgb18.df, 
-              aes(x = x, y = y, fill = color.hex), 
-              inherit.aes = FALSE, 
-              alpha = 0.8) +
+# tk.depth.map <- ggplot(data = emlhillshd.df, aes(x = x, y = y)) +
+#   geom_raster(aes(fill = hillshd)) +
+#   scale_fill_gradient(low = '#000000', high = '#FFFFFF',
+#                       guide = FALSE) +
+#   new_scale('fill') +
+tk.depth.map <- ggplot(data = emlrgb18.df, aes(x = x, y = y)) +
+  geom_raster(aes(fill = color.hex), alpha = 0.8) +
   scale_fill_manual(values = levels(emlrgb18.df$color.hex),
                     guide = FALSE) +
   new_scale('fill') +
@@ -489,7 +737,7 @@ tk.depth.map <- ggplot(data = emlhillshd.df, aes(x = x, y = y)) +
   geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
   # scale_x_continuous(name = 'Longitude (m)') +
   # scale_y_continuous(name = 'Latitude (m)') +
-  coord_sf(clip = "off",
+  coord_sf(# clip = "off",
            datum = st_crs(ec_sf),
            expand = FALSE,
            xlim = c(min(emlrgb18.df$x), max(emlrgb18.df$x)),
@@ -498,15 +746,20 @@ tk.depth.map <- ggplot(data = emlhillshd.df, aes(x = x, y = y)) +
   theme(legend.key.height = unit(2, 'lines'),
         axis.title = element_blank(),
         axis.text = element_blank()) +
-  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089900)) +
-  geom_text(aes(x = 3964700, y = 7089970, label = 'N')) +
-  scalebar(location = "bottomleft", anchor = c(x = 386750, y = 7080250), 
-           dist = 500, dist_unit = 'm', transform = FALSE, st.size = 4, st.dist = 0.01,
+  north(data = extent_sf, scale = 0.05, symbol = 12, 
+        anchor = c('x' = 396250, 'y' = 7090000)) +
+  geom_text(aes(x = 396250, y = 7089750, label = 'N'),
+            size = 3) +
+  scalebar(location = "bottomleft", 
+           anchor = c('x' = min(emlrgb18.df$x) + 750, 'y' = min(emlrgb18.df$y) + 750), 
+           dist = 500, dist_unit = 'm', transform = FALSE, 
+           st.size = 3, 
+           # st.dist = 0.01,
            x.min = min(emlrgb18.df$x),
            x.max = max(emlrgb18.df$x),
            y.min = min(emlrgb18.df$y),
            y.max = max(emlrgb18.df$y))
-  # geom_text(aes(x = 385000, y = 7090000, label = 'A'))
+  # geo_text(aes(x = 385000, y = 7090000, label = 'A'))
 tk.depth.map
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map.jpg',
 #        tk.depth.map,
@@ -520,26 +773,13 @@ tk.depth.map
 ### Zoom in on specific features
 ### Will need to redo with 1 m data!
 # Thaw pond N of EML
-ggplot(data = filter(emlhillshd.df, 
-                     (x > 389100 & x < 390100) & (y > 7088500 & y < 7089500)), 
-       aes(x = x, y = y)) +
-  geom_raster(aes(fill = hillshd)) +
-  scale_fill_gradient(low = '#000000', high = '#FFFFFF',
-                      guide = FALSE) +
-  new_scale('fill') +
-  geom_raster(data = filter(emlrgb18.df, 
-                            (x > 389100 & x < 390100) & (y > 7088500 & y < 7089500)), 
-              aes(x = x, y = y, fill = color.hex), 
-              inherit.aes = FALSE, 
-              alpha = 0.8) +
-  scale_fill_manual(breaks = levels(filter(emlrgb18.df, 
-                                           (x > 389100 & x < 390100) & (y > 7088500 & y < 7089500))$color.hex),
-                    values = levels(filter(emlrgb18.df, 
-                                           (x > 389100 & x < 390100) & (y > 7088500 & y < 7089500))$color.hex),
+tk.pond.map <- ggplot(data = rgb.pond.df) +
+  geom_raster(aes(x = x, y = y, fill = color.hex), 
+              inherit.aes = FALSE) +
+  scale_fill_manual(values = levels(rgb.pond.df$color.hex),
                     guide = FALSE) +
   new_scale('fill') +
-  geom_raster(data = filter(tk.mean.depth.df, 
-                            (x > 389100 & x < 390100) & (y > 7088500 & y < 7089500)),
+  geom_raster(data = tk.mean.depth.pond.df,
               aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
               inherit.aes = FALSE) +
   scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
@@ -549,44 +789,35 @@ ggplot(data = filter(emlhillshd.df,
                      labels = c(seq(0, 0.9, by = 0.1), '1+'),
                      oob = squish,
                      direction = -1) +
-  coord_sf(datum = st_crs(ec_sf),
+  coord_sf(datum = st_crs(rgb.pond.df),
            expand = FALSE,
-           xlim = c(389100, 390100),
-           ylim = c(7088500, 7089500)) +
+           xlim = c(min(rgb.pond.df$x), max(rgb.pond.df$x)),
+           ylim = c(min(rgb.pond.df$y), max(rgb.pond.df$y))) +
   theme_bw() +
   theme(legend.position = 'none',
         axis.title = element_blank(),
         axis.text = element_blank()) +
-  scalebar(location = "bottomleft", anchor = c(x = 389150, y = 7088550), 
-           dist = 100, dist_unit = 'm', transform = FALSE, st.size = 4, 
-           height = 0.005, st.dist = 0.0025,
-           x.min = min(emlrgb18.df$x),
-           x.max = max(emlrgb18.df$x),
-           y.min = min(emlrgb18.df$y),
-           y.max = max(emlrgb18.df$y))
+  scalebar(location = "bottomleft", 
+           anchor = c(x = min(rgb.pond.df$x) + 50, y = min(rgb.pond.df$y) + 50), 
+           dist = 100, dist_unit = 'm', 
+           transform = FALSE, 
+           st.size = 3, 
+           # height = 0.005, 
+           # st.dist = 0.01,
+           x.min = min(rgb.pond.df$x),
+           x.max = max(rgb.pond.df$x),
+           y.min = min(rgb.pond.df$y),
+           y.max = max(rgb.pond.df$y))
+tk.pond.map
 
 # Terminal Moraine and CiPEHR
-# extent  389900, 390900, 7085900, 7086900
-ggplot(data = filter(emlhillshd.df, 
-                     (x > 389900 & x < 390900) & (y > 7085500 & y < 7086500)), 
-       aes(x = x, y = y)) +
-  geom_raster(aes(fill = hillshd)) +
-  scale_fill_gradient(low = '#000000', high = '#FFFFFF',
-                      guide = FALSE) +
-  new_scale('fill') +
-  geom_raster(data = filter(emlrgb18.df, 
-                            (x > 389900 & x < 390900) & (y > 7085500 & y < 7086500)), 
-              aes(x = x, y = y, fill = color.hex), 
-              inherit.aes = FALSE, 
-              alpha = 0.8) +
-  scale_fill_manual(breaks = levels(filter(emlrgb18.df, 
-                                           (x > 389900 & x < 390900) & (y > 7085500 & y < 7086500))$color.hex),
-                    values = levels(filter(emlrgb18.df, 
-                                           (x > 389900 & x < 390900) & (y > 7085500 & y < 7086500))$color.hex),
+tk.moraine.map <- ggplot(data = rgb.moraine.df) +
+  geom_raster(aes(x = x, y = y, fill = color.hex), 
+              inherit.aes = FALSE) +
+  scale_fill_manual(values = levels(rgb.moraine.df$color.hex),
                     guide = FALSE) +
   new_scale('fill') +
-  geom_raster(data = filter(tk.mean.depth.df, 
-                            (x > 389900 & x < 390900) & (y > 7085500 & y < 7086500)),
+  geom_raster(data = tk.mean.depth.moraine.df,
               aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
               inherit.aes = FALSE) +
   scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
@@ -596,44 +827,36 @@ ggplot(data = filter(emlhillshd.df,
                      labels = c(seq(0, 0.9, by = 0.1), '1+'),
                      oob = squish,
                      direction = -1) +
-  coord_sf(datum = st_crs(ec_sf),
+  geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
+  coord_sf(datum = st_crs(rgb.moraine.df),
            expand = FALSE,
-           xlim = c(389900, 390900),
-           ylim = c(7085500, 7086500)) +
+           xlim = c(min(rgb.moraine.df$x), max(rgb.moraine.df$x)),
+           ylim = c(min(rgb.moraine.df$y), max(rgb.moraine.df$y))) +
   theme_bw() +
   theme(legend.position = 'none',
         axis.title = element_blank(),
         axis.text = element_blank()) +
-  scalebar(location = "bottomleft", anchor = c(x = 389950, y = 7085550), 
-           dist = 100, dist_unit = 'm', transform = FALSE, st.size = 4, 
-           height = 0.005, st.dist = 0.0025,
-           x.min = min(emlrgb18.df$x),
-           x.max = max(emlrgb18.df$x),
-           y.min = min(emlrgb18.df$y),
-           y.max = max(emlrgb18.df$y))
+  scalebar(location = "bottomleft", 
+           anchor = c(x = min(rgb.moraine.df$x) + 50, y = min(rgb.moraine.df$y) + 50), 
+           dist = 100, dist_unit = 'm', 
+           transform = FALSE, 
+           st.size = 3, 
+           # height = 0.005, 
+           # st.dist = 0.01,
+           x.min = min(rgb.moraine.df$x),
+           x.max = max(rgb.moraine.df$x),
+           y.min = min(rgb.moraine.df$y),
+           y.max = max(rgb.moraine.df$y))
+tk.moraine.map
 
 # Gradient
-# extent  389000, 390000, 7085000, 7086000
-ggplot(data = filter(emlhillshd.df, 
-                     (x > 388900 & x < 389900) & (y > 7085250 & y < 7086250)), 
-       aes(x = x, y = y)) +
-  geom_raster(aes(fill = hillshd)) +
-  scale_fill_gradient(low = '#000000', high = '#FFFFFF',
-                      guide = FALSE) +
-  new_scale('fill') +
-  geom_raster(data = filter(emlrgb18.df, 
-                            (x > 388900 & x < 389900) & (y > 7085200 & y < 7086200)), 
-              aes(x = x, y = y, fill = color.hex), 
-              inherit.aes = FALSE, 
-              alpha = 0.8) +
-  scale_fill_manual(breaks = levels(filter(emlrgb18.df, 
-                                           (x > 388900 & x < 389900) & (y > 7085200 & y < 7086200))$color.hex),
-                    values = levels(filter(emlrgb18.df, 
-                                           (x > 388900 & x < 389900) & (y > 7085200 & y < 7086200))$color.hex),
+tk.gradient.map <- ggplot(data = rgb.gradient.df) +
+  geom_raster(aes(x = x, y = y, fill = color.hex), 
+              inherit.aes = FALSE) +
+  scale_fill_manual(values = levels(rgb.gradient.df$color.hex),
                     guide = FALSE) +
   new_scale('fill') +
-  geom_raster(data = filter(tk.mean.depth.df, 
-                            (x > 388900 & x < 389900) & (y > 7085200 & y < 7086200)),
+  geom_raster(data = tk.mean.depth.gradient.df,
               aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
               inherit.aes = FALSE) +
   scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
@@ -643,40 +866,66 @@ ggplot(data = filter(emlhillshd.df,
                      labels = c(seq(0, 0.9, by = 0.1), '1+'),
                      oob = squish,
                      direction = -1) +
-  coord_sf(datum = st_crs(ec_sf),
+  geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
+  geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
+  coord_sf(datum = st_crs(rgb.gradient.df),
            expand = FALSE,
-           xlim = c(388900, 389900),
-           ylim = c(7085200, 7086200)) +
+           xlim = c(min(rgb.gradient.df$x), max(rgb.gradient.df$x)),
+           ylim = c(min(rgb.gradient.df$y), max(rgb.gradient.df$y))) +
   theme_bw() +
   theme(legend.position = 'none',
         axis.title = element_blank(),
         axis.text = element_blank()) +
-  scalebar(location = "bottomleft", anchor = c(x = 388950, y = 7085250), 
-           dist = 100, dist_unit = 'm', transform = FALSE, st.size = 4, 
-           height = 0.005, st.dist = 0.0025,
-           x.min = min(emlrgb18.df$x),
-           x.max = max(emlrgb18.df$x),
-           y.min = min(emlrgb18.df$y),
-           y.max = max(emlrgb18.df$y))
+  scalebar(location = "bottomleft", 
+           anchor = c(x = min(rgb.gradient.df$x) + 50, y = min(rgb.gradient.df$y) + 50), 
+           dist = 100, dist_unit = 'm', 
+           transform = FALSE, 
+           st.size = 3, 
+           # height = 0.005, 
+           # st.dist = 0.01,
+           x.min = min(rgb.gradient.df$x),
+           x.max = max(rgb.gradient.df$x),
+           y.min = min(rgb.gradient.df$y),
+           y.max = max(rgb.gradient.df$y))
+tk.gradient.map
 
-
-tk.depth.elev.rgb <- tk.depth.map +
-  theme(legend.justification = 'top') +
-  annotation_custom(ggplotGrob(tk.elev.map),
-                    xmin = 396510,
-                    xmax = 399500,
-                    ymin = 7080010,
-                    ymax = 7084000)
-
-tk.depth.elev.rgb
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_elev_map.jpg',
-#        tk.depth.elev.rgb,
-#        height = 4.75,
+# Join all plots together
+tk.figure <- ggarrange(tk.depth.map,
+                       tk.pond.map,
+                       tk.gradient.map,
+                       tk.moraine.map,
+                       ncol = 2,
+                       nrow = 2,
+                       legend.grob = get_legend(tk.depth.map),
+                       common.legend = TRUE)
+tk.figure
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map_insets.jpg',
+#        tk.figure,
+#        height = 7,
 #        width = 6.5)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_elev_map.pdf',
-#        tk.depth.elev.rgb,
-#        height = 4.75,
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map_insets.pdf',
+#        tk.figure,
+#        height = 7,
 #        width = 6.5)
+
+
+# tk.depth.elev.rgb <- tk.depth.map +
+#   theme(legend.justification = 'top') +
+#   annotation_custom(ggplotGrob(tk.elev.map),
+#                     xmin = 396510,
+#                     xmax = 399500,
+#                     ymin = 7080010,
+#                     ymax = 7084000)
+# 
+# tk.depth.elev.rgb
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_elev_map.jpg',
+# #        tk.depth.elev.rgb,
+# #        height = 4.75,
+# #        width = 6.5)
+# # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_elev_map.pdf',
+# #        tk.depth.elev.rgb,
+# #        height = 4.75,
+# #        width = 6.5)
 ##############################################################################################################
 
 ### Map of Shape #############################################################################################
