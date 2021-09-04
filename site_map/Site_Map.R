@@ -102,6 +102,16 @@ rgb.pond.df <- as.data.frame(rgb.pond.stretch,
   filter(!(is.na(r) | is.na(g) | is.na(b))) %>%
   mutate(color.hex = factor(rgb(r, g, b, maxColorValue = 255)))
 
+pond.extent.sf <- st_as_sf(data.frame(x = c(rep(pond.extent@xmin, 2),
+                                               rep(pond.extent@xmax, 2),
+                                               pond.extent@xmin),
+                                         y = c(pond.extent@ymin,
+                                               rep(pond.extent@ymax, 2),
+                                               rep(pond.extent@ymin, 2))) %>%
+                                st_as_sf(coords = c(1, 2), crs = st_crs(rgb.pond)) %>%
+                                summarise(geometry = st_combine(geometry)) %>%
+                                st_cast("POLYGON"))
+
 # # moraine and cipehr (x > 389900 & x < 390900) & (y > 7085500 & y < 7086500)
 moraine.extent <- extent(matrix(c(389900, 390900, 7085500, 7086500),
                                 nrow = 2, byrow = TRUE))
@@ -129,6 +139,16 @@ rgb.moraine.df <- as.data.frame(rgb.moraine.stretch,
   filter(!(is.na(r) | is.na(g) | is.na(b))) %>%
   mutate(color.hex = factor(rgb(r, g, b, maxColorValue = 255)))
 
+moraine.extent.sf <- st_as_sf(data.frame(x = c(rep(moraine.extent@xmin, 2),
+                                               rep(moraine.extent@xmax, 2),
+                                               moraine.extent@xmin),
+                                         y = c(moraine.extent@ymin,
+                                               rep(moraine.extent@ymax, 2),
+                                               rep(moraine.extent@ymin, 2))) %>%
+                                st_as_sf(coords = c(1, 2), crs = st_crs(rgb.moraine)) %>%
+                                summarise(geometry = st_combine(geometry)) %>%
+                                st_cast("POLYGON"))
+
 # # gradient (x > 388900 & x < 389900) & (y > 7085250 & y < 7086250)
 gradient.extent <- extent(matrix(c(388900, 389900, 7085250, 7086250),
                                  nrow = 2, byrow = TRUE))
@@ -155,6 +175,16 @@ rgb.gradient.df <- as.data.frame(rgb.gradient.stretch,
   rename(r = 3, g = 4, b = 5) %>%
   filter(!(is.na(r) | is.na(g) | is.na(b))) %>%
   mutate(color.hex = factor(rgb(r, g, b, maxColorValue = 255)))
+
+gradient.extent.sf <- st_as_sf(data.frame(x = c(rep(gradient.extent@xmin, 2),
+                                               rep(gradient.extent@xmax, 2),
+                                               gradient.extent@xmin),
+                                         y = c(gradient.extent@ymin,
+                                               rep(gradient.extent@ymax, 2),
+                                               rep(gradient.extent@ymin, 2))) %>%
+                                st_as_sf(coords = c(1, 2), crs = st_crs(rgb.gradient)) %>%
+                                summarise(geometry = st_combine(geometry)) %>%
+                                st_cast("POLYGON"))
 ##############################################################################################################
 
 ### Prep Hillshade ###########################################################################################
@@ -715,6 +745,7 @@ stretch.factor <- 1/2
 #   scale_fill_gradient(low = '#000000', high = '#FFFFFF',
 #                       guide = FALSE) +
 #   new_scale('fill') +
+
 tk.depth.map <- ggplot(data = emlrgb18.df, aes(x = x, y = y)) +
   geom_raster(aes(fill = color.hex), alpha = 0.8) +
   scale_fill_manual(values = levels(emlrgb18.df$color.hex),
@@ -723,43 +754,57 @@ tk.depth.map <- ggplot(data = emlrgb18.df, aes(x = x, y = y)) +
   geom_raster(data = tk.mean.depth.df,
               aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
               inherit.aes = FALSE) +
-  scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
-                     option = 'C',
-                     limits = c(0, 1)^(stretch.factor),
-                     breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
-                     labels = c(seq(0, 0.9, by = 0.1), '1+'),
-                     oob = squish,
-                     direction = -1) +
+  # scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
+                     # option = 'C',
+                     # limits = c(0, 1)^(stretch.factor),
+                     # breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+                     # labels = c(seq(0, 0.9, by = 0.1), '1+'),
+                     # oob = squish,
+                     # direction = -1) +
+  scale_fill_gradient(name = 'Thermokarst\nMean Depth (m)',
+                      low = 'yellow',
+                      high = 'red',
+                      limits = c(0, 1)^(stretch.factor),
+                      breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+                      labels = c(seq(0, 0.9, by = 0.1), '1+'),
+                      oob = squish) +
   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
+  geom_sf(data = pond.extent.sf, inherit.aes = FALSE, fill = 'transparent', color = '#440154') +
+  geom_sf(data = moraine.extent.sf, inherit.aes = FALSE, fill = 'transparent', color = '#FDE725') +
+  geom_sf(data = gradient.extent.sf, inherit.aes = FALSE, fill = 'transparent', color = '#1F968B') +
   # scale_x_continuous(name = 'Longitude (m)') +
   # scale_y_continuous(name = 'Latitude (m)') +
+  geom_text(aes(x = 386625, y = 7089675, label = 'N'),
+            size = 3,
+            hjust = 0) +
   coord_sf(# clip = "off",
            datum = st_crs(ec_sf),
            expand = FALSE,
            xlim = c(min(emlrgb18.df$x), max(emlrgb18.df$x)),
            ylim = c(min(emlrgb18.df$y), max(emlrgb18.df$y))) +
   theme_bw() +
-  theme(legend.key.height = unit(2, 'lines'),
+  theme(legend.position = 'bottom',
+        legend.key.width = unit(5, 'lines'),
         axis.title = element_blank(),
-        axis.text = element_blank()) +
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
   north(data = extent_sf, scale = 0.05, symbol = 12, 
-        anchor = c('x' = 396250, 'y' = 7090000)) +
-  geom_text(aes(x = 396250, y = 7089750, label = 'N'),
-            size = 3) +
+        location = 'topleft',
+        anchor = c('x' = 386525, 'y' = 7089500)) +
   scalebar(location = "bottomleft", 
-           anchor = c('x' = min(emlrgb18.df$x) + 750, 'y' = min(emlrgb18.df$y) + 750), 
-           dist = 500, dist_unit = 'm', transform = FALSE, 
-           st.size = 3, 
-           # st.dist = 0.01,
+           anchor = c('x' = min(emlrgb18.df$x) + 750, 'y' = min(emlrgb18.df$y) + 1000), 
+           dist = 1, dist_unit = 'km', transform = FALSE, 
+           st.size = 3, border.size = 0.5,
+           st.dist = 0.03,
            x.min = min(emlrgb18.df$x),
            x.max = max(emlrgb18.df$x),
            y.min = min(emlrgb18.df$y),
            y.max = max(emlrgb18.df$y))
-  # geo_text(aes(x = 385000, y = 7090000, label = 'A'))
+  # geom_text(aes(x = 385000, y = 7090000, label = 'A'))
 tk.depth.map
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map.jpg',
 #        tk.depth.map,
@@ -774,34 +819,42 @@ tk.depth.map
 ### Will need to redo with 1 m data!
 # Thaw pond N of EML
 tk.pond.map <- ggplot(data = rgb.pond.df) +
-  geom_raster(aes(x = x, y = y, fill = color.hex), 
-              inherit.aes = FALSE) +
+  geom_raster(aes(x = x, y = y, fill = color.hex)) +
   scale_fill_manual(values = levels(rgb.pond.df$color.hex),
                     guide = FALSE) +
   new_scale('fill') +
   geom_raster(data = tk.mean.depth.pond.df,
               aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
               inherit.aes = FALSE) +
-  scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
-                     option = 'C',
-                     limits = c(0, 1)^(stretch.factor),
-                     breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
-                     labels = c(seq(0, 0.9, by = 0.1), '1+'),
-                     oob = squish,
-                     direction = -1) +
-  coord_sf(datum = st_crs(rgb.pond.df),
+  # scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
+  #                    option = 'C',
+  #                    limits = c(0, 1)^(stretch.factor),
+  #                    breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+  #                    labels = c(seq(0, 0.9, by = 0.1), '1+'),
+  #                    oob = squish,
+  #                    direction = -1) +
+  scale_fill_gradient(name = 'Thermokarst\nMean Depth (m)',
+                      low = 'yellow',
+                      high = 'red',
+                      limits = c(0, 1)^(stretch.factor),
+                      breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+                      labels = c(seq(0, 0.9, by = 0.1), '1+'),
+                      oob = squish) +
+  coord_sf(datum = st_crs(rgb.pond.stretch),
            expand = FALSE,
            xlim = c(min(rgb.pond.df$x), max(rgb.pond.df$x)),
            ylim = c(min(rgb.pond.df$y), max(rgb.pond.df$y))) +
   theme_bw() +
   theme(legend.position = 'none',
         axis.title = element_blank(),
-        axis.text = element_blank()) +
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(size = 2, color = '#440154')) +
   scalebar(location = "bottomleft", 
            anchor = c(x = min(rgb.pond.df$x) + 50, y = min(rgb.pond.df$y) + 50), 
            dist = 100, dist_unit = 'm', 
            transform = FALSE, 
-           st.size = 3, 
+           st.size = 3, border.size = 0.5,
            # height = 0.005, 
            # st.dist = 0.01,
            x.min = min(rgb.pond.df$x),
@@ -820,27 +873,36 @@ tk.moraine.map <- ggplot(data = rgb.moraine.df) +
   geom_raster(data = tk.mean.depth.moraine.df,
               aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
               inherit.aes = FALSE) +
-  scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
-                     option = 'C',
-                     limits = c(0, 1)^(stretch.factor),
-                     breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
-                     labels = c(seq(0, 0.9, by = 0.1), '1+'),
-                     oob = squish,
-                     direction = -1) +
+  # scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
+  #                    option = 'C',
+  #                    limits = c(0, 1)^(stretch.factor),
+  #                    breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+  #                    labels = c(seq(0, 0.9, by = 0.1), '1+'),
+  #                    oob = squish,
+  #                    direction = -1) +
+  scale_fill_gradient(name = 'Thermokarst\nMean Depth (m)',
+                      low = 'yellow',
+                      high = 'red',
+                      limits = c(0, 1)^(stretch.factor),
+                      breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+                      labels = c(seq(0, 0.9, by = 0.1), '1+'),
+                      oob = squish) +
   geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
-  coord_sf(datum = st_crs(rgb.moraine.df),
+  coord_sf(datum = st_crs(rgb.moraine.stretch),
            expand = FALSE,
            xlim = c(min(rgb.moraine.df$x), max(rgb.moraine.df$x)),
            ylim = c(min(rgb.moraine.df$y), max(rgb.moraine.df$y))) +
   theme_bw() +
   theme(legend.position = 'none',
         axis.title = element_blank(),
-        axis.text = element_blank()) +
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(size = 2, color = '#FDE725')) +
   scalebar(location = "bottomleft", 
            anchor = c(x = min(rgb.moraine.df$x) + 50, y = min(rgb.moraine.df$y) + 50), 
            dist = 100, dist_unit = 'm', 
            transform = FALSE, 
-           st.size = 3, 
+           st.size = 3, border.size = 0.5,
            # height = 0.005, 
            # st.dist = 0.01,
            x.min = min(rgb.moraine.df$x),
@@ -859,28 +921,37 @@ tk.gradient.map <- ggplot(data = rgb.gradient.df) +
   geom_raster(data = tk.mean.depth.gradient.df,
               aes(x = x, y = y, fill = mean.depth^(stretch.factor)),
               inherit.aes = FALSE) +
-  scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
-                     option = 'C',
-                     limits = c(0, 1)^(stretch.factor),
-                     breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
-                     labels = c(seq(0, 0.9, by = 0.1), '1+'),
-                     oob = squish,
-                     direction = -1) +
+  # scale_fill_viridis(name = 'Thermokarst\nMean Depth (m)',
+  #                    option = 'C',
+  #                    limits = c(0, 1)^(stretch.factor),
+  #                    breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+  #                    labels = c(seq(0, 0.9, by = 0.1), '1+'),
+  #                    oob = squish,
+  #                    direction = -1) +
+  scale_fill_gradient(name = 'Thermokarst\nMean Depth (m)',
+                      low = 'yellow',
+                      high = 'red',
+                      limits = c(0, 1)^(stretch.factor),
+                      breaks = c(seq(0, 1, by = 0.1)^(stretch.factor)),
+                      labels = c(seq(0, 0.9, by = 0.1), '1+'),
+                      oob = squish) +
   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
-  coord_sf(datum = st_crs(rgb.gradient.df),
+  coord_sf(datum = st_crs(rgb.gradient.stretch),
            expand = FALSE,
            xlim = c(min(rgb.gradient.df$x), max(rgb.gradient.df$x)),
            ylim = c(min(rgb.gradient.df$y), max(rgb.gradient.df$y))) +
   theme_bw() +
   theme(legend.position = 'none',
         axis.title = element_blank(),
-        axis.text = element_blank()) +
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(size = 2, color = '#1F968B')) +
   scalebar(location = "bottomleft", 
            anchor = c(x = min(rgb.gradient.df$x) + 50, y = min(rgb.gradient.df$y) + 50), 
            dist = 100, dist_unit = 'm', 
            transform = FALSE, 
-           st.size = 3, 
+           st.size = 3, border.size = 0.5,
            # height = 0.005, 
            # st.dist = 0.01,
            x.min = min(rgb.gradient.df$x),
@@ -897,7 +968,11 @@ tk.figure <- ggarrange(tk.depth.map,
                        ncol = 2,
                        nrow = 2,
                        legend.grob = get_legend(tk.depth.map),
-                       common.legend = TRUE)
+                       common.legend = TRUE,
+                       legend = 'bottom',
+                       labels = c('A', 'B', 'C', 'D'),
+                       hjust = 0,
+                       font.label = list(size = 10))
 tk.figure
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_depth_map_insets.jpg',
 #        tk.figure,
@@ -1003,83 +1078,60 @@ tk.mean.shape.map
 #        height = 6,
 #        width = 7.5)
 
-tk.mean.shape.elev.rgb <- tk.mean.shape.map +
-  theme(legend.justification = 'top') +
-  annotation_custom(ggplotGrob(tk.elev.map),
-                    xmin = 396510,
-                    xmax = 399500,
-                    ymin = 7080010,
-                    ymax = 7084000)
-
-tk.mean.shape.elev.rgb
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_shape_elev_map_2018.jpg',
-#        tk.mean.shape.elev.rgb,
-#        height = 4.75,
-#        width = 6.5)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_shape_elev_map_2018.pdf',
-#        tk.mean.shape.elev.rgb,
-#        height = 4.75,
-#        width = 6.5)
-
-# 2018 only
-tk.shape.map <- ggplot(emlhillshd.df, aes(x = x, y = y, fill = hillshd)) +
-  geom_raster() +
-  scale_fill_gradient(low = '#000000', high = '#FFFFFF',
-                      guide = FALSE) +
+tk.mean.shape.elev.rgb <- ggplot(data = emldtm5.df, aes(x = x, y = y)) +
+  geom_raster(aes(fill = elevation)) +
+  scale_fill_gradient(name = 'Elevation (m)',
+                      low = '#333333',
+                      high = '#FFFFFF') +
   new_scale('fill') +
-  geom_raster(data = emlrgb18.df, 
-              aes(x = x, y = y, fill = color.hex), 
-              inherit.aes = FALSE, 
-              alpha = 0.8) +
-  scale_fill_manual(values = levels(emlrgb18.df$color.hex),
-                    guide = FALSE) +
-  new_scale('fill') +
-  geom_sf(data = filter(karst_1_stats_sf, year == 2018),
-              aes(color = shape, fill = shape),
+  geom_raster(data = tk.mean.shape.df,
+              aes(x = x, y = y, fill = mean.shape^(stretch.factor)),
               inherit.aes = FALSE) +
-  scale_fill_viridis(name = 'Thermokarst\nShape',
-                     option = 'C') +
-  scale_color_viridis(name = 'Thermokarst\nShape',
-                     option = 'C') +
+  scale_fill_gradient(name = 'Thermokarst\nMean Shape',
+                     low = 'yellow',
+                     high = 'red',
+                     limits = c(0, 
+                                max(tk.mean.shape.df$mean.shape))^(stretch.factor),
+                     breaks = c(seq(0, 0.8, by = 0.2)^(stretch.factor)),
+                     labels = seq(0, 0.8, by = 0.2)) +
   geom_sf(data = ec_sf, inherit.aes = FALSE, color = 'black') +
   geom_sf(data = circle_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = eml_wtrshd, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = extent_sf, inherit.aes = FALSE, fill = 'transparent', color = 'black') +
   geom_sf(data = cipehr, inherit.aes = FALSE, fill = 'transparent', color = 'gray80') +
-  scale_x_continuous(name = 'Longitude (m)') +
-  scale_y_continuous(name = 'Latitude (m)') +
-  coord_sf(clip = "off",
-           datum = st_crs(ec_sf),
-           expand = FALSE,
-           xlim = c(min(emlhillshd.df$x), max(emlhillshd.df$x))) +
+  geom_text(aes(x = 386625, y = 7089675, label = 'N'),
+            size = 4,
+            hjust = 0) +
+  coord_sf(# clip = "off",
+    datum = st_crs(ec_sf),
+    expand = FALSE,
+    xlim = c(min(emlrgb18.df$x), max(emlrgb18.df$x)),
+    ylim = c(min(emlrgb18.df$y), max(emlrgb18.df$y))) +
   theme_bw() +
-  north(data = extent_sf, scale = 0.05, symbol = 12, anchor = c('x' = 396470, 'y' = 7089970)) +
-  # geom_text(aes(x = 385000, y = 7090000, label = 'A'))
-tk.shape.map
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_shape_map_2018.jpg',
-#        tk.shape.map,
-#        height = 6,
-#        width = 7.5)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_shape_map_2018.pdf',
-#        tk.shape.map,
-#        height = 6,
-#        width = 7.5)
+  theme(# legend.key.height = unit(2, 'lines'),
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  north(data = extent_sf, scale = 0.05, symbol = 12, 
+        location = 'topleft',
+        anchor = c('x' = 386525, 'y' = 7089500)) +
+  scalebar(location = "bottomleft", 
+           anchor = c('x' = min(emlrgb18.df$x) + 750, 'y' = min(emlrgb18.df$y) + 1000), 
+           dist = 1, dist_unit = 'km', transform = FALSE, 
+           st.size = 3, border.size = 0.5,
+           st.dist = 0.03,
+           x.min = min(emlrgb18.df$x),
+           x.max = max(emlrgb18.df$x),
+           y.min = min(emlrgb18.df$y),
+           y.max = max(emlrgb18.df$y))
 
-tk.shape.elev.rgb <- tk.shape.map +
-  theme(legend.justification = 'top') +
-  annotation_custom(ggplotGrob(tk.elev.map),
-                    xmin = 396510,
-                    xmax = 399500,
-                    ymin = 7080010,
-                    ymax = 7084000)
-
-tk.shape.elev.rgb
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_shape_elev_map_2018.jpg',
-#        tk.shape.elev.rgb,
+tk.mean.shape.elev.rgb
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_shape_elev_map.jpg',
+#        tk.mean.shape.elev.rgb,
 #        height = 4.75,
 #        width = 6.5)
-# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_shape_elev_map_2018.pdf',
-#        tk.shape.elev.rgb,
+# ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/thermokarst_mean_shape_elev_map.pdf',
+#        tk.mean.shape.elev.rgb,
 #        height = 4.75,
 #        width = 6.5)
 ##############################################################################################################
