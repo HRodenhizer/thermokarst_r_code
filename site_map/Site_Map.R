@@ -372,7 +372,9 @@ tk.mean.depth.pond.df <- tk.mean.depth.pond %>%
                              NA,
                              ifelse(mean.depth > 0,
                                     0, 
-                                    mean.depth*-1))) %>%
+                                    mean.depth*-1)))
+pond.tk.extent <- (nrow(tk.mean.depth.pond.df) - length(which(is.na(tk.mean.depth.pond.df$mean.depth)))) / nrow(tk.mean.depth.pond.df)
+tk.mean.depth.pond.df <- tk.mean.depth.pond.df %>%
   filter(!is.na(mean.depth))
 
 # ### moraine
@@ -447,7 +449,9 @@ tk.mean.depth.moraine.df <- tk.mean.depth.moraine %>%
                              NA,
                              ifelse(mean.depth > 0,
                                     0, 
-                                    mean.depth*-1))) %>%
+                                    mean.depth*-1)))
+moraine.tk.extent <- (nrow(tk.mean.depth.moraine.df) - length(which(is.na(tk.mean.depth.moraine.df$mean.depth)))) / nrow(tk.mean.depth.moraine.df)
+tk.mean.depth.moraine.df <- tk.mean.depth.moraine.df %>%
   filter(!is.na(mean.depth))
 
 # ### gradient
@@ -522,7 +526,9 @@ tk.mean.depth.gradient.df <- tk.mean.depth.gradient %>%
                              NA,
                              ifelse(mean.depth > 0,
                                     0, 
-                                    mean.depth*-1))) %>%
+                                    mean.depth*-1)))
+gradient.tk.extent <- (nrow(tk.mean.depth.gradient.df) - length(which(is.na(tk.mean.depth.gradient.df$mean.depth)))) / nrow(tk.mean.depth.gradient.df)
+tk.mean.depth.gradient.df <- tk.mean.depth.gradient.df %>%
   filter(!is.na(mean.depth))
 ##############################################################################################################
 
