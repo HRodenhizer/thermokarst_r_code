@@ -1295,7 +1295,7 @@ karst_eml_mean_na[karst_eml_mean_na == 0] <- NA
 # karst_eml_mean_sp <- rasterToPolygons(karst_eml_mean_na)
 # writeOGR(karst_eml_mean_sp,
 #          dsn = '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/',
-#          layer = 'eml_wtshd_mean_karst.shp',
+#          layer = 'eml_wtshd_mean_karst',
 #          driver = 'ESRI Shapefile')
 # 
 karst_eml_df <- karst_eml_mean %>%
