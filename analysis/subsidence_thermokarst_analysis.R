@@ -3564,8 +3564,10 @@ effect.size.plot
 #        height = 3.75,
 #        width = 6.5)
 # 
+# effect.size.plot.pdf <- effect.size.plot +
+#   theme(legend.box.margin = margin(0.196,0.6,0.34,0.20,"inches"))
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.pdf',
-#        effect.size.plot,
+#        effect.size.plot.pdf,
 #        height = 3.75,
 #        width = 6.5)
 
