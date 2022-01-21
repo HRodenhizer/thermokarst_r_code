@@ -85,7 +85,11 @@ gps_neon_offset_summary_1 <- gps_neon_offset %>%
 gps_neon_offset_summary <- gps_neon_offset_summary_1 %>%
   group_by(year) %>%
   summarize(mean.neon.offset = mean(neon.offset, na.rm = TRUE),
-            sd.neon.offset = sd(neon.offset, na.rm = TRUE))
+            sd.neon.offset = sd(neon.offset, na.rm = TRUE),
+            median.neon.offset = median(neon.offset, na.rm = TRUE))
+
+# write.csv(gps_neon_offset_summary, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/lidar_subsidence/neon_gps_offsets.csv',
+#           row.names = FALSE)
 
 # Correct the vertical alignment of NEON using GPS offset
 neon_gps_correction <- neon + gps_neon_offset_summary$mean.neon.offset[1:3] # gps correction
