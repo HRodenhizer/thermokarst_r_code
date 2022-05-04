@@ -3427,7 +3427,7 @@ co2.model.summary <- co2.models.ngs %>%
   ungroup() %>%
   mutate(coefficient.type = str_to_title(coefficient.type),
          Response = factor(Response,
-                           levels = c('Reco', 'NEE', 'GPP')))
+                           levels = c('GPP', 'NEE', 'Reco')))
 # write.csv(co2.model.summary,
 #           '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/co2_model_parameters.csv',
 #           row.names = FALSE)
@@ -3472,7 +3472,18 @@ rects <- rects %>%
                      mutate(xmin = 0,
                             xmax = Inf,
                             col = letters[2]))
-
+arrows <- data.frame(xmin = c(10, 10),
+                     xmax = c(10, 10),
+                     ymin = c(0.02, -0.02),
+                     ymax = c(0.1, -0.1),
+                     Response = rep('GPP', 2),
+                     season = rep('NGS/Night', 2))
+arrow.labels <- data.frame(x = c(10, 10),
+                           y = c(0.12, -0.12),
+                           label = c('Source', 'Sink'),
+                           Response = rep('GPP', 2),
+                           season = rep('NGS/Night', 2),
+                           hjust = c(0.5, 0.5))
 # ### all seasons, thermokarst only, slopes only
 # effect.size.plot <- ggplot(filter(co2.model.summary, coefficient.type == 'slope' & Predictor == 'Thermokarst'),
 #                            aes(x = Month, color = Response, group = Response)) +
@@ -3521,13 +3532,18 @@ rects <- rects %>%
 # #        width = 7)
 
 ### all seasons, thermokarst only, with intercepts
+facet_labeller <- as_labeller(c(GPP = 'GPP', NEE = 'NEE', Reco = 'R[eco]',
+                              `GS Day` = '`GS Day`', `NGS/Night` = 'NGS/Night'),
+                            default = label_parsed)
+
 effect.size.plot <- ggplot(filter(co2.model.summary, Predictor == 'Thermokarst'),
                            aes(x = Month, group = coefficient.type)) +
-  geom_rect(data = filter(rects, Predictor == 'Thermokarst'),
-            aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
-            alpha = 0.2,
-            inherit.aes = FALSE) +
   geom_hline(yintercept = 0) +
+  # geom_rect(data = filter(rects, Predictor == 'Thermokarst'),
+  #           aes(xmin = -Inf, xmax = Inf, ymin = xmin, ymax = xmax, fill = col),
+  #           alpha = 0.2,
+  #           inherit.aes = FALSE) +
+  # geom_hline(yintercept = 0) +
   geom_point(aes(y = Coefficient, color = coefficient.type),
              position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`, color = coefficient.type),
@@ -3540,6 +3556,15 @@ effect.size.plot <- ggplot(filter(co2.model.summary, Predictor == 'Thermokarst')
             size = 3,
             vjust = 'inward',
             hjust = 'inward') +
+  geom_segment(data = arrows, 
+               aes(x = xmin, y = ymin, xend = xmax, yend = ymax),
+               inherit.aes = FALSE,
+               arrow = arrow(length = unit(6, 'pt'))) +
+  geom_text(data = arrow.labels,
+            aes(x = x, y = y, label = label, hjust = hjust),
+            inherit.aes = FALSE,
+            # angle = 90,
+            size = 3) +
   scale_x_continuous(breaks = seq(1:12),
                      labels = str_sub(month.name[1:12], start = 1, end = 3)) +
   scale_color_manual(name = element_blank(),
@@ -3549,23 +3574,26 @@ effect.size.plot <- ggplot(filter(co2.model.summary, Predictor == 'Thermokarst')
                     values = c('#99CC33', '#CC3300'),
                     labels = c('Sink',
                                'Source')) +
-  facet_grid(season ~ Response, scales = 'free_y') +
+  facet_grid(season ~ Response, 
+             scales = 'free_y',
+             labeller = facet_labeller) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        legend.position = c(0.999, 0.002),
-        legend.justification = c(1, 0),
-        legend.margin = margin(-0.1, 0.1, -0.1, 0.1, "inches"),
+        legend.position = c(0.01, 0.02),
+        legend.justification = c(0, 0),
+        # legend.margin = margin(-0.1, 0.1, -0.1, 0.1, "inches"),
         legend.box.background = element_rect(color = 'gray40', fill = "white"),
-        legend.box.margin = margin(0.196,0.6,0.34,0.24,"inches"))
+        # legend.box.margin = margin(0.196,0.6,0.34,0.24,"inches")
+        )
 effect.size.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.jpg',
 #        effect.size.plot,
 #        height = 3.75,
 #        width = 6.5)
 # 
-# effect.size.plot.pdf <- effect.size.plot +
-#   theme(legend.box.margin = margin(0.196,0.6,0.34,0.20,"inches"))
+# effect.size.plot.pdf <- effect.size.plot # +
+# #  theme(legend.box.margin = margin(0.196,0.6,0.34,0.20,"inches"))
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/co2_effect_size.pdf',
 #        effect.size.plot.pdf,
 #        height = 3.75,
@@ -4230,22 +4258,30 @@ ch4.intercepts <- slice(ch4.model.table, 1:12) %>%
          coefficient = 'Intercept')
 ch4.coefficients <- rbind(ch4.intercepts, ch4.slopes) %>%
   mutate(measurement = 'Methane')
-text <- data.frame(x = 12,
-                   y = -0.0225,
+text <- data.frame(x = 1,
+                   y = 0.03,
                    label = paste0(as.character(expression('R'^2 ~ ' = ')), ' ~ ', ch4.model.table$R2[1]))
 ch4.rects <- data.frame(ymin = c(-Inf, 0),
                         ymax = c(0, Inf),
                         col = c('a', 'b'))
+arrows <- data.frame(xmin = c(14, 14),
+                     xmax = c(14, 14),
+                     ymin = c(0.002, -0.002),
+                     ymax = c(0.02, -0.02))
+arrow.labels <- data.frame(x = c(14, 14),
+                           y = c(0.022, -0.022),
+                           label = c('Source', 'Sink'))
 # the higher methane uptake with higher
 # thermokarst is probably actually driven by high release at low thermokarst
 # which is a coincidence because winter storms with high wind speeds and high
 # methane release happen to come from a direction with low thermokrst!
 ch4.coefficients.plot <- ggplot(ch4.coefficients,
                                 aes(x = month, y = Coefficient, color = coefficient)) +
-  geom_rect(data = ch4.rects,
-            aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, fill = col),
-            alpha = 0.2,
-            inherit.aes = FALSE) +
+  geom_hline(yintercept = 0) +
+  # geom_rect(data = ch4.rects,
+  #           aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, fill = col),
+  #           alpha = 0.2,
+  #           inherit.aes = FALSE) +
   geom_point(position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = `Min CI`, ymax = `Max CI`),
                 position = position_dodge(width = 0.5),
@@ -4257,9 +4293,18 @@ ch4.coefficients.plot <- ggplot(ch4.coefficients,
             size = 3,
             vjust = 'inward',
             hjust = 'inward') +
+  geom_segment(data = arrows,
+               aes(x = xmin, y = ymin, xend = xmax, yend = ymax),
+               inherit.aes = FALSE,
+               arrow = arrow(length = unit(6, 'pt'))) +
+  geom_text(data = arrow.labels, 
+            aes(x = x, y = y, label = label),
+            inherit.aes = FALSE,
+            size = 3) +
   scale_x_continuous(breaks = seq(1, 12),
                      labels = month.name[seq(1, 12)],
-                     minor_breaks = NULL) +
+                     minor_breaks = NULL,
+                     expand = F) +
   scale_y_continuous(name = 'Coefficient') +
   scale_color_manual(name = element_blank(),
                      values = c('gray50', 'black')) +
@@ -4270,8 +4315,16 @@ ch4.coefficients.plot <- ggplot(ch4.coefficients,
                                'Source')) +
   facet_grid(.~measurement) +
   theme_bw() +
+  coord_cartesian(xlim = c(0.25, 12.75),
+                  ylim = c(-0.025, 0.032),
+                  clip = 'off',
+                  expand = FALSE) +
   theme(axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        legend.position = c(0.99, 0.01),
+        legend.justification = c(1, 0),
+        plot.margin = margin(unit(c(5, 40, 5, 5), 'pt')),
+        legend.box.background = element_rect(color = 'gray40', fill = "white"))
 ch4.coefficients.plot
 # ggsave('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/ch4_coefficients_all_years.jpg',
 #        ch4.coefficients.plot,
