@@ -942,19 +942,19 @@ karst_edges <- brick(stack('/home/heidi/Documents/School/NAU/Schuur Lab/Remote S
 # create mask of karst_edges
 karst_edges_mask <- mask(crop(karst_edges, sub), sub)
 
-# take stratified random sample of cells (currently set up for non-thermokarst, thermokarst center and thermokarst edges)
-set.seed(333)
-samples <- st_as_sf(sampleStratified(karst_edges_mask[[1]],
-                                     size = 500,
-                                     xy = TRUE,
-                                     sp = TRUE)) %>%
-  select(-4) %>%
-  mutate(ID = seq(1, 1500))
-ggplot(samples, aes(x = x, y = y)) +
-  geom_point() +
-  coord_fixed()
-
-# st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
+# # take stratified random sample of cells (currently set up for non-thermokarst, thermokarst center and thermokarst edges)
+# set.seed(333)
+# samples <- st_as_sf(sampleStratified(karst_edges_mask[[1]],
+#                                      size = 500,
+#                                      xy = TRUE,
+#                                      sp = TRUE)) %>%
+#   select(-4) %>%
+#   mutate(ID = seq(1, 1500))
+# ggplot(samples, aes(x = x, y = y)) +
+#   geom_point() +
+#   coord_fixed()
+# 
+# # st_write(samples, '/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
 samples <- st_read('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/analysis/subsidence_rate_samples_500.shp')
 
 # extract values from subsidence brick
@@ -1024,8 +1024,8 @@ model.table <- model.contrast %>%
                         'Non-Thermokarst',
                         ifelse(emmeans.karst == 1,
                                'Thermokarst Center',
-                               'Thermokarst Edge')),
-                        levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center'))) %>%
+                               'Thermokarst Margin')),
+                        levels = c('Non-Thermokarst', 'Thermokarst Margin', 'Thermokarst Center'))) %>%
   select(Class = emmeans.karst, Group = letters, Mean = emmeans.emmean, 
          `Lower CI` = emmeans.lower.CL, `Upper CI` = emmeans.upper.CL, 
          SE = emmeans.SE, df = emmeans.df)
@@ -1034,15 +1034,16 @@ model.table <- model.contrast %>%
 #           row.names = FALSE)
 model.table <- read.csv('/home/heidi/Documents/School/NAU/Schuur Lab/Remote Sensing/thermokarst_project/figures/sub_karst_model.csv') %>%
   rename(`Lower CI` = Lower.CI, `Upper CI` = Upper.CI) %>%
-  mutate(Class = factor(Class,
-                        levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center')))
+  mutate(Class = factor(case_when(Class == 'Thermokarst Edge' ~ 'Thermokarst Margin',
+                                  TRUE ~ Class),
+                        levels = c('Non-Thermokarst', 'Thermokarst Margin', 'Thermokarst Center')))
 
 # boxplot looks really messy
 boxplot <- ggplot(sub_karst_summary, aes(x = karst, y = sub, group = karst)) +
   geom_boxplot() +
   geom_text(data = letters, aes(label = letters)) +
   scale_x_discrete(breaks = c(0, 1, 2),
-                   labels = c('Non-Thermokarst', 'Thermokarst Center', 'Thermokarst Edge')) +
+                   labels = c('Non-Thermokarst', 'Thermokarst Center', 'Thermokarst Margin')) +
   scale_y_continuous(name = expression(Delta ~ "Elevation")) +
   theme_bw() +
   theme(axis.title.x = element_blank())
@@ -1099,8 +1100,8 @@ gps.karst.extract <- raster::extract(karst_edges, as(sub.gps, 'Spatial'),
                                         df = TRUE) %>%
   as.data.frame()
 
-sub.gps <- gps.karst.extract %>%
-  pivot_longer(karst_edges_1:karst_edges_3, names_to = 'year', values_to = 'karst') %>%
+sub.gps.1 <- gps.karst.extract %>%
+  pivot_longer(3:5, names_to = 'year', values_to = 'karst') %>%
   group_by(ID, cells) %>%
   summarise(karst = ifelse(any(karst == 2),
                            2,
@@ -1108,8 +1109,11 @@ sub.gps <- gps.karst.extract %>%
                                       1,
                                       0))) %>%
   cbind.data.frame(sub.gps) %>%
-  select(-c(ID, cells, geometry))
-sub.gps.summary <- sub.gps
+  st_as_sf()
+sub.gps <- sub.gps.1 %>%
+  select(-c(ID, cells)) %>%
+  st_drop_geometry()
+sub.gps.summary <- sub.gps %>%
   group_by(karst) %>%
   summarise(mean.sub = mean(sub, na.rm = TRUE),
             se.sub = sd(sub, na.rm = TRUE)/sqrt(n()),
@@ -1120,8 +1124,8 @@ sub.gps.summary <- sub.gps
                                'Non-Thermokarst',
                                ifelse(karst == 1,
                                       'Thermokarst Center',
-                                      'Thermokarst Edge')),
-                        levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center')))
+                                      'Thermokarst Margin')),
+                        levels = c('Non-Thermokarst', 'Thermokarst Margin', 'Thermokarst Center')))
 
 ### Test LiDAR subsidence at same points as GPS
 template <- list()
@@ -1138,34 +1142,35 @@ elev.cip.aligned <- merge(elev.cip.aligned[[1]],
                           elev.cip.aligned[[2]],
                           elev.cip.aligned[[3]])
 
-karst_edges_gps_aligned <- mask(crop(karst_edges, elev.cip[[1]]), elev.cip[[1]]) %>%
+karst_edges_gps_aligned <- mask(crop(karst_edges, elev.cip.aligned[[1]]), elev.cip.aligned[[1]]) %>%
   as.data.frame(xy = TRUE) %>%
-  filter(!(is.na(karst_edges_1) & is.na(karst_edges_2) & is.na(karst_edges_3))) %>%
-  mutate(karst = factor(ifelse(karst_edges_1 == 2 | karst_edges_2 == 2 | karst_edges_3 == 2,
-                               'Thermokarst Edge',
-                               ifelse(karst_edges_1 == 1 | karst_edges_2 == 1 | karst_edges_3 == 1,
+  filter(!(is.na(layer.1) & is.na(layer.2) & is.na(layer.3))) %>%
+  mutate(karst = factor(ifelse(layer.1 == 2 | layer.2 == 2 | layer.3 == 2,
+                               'Thermokarst Margin',
+                               ifelse(layer.1 == 1 | layer.2 == 1 | layer.3 == 1,
                                       'Thermokarst Center',
                                       'Non-Thermokarst')),
                         levels = c('Non-Thermokarst', 
-                                   'Thermokarst Edge', 
+                                   'Thermokarst Margin', 
                                    'Thermokarst Center'))) %>%
   select(x, y, karst)
 
 neon.sub.extract.gps <- raster::extract(sub, 
-                                        as(sub.gps, 'Spatial'),
+                                        as(sub.gps.1, 
+                                           'Spatial'),
                                         cellnumbers = TRUE,
                                         df = TRUE) %>%
   as.data.frame()
 
 lidar_sub_karst <- neon.sub.extract.gps %>%
   full_join(gps.karst.extract, by = c('ID', 'cells')) %>%
-  mutate(karst = factor(ifelse(karst_edges_1 == 2 | karst_edges_2 == 2 | karst_edges_3 == 2,
-                               'Thermokarst Edge',
-                               ifelse(karst_edges_1 == 1 | karst_edges_2 == 1 | karst_edges_3 == 1,
+  mutate(karst = factor(ifelse(layer.1 == 2 | layer.2 == 2 | layer.3 == 2,
+                               'Thermokarst Margin',
+                               ifelse(layer.1 == 1 | layer.2 == 1 | layer.3 == 1,
                                       'Thermokarst Center',
                                       'Non-Thermokarst')),
                         levels = c('Non-Thermokarst', 
-                                   'Thermokarst Edge', 
+                                   'Thermokarst Margin', 
                                    'Thermokarst Center'))) %>%
   select(subsidence_2017_2019, karst)
 n.samples <- lidar_sub_karst %>%
@@ -1187,15 +1192,15 @@ letters.gps.aligned <- data.frame(karst = factor(c(0, 1, 2)),
                                   sub = 0.25,
                                   letters = c('a', 'b', 'b'))
 
-model.table.gps.aligned <- model.contrast %>%
+model.table.gps.aligned <- model.contrast.gps.aligned %>%
   select(matches('^emmeans')) %>%
   mutate(letters = c('a', 'b', 'b'),
          emmeans.karst = factor(ifelse(emmeans.karst == 'Non-Thermokarst',
                                        'Non-Thermokarst',
                                        ifelse(emmeans.karst == 'Thermokarst Center',
                                               'Thermokarst Center',
-                                              'Thermokarst Edge')),
-                                levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center'))) %>%
+                                              'Thermokarst Margin')),
+                                levels = c('Non-Thermokarst', 'Thermokarst Margin', 'Thermokarst Center'))) %>%
   select(Class = emmeans.karst, Group = letters, Mean = emmeans.emmean, 
          `Lower CI` = emmeans.lower.CL, `Upper CI` = emmeans.upper.CL, 
          SE = emmeans.SE, df = emmeans.df)
@@ -1206,17 +1211,17 @@ gps.lidar.sub <- sub.gps %>%
                        'Non-Thermokarst',
                        ifelse(karst == 1,
                               'Thermokarst Center',
-                              'Thermokarst Edge')),
-                levels = c('Non-Thermokarst', 'Thermokarst Edge', 'Thermokarst Center')),
+                              'Thermokarst Margin')),
+                levels = c('Non-Thermokarst', 'Thermokarst Margin', 'Thermokarst Center')),
          method = 'GPS') %>%
   rbind.data.frame(lidar_sub_karst %>%
                      rename(sub = subsidence_2017_2019) %>%
                      mutate(method = 'LIDAR'))
   
-model <- lm(sub ~ method + karst, data = gps.lidar.sub)
-summary(model)
-model.contrast <- emmeans(model, specs = pairwise ~ method)
-model.contrast
+# model <- lm(sub ~ method + karst, data = gps.lidar.sub)
+# summary(model)
+# model.contrast <- emmeans(model, specs = pairwise ~ method)
+# model.contrast
 
 # plot mean lidar sub with mean gps sub
 points_plot_2 <- ggplot(model.table.gps.aligned, aes(x = Class, y = Mean)) +
@@ -1253,7 +1258,7 @@ points_plot_2 <- ggplot(model.table.gps.aligned, aes(x = Class, y = Mean)) +
             position = position_nudge(x = 0.1)) +
   scale_y_continuous(name = expression(Delta ~ "Elevation (m)"),
                      limits = c(-0.15, 0.05)) +
-  scale_x_discrete(labels = c('Non-\nThermokarst', 'Thermokarst\nEdge', 
+  scale_x_discrete(labels = c('Non-\nThermokarst', 'Thermokarst\nMargin', 
                               'Thermokarst\nCenter')) +
   scale_color_manual(breaks = c('GPS', 'LiDAR\n(GPS Locations)', 'LiDAR\n(Study Extent)'),
                      values = c('gray80', 'gray40', 'black'),
